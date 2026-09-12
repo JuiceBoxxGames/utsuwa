@@ -22,19 +22,17 @@ import {
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 export function sanitizeCamera(raw: Partial<CameraSettings> | undefined): CameraSettings {
-	return {
-		fov: clamp(raw?.fov ?? CAMERA_DEFAULTS.fov, CAMERA_LIMITS.fov.min, CAMERA_LIMITS.fov.max),
-		zoom: clamp(raw?.zoom ?? CAMERA_DEFAULTS.zoom, CAMERA_LIMITS.zoom.min, CAMERA_LIMITS.zoom.max),
-		height: clamp(
-			raw?.height ?? CAMERA_DEFAULTS.height,
-			CAMERA_LIMITS.height.min,
-			CAMERA_LIMITS.height.max
-		)
+	const value = (key: keyof CameraSettings) => {
+		const v = raw?.[key];
+		return typeof v === 'number' && Number.isFinite(v)
+			? clamp(v, CAMERA_LIMITS[key].min, CAMERA_LIMITS[key].max)
+			: CAMERA_DEFAULTS[key];
 	};
+	return { fov: value('fov'), zoom: value('zoom'), height: value('height'), panX: value('panX') };
 }
 
 function isChatDisplayMode(value: unknown): value is ChatDisplayMode {
-	return value === 'bubble' || value === 'sidebar' || value === 'both' || value === 'off';
+	return value === 'bubble' || value === 'sidebar';
 }
 
 function isSidebarPosition(value: unknown): value is SidebarPosition {
@@ -64,6 +62,7 @@ export interface ParsedDisplaySettings {
 	typingIndicatorDelayMs: number;
 	textRevealSpeed: TextRevealSpeed;
 	chatBarAlignment: ChatBarAlignment;
+	keepScreenAwake: boolean;
 }
 
 /**
@@ -95,7 +94,8 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 			waitToneEnabled: DEFAULT_WAIT_TONE_ENABLED,
 			typingIndicatorDelayMs: DEFAULT_TYPING_INDICATOR_DELAY_MS,
 			textRevealSpeed: DEFAULT_TEXT_REVEAL_SPEED,
-			chatBarAlignment: DEFAULT_CHAT_BAR_ALIGNMENT
+			chatBarAlignment: DEFAULT_CHAT_BAR_ALIGNMENT,
+			keepScreenAwake: false
 		};
 	}
 
@@ -127,7 +127,7 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 
 	const sceneBackground = sanitizeSceneBackground(parsed.sceneBackground);
 
-	const chatDisplayMode = isChatDisplayMode(parsed.chatDisplayMode)
+	const chatDisplayMode = parsed.chatDisplayMode === 'both' ? 'sidebar' : isChatDisplayMode(parsed.chatDisplayMode)
 		? parsed.chatDisplayMode
 		: DEFAULT_CHAT_DISPLAY_MODE;
 
@@ -153,5 +153,5 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 		? parsed.chatBarAlignment
 		: DEFAULT_CHAT_BAR_ALIGNMENT;
 
-	return { camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
+	return { keepScreenAwake: parsed.keepScreenAwake === true, camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
 }

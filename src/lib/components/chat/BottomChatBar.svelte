@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { Icon } from '$lib/components/ui';
-	import { characterStore } from '$lib/stores/character.svelte';
-	import { localPath } from '$lib/config/links';
 	import { isTauri } from '$lib/services/platform/platform';
 	import { ttsStore } from '$lib/stores/tts.svelte';
 	import { sttStore } from '$lib/stores/stt.svelte';
@@ -35,27 +33,6 @@
 		overlay = false,
 		barHidden = false
 	}: Props = $props();
-
-	// Companion mood + stats, merged into the command bar.
-	const moodInfo = $derived(characterStore.moodInfo);
-	const charState = $derived(characterStore.state);
-	const affectionPercent = $derived(characterStore.affectionPercent);
-	const isCompanionMode = $derived(characterStore.appMode === 'companion');
-	let showStats = $state(false);
-
-	const datingStats = $derived([
-		{ key: 'affection', label: 'Love', icon: 'heart', value: affectionPercent, color: 'var(--stat-affection)' },
-		{ key: 'trust', label: 'Trust', icon: 'shield', value: charState.trust, color: 'var(--stat-trust)' },
-		{ key: 'intimacy', label: 'Intimacy', icon: 'sparkles', value: charState.intimacy, color: 'var(--stat-intimacy)' },
-		{ key: 'comfort', label: 'Comfort', icon: 'home', value: charState.comfort, color: 'var(--stat-comfort)' },
-		{ key: 'energy', label: 'Energy', icon: 'zap', value: charState.energy, color: 'var(--stat-energy)' },
-		{ key: 'respect', label: 'Respect', icon: 'award', value: charState.respect, color: 'var(--stat-respect)' }
-	]);
-	const companionStats = $derived([
-		{ key: 'energy', label: 'Energy', icon: 'zap', value: charState.energy, color: 'var(--stat-energy)' },
-		{ key: 'chats', label: 'Chats', icon: 'message-circle', value: Math.min(charState.totalInteractions, 100), color: 'var(--stat-trust)' }
-	]);
-	const stats = $derived(isCompanionMode ? companionStats : datingStats);
 
 	// Surface voice playback failures; without this a TTS misconfiguration
 	// (like a stale voice id after switching providers) looks like she simply
@@ -192,11 +169,13 @@
 			{#if providerIsLocal}
 				Photos you show her stay on your machine — they never leave this device.
 			{:else}
-				Photos you show her are sent to {providerLabel} so she can see them. They're also
-				saved on this device; delete them anytime from the board.
+				Photos you show her are sent to {providerLabel} so she can see them. They're also saved on this
+				device; delete them anytime from the board.
 			{/if}
 		</span>
-		<button type="button" class="privacy-ack" onclick={() => chatHintStore.ackPrivacy()}>Got it</button>
+		<button type="button" class="privacy-ack" onclick={() => chatHintStore.ackPrivacy()}
+			>Got it</button
+		>
 	</div>
 {/if}
 
@@ -210,6 +189,7 @@
 {#if !barHidden}
 	<div
 		class="bottom-chat-bar"
+		class:overlay
 		class:dragging={chatDraftStore.dropActive}
 		class:align-left={displayStore.chatBarAlignment === 'left'}
 		class:align-right={displayStore.chatBarAlignment === 'right'}
@@ -220,46 +200,7 @@
 				<span>Drop a photo to show her</span>
 			</div>
 		{/if}
-		{#if showStats && !overlay}
-			<div class="stats-tray" out:pop={{ y: 8, duration: 200 }}>
-				<div class="tray-mood">
-					<span class="mood-dot" style="color: {moodInfo.color}"><Icon name={moodInfo.icon} size={16} /></span>
-					<span>{moodInfo.description}</span>
-				</div>
-				<div class="stat-list">
-					{#each stats as stat}
-						<div class="stat-row">
-							<span class="s-icon" style="color: {stat.color}"><Icon name={stat.icon} size={15} /></span>
-							<span class="s-label">{stat.label}</span>
-							<span class="s-track"><span class="s-fill" style="width: {stat.value}%; background: {stat.color}"></span></span>
-							<span class="s-val">{Math.round(stat.value)}</span>
-						</div>
-					{/each}
-				</div>
-				<div class="stat-foot">
-					<span class="foot-stat"><Icon name="calendar" size={12} />{charState.daysKnown}d</span>
-					<span class="foot-stat"><Icon name="message-circle" size={12} />{charState.totalInteractions}</span>
-					{#if charState.currentStreak > 1}
-						<span class="foot-stat streak"><Icon name="flame" size={12} />{charState.currentStreak}</span>
-					{/if}
-					<a href={localPath('app', '/settings/persona')} class="foot-link">Profile <Icon name="arrow-right" size={12} /></a>
-				</div>
-			</div>
-		{/if}
 		<div class="bar-row">
-			{#if !overlay}
-				<button
-					type="button"
-					class="mood-fab"
-					class:active={showStats}
-					onclick={() => (showStats = !showStats)}
-					aria-label="Companion status"
-					aria-expanded={showStats}
-					title={moodInfo.description}
-				>
-					<span class="mood-dot" style="color: {moodInfo.color}"><Icon name={moodInfo.icon} size={20} /></span>
-				</button>
-			{/if}
 			<ChatInput {onSend} {disabled} {visionCapable} {overlay} />
 		</div>
 	</div>
@@ -285,10 +226,18 @@
 		box-shadow: var(--shadow-lg);
 		animation: hintDrop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 	}
-	.vision-hint :global(svg) { flex-shrink: 0; }
+	.vision-hint :global(svg) {
+		flex-shrink: 0;
+	}
 	@keyframes hintDrop {
-		from { transform: translate(-50%, -16px) scale(0.96); opacity: 0; }
-		to { transform: translate(-50%, 0) scale(1); opacity: 1; }
+		from {
+			transform: translate(-50%, -16px) scale(0.96);
+			opacity: 0;
+		}
+		to {
+			transform: translate(-50%, 0) scale(1);
+			opacity: 1;
+		}
 	}
 	/* One-time photo-privacy disclosure (dismissable, light informational card). */
 	.privacy-notice {
@@ -311,7 +260,10 @@
 		box-shadow: var(--shadow-lg);
 		animation: hintDrop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 	}
-	.privacy-notice :global(svg) { flex-shrink: 0; opacity: 0.65; }
+	.privacy-notice :global(svg) {
+		flex-shrink: 0;
+		opacity: 0.65;
+	}
 	@media (prefers-reduced-motion: reduce) {
 		.vision-hint,
 		.privacy-notice {
@@ -330,7 +282,9 @@
 		cursor: pointer;
 		transition: background 0.15s ease;
 	}
-	.privacy-ack:hover { background: var(--accent-hover); }
+	.privacy-ack:hover {
+		background: var(--accent-hover);
+	}
 	.drop-zone {
 		position: absolute;
 		left: 1rem;
@@ -358,15 +312,26 @@
 		animation: dropIcon 0.9s ease-in-out infinite;
 	}
 	@keyframes dropPop {
-		0% { transform: scale(0.8); opacity: 0; }
-		100% { transform: scale(1); opacity: 1; }
+		0% {
+			transform: scale(0.8);
+			opacity: 0;
+		}
+		100% {
+			transform: scale(1);
+			opacity: 1;
+		}
 	}
 	@keyframes dropIcon {
-		0%, 100% { transform: translateY(0) rotate(0deg); }
-		50% { transform: translateY(-4px) rotate(-6deg); }
+		0%,
+		100% {
+			transform: translateY(0) rotate(0deg);
+		}
+		50% {
+			transform: translateY(-4px) rotate(-6deg);
+		}
 	}
 	.bottom-chat-bar {
-		position: fixed;
+		position: absolute;
 		bottom: 2.5rem;
 		left: 50%;
 		transform: translateX(-50%);
@@ -374,6 +339,10 @@
 		max-width: 600px;
 		padding: 0 1rem;
 		z-index: 40;
+	}
+
+	.bottom-chat-bar.overlay {
+		position: fixed;
 	}
 
 	/* Alignment: pin the bar toward an edge instead of centered */
@@ -388,156 +357,11 @@
 		transform: none;
 	}
 
-	/* Command row: mood satellite + input pill */
+	/* The same composer serves both main chat layouts. */
 	.bar-row {
 		display: flex;
 		align-items: flex-end;
 		gap: 0.5rem;
-	}
-
-	/* Floating mood button (companion status) */
-	/* Fixed size: expanding it would shove the input pill off center */
-	.mood-fab {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-		height: 56px;
-		width: 56px;
-		padding: 0;
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-full);
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-		cursor: pointer;
-		font-family: inherit;
-		box-shadow: var(--shadow-md);
-		transition: background 0.15s ease, box-shadow 0.15s ease;
-	}
-
-	.mood-fab:hover,
-	.mood-fab.active {
-		box-shadow: var(--shadow-lg);
-	}
-
-	.mood-dot {
-		display: flex;
-		flex-shrink: 0;
-	}
-
-	/* Stats tray (expands above the pill) */
-	.stats-tray {
-		margin-bottom: 0.5rem;
-		padding: 0.9rem 1rem;
-		background: var(--bg-primary);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		animation: trayIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	@keyframes trayIn {
-		from { opacity: 0; transform: translateY(8px); }
-		to { opacity: 1; transform: translateY(0); }
-	}
-
-	.tray-mood {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		margin-bottom: 0.7rem;
-		font-size: 0.82rem;
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.stat-list {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.5rem 1.25rem;
-	}
-
-	.stat-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.s-icon {
-		display: flex;
-		flex-shrink: 0;
-	}
-
-	.s-label {
-		font-size: 0.78rem;
-		color: var(--text-secondary);
-		width: 4.5rem;
-		flex-shrink: 0;
-	}
-
-	.s-track {
-		flex: 1;
-		height: 6px;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		overflow: hidden;
-	}
-
-	.s-fill {
-		display: block;
-		height: 100%;
-		border-radius: var(--radius-full);
-		transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.s-val {
-		font-size: 0.72rem;
-		color: var(--text-tertiary);
-		font-variant-numeric: tabular-nums;
-		width: 1.75rem;
-		text-align: right;
-		flex-shrink: 0;
-	}
-
-	.stat-foot {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-top: 0.85rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--border-subtle);
-	}
-
-	.foot-stat {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.75rem;
-		color: var(--text-secondary);
-	}
-
-	.foot-stat.streak {
-		color: var(--color-warning);
-	}
-
-	.foot-link {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		margin-left: auto;
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: var(--accent);
-		text-decoration: none;
-	}
-
-	.foot-link:hover {
-		color: var(--accent-hover);
-	}
-
-	@media (max-width: 640px) {
-		.stat-list {
-			grid-template-columns: 1fr;
-		}
 	}
 
 	.stt-error {

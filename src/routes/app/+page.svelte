@@ -1,4 +1,5 @@
 <script lang="ts">
+	import WakeLockIndicator from '$lib/components/display/WakeLockIndicator.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
 	import { TopRightButtons, TopLeftButtons, InfoModal } from '$lib/components/ui';
@@ -32,7 +33,8 @@
 	import Photoboard from '$lib/components/chat/Photoboard.svelte';
 	import { EventScene } from '$lib/components/events';
 	import { OnboardingModal } from '$lib/components/onboarding';
-	import MemoryGraphModal from '$lib/components/memory/MemoryGraphModal.svelte';
+	import { goto } from '$app/navigation';
+	import { localPath } from '$lib/config/links';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import { chatStore } from '$lib/stores/chat.svelte';
 	import { modulesStore } from '$lib/stores/modules.svelte';
@@ -76,9 +78,6 @@
 	// Her impression from the latest turn, attached to a kept photo as its note.
 	let lastNewMemory: string | undefined;
 
-	// Memory graph modal state
-	let showMemoryGraph = $state(false);
-
 	// Onboarding state
 	let showOnboarding = $state(false);
 	let onboardingDismissed = $state(false);
@@ -88,21 +87,6 @@
 	let isTyping = $state(false);
 	// What she's doing this turn, for the shimmer label
 	let thinkingPhase = $state<ThinkingPhase>('thinking');
-	// Chat sidebar state — start open when sidebar mode is enabled
-	let sidebarOpen = $state(
-		displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'
-	);
-
-	// In sidebar-only mode the panel is the only place a reply can appear, so a
-	// closed panel reopens when she starts responding; you should never miss
-	// her answer. In 'both' mode the 3D bubble already shows it, so a manual
-	// close is respected.
-	$effect(() => {
-		if (isTyping && displayStore.chatDisplayMode === 'sidebar' && !sidebarOpen) {
-			sidebarOpen = true;
-		}
-	});
-
 	// Typing dots visibility — delayed by typingIndicatorDelayMs
 	let typingDotsVisible = $state(false);
 	$effect(() => {
@@ -131,12 +115,12 @@
 		}
 	});
 
-	const showBubble = $derived(
-		displayStore.chatDisplayMode === 'bubble' || displayStore.chatDisplayMode === 'both'
-	);
-	const showSidebarTrigger = $derived(
-		displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'
-	);
+	const showBubble = $derived(displayStore.chatDisplayMode === 'bubble');
+	const windowMode = $derived(displayStore.chatDisplayMode === 'sidebar');
+	const dockedChat = $derived(windowMode && !photomodeStore.active);
+	let availableHeight = $state(0);
+	let frameWidth = $state(0);
+	let frameHeight = $state(0);
 	// Images she's currently being shown, floated above her head while she thinks
 	let thinkingImages = $state<{ id: string; url: string }[]>([]);
 
@@ -289,16 +273,15 @@
 </script>
 
 <div class="app-container">
+	<div class="wake-status"><WakeLockIndicator /></div>
 {#if !photomodeStore.active}
-		<TopLeftButtons onOpenMemoryGraph={() => showMemoryGraph = true} onBoardClick={() => showBoard = true} />
+		<TopLeftButtons onOpenMemoryGraph={() => goto(localPath('app', '/settings/memory?view=graph'))} onBoardClick={() => showBoard = true} />
 		<TopRightButtons
 			onInfoClick={() => showInfoModal = true}
 			upcomingReminders={reminderStore.upcoming}
 			onDeleteReminder={reminderStore.deleteReminder}
 			recentFired={reminderStore.recentFired}
 			onDismissRecentFired={reminderStore.dismissRecentFired}
-			sidebarOpen={sidebarOpen && showSidebarTrigger}
-			onSidebarToggle={() => sidebarOpen = !sidebarOpen}
 		/>
 	{/if}
 	{#if showInfoModal}
@@ -307,11 +290,11 @@
 	{#if showBoard}
 		<Photoboard onClose={() => showBoard = false} />
 	{/if}
-	{#if showMemoryGraph}
-		<MemoryGraphModal onClose={() => showMemoryGraph = false} />
-	{/if}
 
-	<main class="main-content">
+	<main class="main-content" class:docked-chat={dockedChat} class:dock-left={displayStore.sidebarPosition === 'left'}
+		bind:clientHeight={availableHeight}
+		style:--chat-dock-height={availableHeight > 0 && availableHeight < 500 ? '70%' : '50%'}>
+		<div class="character-frame" aria-hidden="true" bind:clientWidth={frameWidth} bind:clientHeight={frameHeight}></div>
 		<!-- VRM Stage (Full Background) -->
 		<div class="stage-container">
 			{#if vrmStore.isLoading || !vrmStore.modelUrl}
@@ -353,7 +336,7 @@
 				class:is-loading={vrmStore.isLoading || !vrmStore.modelUrl}
 				style:filter={photoFilterCss}
 			>
-				<VrmScene />
+				<VrmScene framing={{ width: frameWidth, height: frameHeight, left: displayStore.sidebarPosition === 'left' }} />
 			</div>
 
 			{#if photomodeStore.active && photomodeStore.vignette}
@@ -391,8 +374,7 @@
 
 			<!-- Chat window (hides with the rest of the chat UI in photo mode) -->
 			<ChatWindow
-				open={sidebarOpen && showSidebarTrigger}
-				onClose={() => sidebarOpen = false}
+				open={windowMode}
 				isTyping={isTyping && typingDotsVisible}
 				phase={thinkingPhase}
 				onSend={handleSend}
@@ -410,7 +392,7 @@
 				{visionCapable}
 				providerLabel={imageProvider.label}
 				providerIsLocal={imageProvider.isLocal}
-				barHidden={sidebarOpen && showSidebarTrigger}
+				barHidden={windowMode}
 			/>
 		</div>
 		{#if photomodeStore.active}
@@ -458,16 +440,21 @@
 	.app-container {
 		display: flex;
 		flex-direction: column;
-		height: 100vh;
+		height: 100%;
 		overflow: hidden;
 	}
 
 	.main-content {
+		--chat-dock-width: clamp(320px, 36vw, 440px);
+		--chat-dock-height: 50%;
+		min-height: 0;
 		flex: 1;
 		display: flex;
 		position: relative;
 		overflow: hidden;
 	}
+
+	.character-frame { position: absolute; inset: 0; pointer-events: none; }
 
 	.stage-container {
 		position: absolute;
@@ -645,4 +632,14 @@
 			max-width: calc(100vw - 1.5rem);
 		}
 	}
+
+	.docked-chat .character-frame { right: var(--chat-dock-width); }
+	.docked-chat.dock-left .character-frame { left: var(--chat-dock-width); right: 0; }
+	@media (max-width: 720px) {
+		.docked-chat .character-frame, .docked-chat.dock-left .character-frame {
+			left: 0; right: 0; bottom: var(--chat-dock-height);
+		}
+	}
+
+	.wake-status { position: fixed; top: 68px; left: 1rem; z-index: 46; }
 </style>

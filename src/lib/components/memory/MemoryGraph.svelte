@@ -1,7 +1,10 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { browser } from '$app/environment';
+	import { onMount, untrack } from 'svelte';
+	import type ForceGraph from 'force-graph';
+	import type { LinkObject } from 'force-graph';
 	import type { FactCategory } from '$lib/types/memory';
+	import { Button, Icon } from '$lib/components/ui';
+	import MemoryFactSummary from './MemoryFactSummary.svelte';
 	import {
 		getFactsWithEmbeddings,
 		buildGraph,
@@ -9,589 +12,411 @@
 		getConnectedNodes,
 		categoryColors,
 		type GraphData,
-		type GraphNode,
-		type GraphFilters
+		type GraphNode
 	} from '$lib/services/memory-graph';
 
+	let {
+		selectedId = $bindable(null),
+		categories = $bindable<FactCategory[]>(['user', 'relationship', 'shared_experience']),
+		onInspect,
+		onOpenFacts,
+		expanded = false
+	}: {
+		selectedId?: number | null;
+		categories?: FactCategory[];
+		onInspect: (id: number) => void;
+		onOpenFacts: () => void;
+		expanded?: boolean;
+	} = $props();
 	let container: HTMLDivElement;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let graph: any = null;
-	let graphData = $state<GraphData>({ nodes: [], links: [] });
-	let fullGraphData = $state<GraphData>({ nodes: [], links: [] });
+	let graph = $state.raw<ForceGraph<GraphNode, LinkObject<GraphNode>> | null>(null);
+	let fullData = $state<GraphData>({ nodes: [], links: [] });
 	let loading = $state(true);
-	let error = $state<string | null>(null);
-	let selectedNode = $state<GraphNode | null>(null);
-	let hoveredNode = $state<GraphNode | null>(null);
-	let isDarkMode = $state(true);
+	let error = $state('');
+	let dark = $state(false);
+	let reducedMotion = $state(false);
+	const categoryOptions: { value: FactCategory; label: string }[] = [
+		{ value: 'user', label: 'About you' },
+		{ value: 'relationship', label: 'Relationship' },
+		{ value: 'shared_experience', label: 'Shared' }
+	];
+	const data = $derived(
+		filterGraph(fullData, { categories: new Set(categories), minSimilarity: 0.5 })
+	);
+	const selected = $derived(data.nodes.find((node) => node.id === selectedId));
+	let destroyed = false;
+	let fitAfterLayout = true;
 
-	// Filter state
-	let showUser = $state(true);
-	let showRelationship = $state(true);
-	let showSharedExperience = $state(true);
-	const similarityThreshold = 0.5; // Fixed threshold
-
-	// Detect dark mode
-	function checkDarkMode() {
-		if (browser) {
-			isDarkMode = document.documentElement.classList.contains('dark');
+	function fit() {
+		const bounds = graph?.getGraphBbox();
+		if (!bounds || ![...bounds.x, ...bounds.y].every(Number.isFinite)) return false;
+		graph?.zoomToFit(reducedMotion ? 0 : 300, 40);
+		return true;
+	}
+	function toggleCategory(category: FactCategory) {
+		categories = categories.includes(category)
+			? categories.filter((value) => value !== category)
+			: [...categories, category];
+	}
+	function selectAt(event: MouseEvent) {
+		if (!graph) return;
+		const canvas = container.querySelector('canvas');
+		if (!canvas) return;
+		const rect = canvas.getBoundingClientRect();
+		const touch = event instanceof PointerEvent && event.pointerType === 'touch';
+		const radius = Math.max(graph.nodeRelSize() * graph.zoom(), touch ? 22 : 4);
+		let nearest: number | null = null;
+		let distance = radius;
+		// A quick tap can precede force-graph's hover update. Resolve the click
+		// from current coordinates; its click callbacks still exclude drags.
+		for (const node of graph.graphData().nodes) {
+			if (node.x === undefined || node.y === undefined) continue;
+			const position = graph.graph2ScreenCoords(node.x, node.y);
+			const delta = Math.hypot(
+				event.clientX - rect.left - position.x,
+				event.clientY - rect.top - position.y
+			);
+			if (delta <= distance) {
+				nearest = node.id;
+				distance = delta;
+			}
 		}
+		selectedId = selectedId === nearest ? null : nearest;
 	}
 
-	// Build filters from current toggle states (not derived to avoid object identity issues)
-	function buildFilters(): GraphFilters {
-		return {
-			categories: new Set<FactCategory>(
-				[
-					showUser && 'user',
-					showRelationship && 'relationship',
-					showSharedExperience && 'shared_experience'
-				].filter(Boolean) as FactCategory[]
-			),
-			minSimilarity: similarityThreshold
-		};
-	}
-
-	// Update graph when filter toggles change
 	$effect(() => {
-		// Track the individual toggle values (not a derived object)
-		const _u = showUser;
-		const _r = showRelationship;
-		const _s = showSharedExperience;
-
-		// Only run if we have data
-		if (fullGraphData.nodes.length === 0) return;
-
-		// Build filters and update graph
-		const filters = buildFilters();
-		const newGraphData = filterGraph(fullGraphData, filters);
-		graphData = newGraphData;
-
-		// Update the force-graph visualization (use queueMicrotask to avoid blocking)
-		queueMicrotask(() => {
-			updateGraphData();
-		});
+		const current = graph;
+		const next = data;
+		if (current)
+			untrack(() => {
+				// force-graph mutates coordinates and link endpoints. Keep its copy separate.
+				current.graphData({
+					nodes: next.nodes.map((node) => ({ ...node })),
+					links: next.links.map((link) => ({ ...link }))
+				});
+			});
+	});
+	$effect(() => {
+		const current = graph;
+		const active = selected;
+		const connected = active ? getConnectedNodes(data, active.id) : null;
+		const isDark = dark;
+		const reduce = reducedMotion;
+		if (!current) return;
+		const touches = (link: LinkObject<GraphNode>) =>
+			[link.source, link.target].some(
+				(node) => (typeof node === 'object' ? node.id : node) === active?.id
+			);
+		current
+			.nodeColor((node) =>
+				!active || node.id === active.id || connected?.has(node.id)
+					? categoryColors[node.category]
+					: isDark
+						? '#333'
+						: '#ddd'
+			)
+			.linkColor((link) =>
+				active && touches(link)
+					? 'rgba(0, 178, 255, 0.8)'
+					: isDark
+						? `rgba(255,255,255,${active ? 0.05 : 0.2})`
+						: `rgba(0,0,0,${active ? 0.05 : 0.15})`
+			)
+			.linkWidth((link) => (active ? (touches(link) ? 2 : 0.5) : 1))
+			.linkDirectionalParticles(reduce ? 0 : 2)
+			.linkDirectionalParticleColor(() => (isDark ? '#00b2ff' : '#0099dd'))
+			.cooldownTicks(reduce ? 0 : 160);
 	});
 
-	// Update graph data (triggers physics recalculation)
-	function updateGraphData() {
-		if (!graph) return;
-
-		graph.graphData({
-			nodes: graphData.nodes.map((node) => ({ ...node })),
-			links: graphData.links.map((link) => ({ ...link }))
-		});
-
-		applyStyles();
-	}
-
-	// Apply visual styles without resetting physics
-	function applyStyles() {
-		if (!graph) return;
-
-		checkDarkMode();
-
-		const connectedToSelected = selectedNode
-			? getConnectedNodes(graphData, selectedNode.id)
-			: null;
-
-		// Colors that work in both modes
-		const baseLinkColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
-		const highlightLinkColor = isDarkMode ? 'rgba(1, 178, 255, 0.8)' : 'rgba(0, 153, 221, 0.8)';
-		const dimmedLinkColor = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
-		const dimmedNodeColor = isDarkMode ? '#333' : '#ddd';
-
-		graph
-			.nodeColor((node: GraphNode) => {
-				if (selectedNode) {
-					if (node.id === selectedNode.id) return categoryColors[node.category];
-					if (connectedToSelected?.has(node.id)) return categoryColors[node.category];
-					return dimmedNodeColor;
-				}
-				return categoryColors[node.category];
-			})
-			.linkColor((link: { source: GraphNode | number; target: GraphNode | number }) => {
-				if (!selectedNode) return baseLinkColor;
-
-				// Check if this link connects to the selected node
-				const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-				const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-
-				if (sourceId === selectedNode.id || targetId === selectedNode.id) {
-					return highlightLinkColor;
-				}
-				return dimmedLinkColor;
-			})
-			.linkWidth((link: { source: GraphNode | number; target: GraphNode | number }) => {
-				if (!selectedNode) return 1;
-
-				const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-				const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-
-				if (sourceId === selectedNode.id || targetId === selectedNode.id) {
-					return 2;
-				}
-				return 0.5;
-			})
-			.linkDirectionalParticleColor(() => isDarkMode ? '#00b2ff' : '#0099dd');
-	}
-
-	function handleNodeClick(node: GraphNode) {
-		if (selectedNode?.id === node.id) {
-			selectedNode = null;
-		} else {
-			selectedNode = node;
-		}
-		applyStyles();
-	}
-
-	function handleBackgroundClick() {
-		selectedNode = null;
-		applyStyles();
-	}
-
-	function resetView() {
-		if (graph) {
-			graph.zoomToFit(400, 50);
-			selectedNode = null;
-			applyStyles();
-		}
-	}
-
-	async function initGraph() {
-		if (!browser) return;
-
+	async function load() {
+		loading = true;
+		error = '';
 		try {
-			loading = true;
-			error = null;
-
-			// Load facts
 			const facts = await getFactsWithEmbeddings();
-
-			if (facts.length === 0) {
-				error = 'No memories with embeddings found. Chat more to build memories!';
-				loading = false;
-				return;
-			}
-
-			// Build graph
-			fullGraphData = buildGraph(facts, 0); // Build with threshold 0, filter later
-			graphData = filterGraph(fullGraphData, buildFilters());
-
-			// Initialize force-graph
-			const ForceGraph = (await import('force-graph')).default;
-
-			// Component may have been destroyed while we awaited facts/module load;
-			// constructing the graph now would leave its rAF loop running forever
 			if (destroyed) return;
-
-			checkDarkMode();
-
-			graph = new ForceGraph(container)
-				.backgroundColor('transparent')
-				// Small nodes like the example
-				.nodeRelSize(1)
-				.nodeVal(1)
-				.nodeId('id')
-				.linkSource('source')
-				.linkTarget('target')
-				// Animated particles flowing along links
-				.linkDirectionalParticles(2)
-				.linkDirectionalParticleSpeed(0.005)
-				.linkDirectionalParticleWidth(1.5)
-				// Dynamic physics like the example
-				.d3AlphaDecay(0.02)
-				.d3VelocityDecay(0.3)
-				.warmupTicks(0)
-				.cooldownTicks(Infinity)
-				// Interactions
-				.onNodeClick((node) => handleNodeClick(node as GraphNode))
-				.onNodeHover((node) => {
-					hoveredNode = node as GraphNode | null;
-					container.style.cursor = node ? 'pointer' : 'grab';
-				})
-				.onBackgroundClick(() => handleBackgroundClick());
-
-			updateGraphData();
-
-			// Fit to view after a short delay
-			setTimeout(() => {
-				graph?.zoomToFit(400, 50);
-			}, 500);
-
-			loading = false;
-		} catch (e) {
-			console.error('Failed to initialize memory graph:', e);
-			error = 'Failed to load memory graph';
-			loading = false;
+			fullData = buildGraph(facts, 0.5);
+			if (facts.length && !graph) {
+				const ForceGraph = (await import('force-graph')).default;
+				if (destroyed) return;
+				graph = new ForceGraph<GraphNode, LinkObject<GraphNode>>(container)
+					.width(container.clientWidth)
+					.height(container.clientHeight)
+					.backgroundColor('transparent')
+					.nodeRelSize(3)
+					.nodeVal(1)
+					.nodeId('id')
+					.linkSource('source')
+					.linkTarget('target')
+					.linkDirectionalParticleSpeed(0.005)
+					.linkDirectionalParticleWidth(1.5)
+					.d3AlphaDecay(0.02)
+					.d3VelocityDecay(0.3)
+					.warmupTicks(reducedMotion ? 80 : 0)
+					.onEngineStop(() => {
+						// Fit after the layout settles, including its reduced-motion warmup.
+						if (fitAfterLayout && fit()) fitAfterLayout = false;
+					})
+					.onNodeClick((_node, event) => selectAt(event))
+					.onLinkClick((_link, event) => selectAt(event))
+					.onBackgroundClick(selectAt);
+				const canvas = container.querySelector('canvas');
+				canvas?.setAttribute(
+					'aria-label',
+					'Memory connections. Use Inspect a memory to select a node with the keyboard.'
+				);
+				canvas?.setAttribute('role', 'img');
+			}
+		} catch {
+			if (!destroyed)
+				error =
+					'Could not load the memory graph. Your saved memories are still available in Facts.';
+		} finally {
+			if (!destroyed) loading = false;
 		}
 	}
-
-	let destroyed = false;
 
 	onMount(() => {
-		initGraph();
-	});
-
-	onDestroy(() => {
-		destroyed = true;
-		if (graph) {
-			graph._destructor?.();
-		}
-	});
-
-	// Handle resize
-	$effect(() => {
-		if (!browser) return;
-
-		const handleResize = () => {
-			if (graph && container) {
+		const media = matchMedia('(prefers-reduced-motion: reduce)');
+		const motion = () => (reducedMotion = media.matches);
+		const theme = () => (dark = document.documentElement.classList.contains('dark'));
+		motion();
+		theme();
+		media.addEventListener('change', motion);
+		const themes = new MutationObserver(theme);
+		themes.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+		const resize = new ResizeObserver(() => {
+			if (graph && container.clientWidth && container.clientHeight) {
 				graph.width(container.clientWidth).height(container.clientHeight);
 			}
+		});
+		resize.observe(container);
+		const visibility = () => (document.hidden ? graph?.pauseAnimation() : graph?.resumeAnimation());
+		document.addEventListener('visibilitychange', visibility);
+		void load();
+		return () => {
+			destroyed = true;
+			resize.disconnect();
+			themes.disconnect();
+			media.removeEventListener('change', motion);
+			document.removeEventListener('visibilitychange', visibility);
+			graph?._destructor();
 		};
-
-		window.addEventListener('resize', handleResize);
-		return () => window.removeEventListener('resize', handleResize);
-	});
-
-	// Watch for theme changes
-	$effect(() => {
-		if (!browser) return;
-
-		const observer = new MutationObserver(() => {
-			const wasDark = isDarkMode;
-			checkDarkMode();
-			if (wasDark !== isDarkMode && graph) {
-				applyStyles();
-			}
-		});
-
-		observer.observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ['class']
-		});
-
-		return () => observer.disconnect();
 	});
 </script>
 
-<div class="memory-graph">
-	<!-- Controls -->
+<div class="memory-graph" class:expanded>
 	<div class="controls">
-		<div class="filter-group">
-			<span class="filter-label">Categories</span>
-			<div class="category-toggles">
-				<label class="category-toggle" style="--cat-color: {categoryColors.user}">
-					<input type="checkbox" bind:checked={showUser} />
-					<span class="toggle-dot"></span>
-					<span>User</span>
-				</label>
-				<label class="category-toggle" style="--cat-color: {categoryColors.relationship}">
-					<input type="checkbox" bind:checked={showRelationship} />
-					<span class="toggle-dot"></span>
-					<span>Relationship</span>
-				</label>
-				<label class="category-toggle" style="--cat-color: {categoryColors.shared_experience}">
-					<input type="checkbox" bind:checked={showSharedExperience} />
-					<span class="toggle-dot"></span>
-					<span>Shared</span>
-				</label>
-			</div>
+		<div class="category-toggles" role="group" aria-label="Graph categories">
+			{#each categoryOptions as category}<Button
+					variant={categories.includes(category.value) ? 'secondary' : 'ghost'}
+					size="sm"
+					aria-pressed={categories.includes(category.value)}
+					onclick={() => toggleCategory(category.value)}
+					><span class="category-dot" style:background={categoryColors[category.value]}
+					></span>{category.label}</Button
+				>{/each}
 		</div>
-
-		<button class="reset-btn" onclick={resetView}>Reset View</button>
+		<Button
+			variant="ghost"
+			size="sm"
+			onclick={() => {
+				selectedId = null;
+				fit();
+			}}
+			disabled={loading || !data.nodes.length}><Icon name="refresh" size={14} />Reset view</Button
+		>
 	</div>
-
-	<!-- Graph container -->
-	<div class="graph-container" bind:this={container}>
-		{#if loading}
-			<div class="loading">
-				<div class="spinner"></div>
-				<span>Loading memories...</span>
-			</div>
-		{/if}
-
-		{#if error}
-			<div class="error-message">
-				<span>{error}</span>
-			</div>
-		{/if}
-	</div>
-
-	<!-- Tooltip -->
-	{#if hoveredNode}
-		<div class="tooltip">
-			<div class="tooltip-category" style="color: {categoryColors[hoveredNode.category]}">
-				{hoveredNode.category.replace('_', ' ')}
-			</div>
-			<div class="tooltip-content">{hoveredNode.content}</div>
-			<div class="tooltip-meta">
-				Importance: {hoveredNode.importance} · Referenced: {hoveredNode.referenceCount}x
-			</div>
+	<label class="memory-picker"
+		>Inspect a memory
+		<select
+			class="settings-field"
+			value={selected?.id ?? ''}
+			onchange={(event) =>
+				(selectedId = event.currentTarget.value ? Number(event.currentTarget.value) : null)}
+			disabled={!data.nodes.length}
+		>
+			<option value="">Select a memory</option>
+			{#each data.nodes as node}<option value={node.id}
+					>{node.content.length > 90 ? `${node.content.slice(0, 90)}…` : node.content}</option
+				>{/each}
+		</select>
+	</label>
+	<div class="graph-layout" class:has-selection={!!selected}>
+		<div class="graph-container" bind:this={container}>
+			{#if loading}<div class="graph-message" role="status">Loading graph...</div>
+			{:else if error}<div class="graph-message" role="alert">
+					<p>{error}</p>
+					<Button variant="secondary" onclick={load}>Retry graph</Button>
+				</div>
+			{:else if !fullData.nodes.length}<div class="graph-message">
+					<Icon name="brain" size={28} />
+					<h3>No connected memories yet</h3>
+					<p>
+						The graph shows memories once their connections are ready. You can still read and manage
+						all saved memories in Facts.
+					</p>
+					<Button variant="secondary" onclick={onOpenFacts}>View facts</Button>
+				</div>
+			{:else if !data.nodes.length}<div class="graph-message">
+					<p>No memories match these categories.</p>
+					<Button
+						variant="secondary"
+						onclick={() => (categories = ['user', 'relationship', 'shared_experience'])}
+						>Show all categories</Button
+					>
+				</div>{/if}
 		</div>
-	{/if}
-
-	<!-- Selected node detail -->
-	{#if selectedNode}
-		<div class="selected-detail">
-			<div class="detail-header">
-				<span class="detail-category" style="background: {categoryColors[selectedNode.category]}">
-					{selectedNode.category.replace('_', ' ')}
-				</span>
-				<button class="close-btn" onclick={() => (selectedNode = null)}>×</button>
-			</div>
-			<div class="detail-content">{selectedNode.content}</div>
-			<div class="detail-meta">
-				<div>Importance: {selectedNode.importance}</div>
-				<div>Referenced: {selectedNode.referenceCount}x</div>
-				<div>Created: {new Date(selectedNode.createdAt).toLocaleDateString()}</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- Stats -->
-	<div class="stats">
-		{graphData.nodes.length} memories · {graphData.links.length} connections
+		{#if selected}<aside class="selected-detail" aria-label="Memory details">
+				<div class="detail-heading">
+					<h3>Memory details</h3>
+					<Button
+						variant="ghost"
+						size="sm"
+						aria-label="Close memory details"
+						onclick={() => (selectedId = null)}><Icon name="x" size={14} /></Button
+					>
+				</div>
+				<MemoryFactSummary fact={selected} />
+				<dl>
+					<dt>Referenced</dt>
+					<dd>{selected.referenceCount} times</dd>
+					<dt>Created</dt>
+					<dd>{new Date(selected.createdAt).toLocaleString()}</dd>
+				</dl>
+				<Button variant="secondary" size="sm" onclick={() => onInspect(selected!.id)}
+					>Open in Facts<Icon name="arrow-right" size={14} /></Button
+				>
+			</aside>{/if}
 	</div>
+	<p class="graph-stats">
+		{data.nodes.length}
+		{data.nodes.length === 1 ? 'memory' : 'memories'} · {data.links.length}
+		{data.links.length === 1 ? 'connection' : 'connections'}
+	</p>
 </div>
 
 <style>
 	.memory-graph {
-		position: relative;
-		width: 100%;
-		height: 100%;
-		background: var(--bg-page);
-		overflow: hidden;
-	}
-
-	.controls {
-		position: absolute;
-		top: 1rem;
-		left: 1rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		background: var(--bg-primary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-lg);
-		padding: 1rem;
-		z-index: 10;
-		min-width: 200px;
-		box-shadow: var(--shadow-md);
+		min-width: 0;
 	}
-
-	.filter-group {
+	.controls,
+	.category-toggles {
 		display: flex;
-		flex-direction: column;
+		align-items: center;
+		flex-wrap: wrap;
 		gap: 0.5rem;
 	}
-
-	.filter-label {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+	.controls {
+		justify-content: space-between;
 	}
-
-	.category-toggles {
+	.category-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+	.memory-picker {
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;
-	}
-
-	.category-toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
 		font-size: 0.8125rem;
 		color: var(--text-secondary);
-		cursor: pointer;
 	}
-
-	.category-toggle input {
-		display: none;
+	.graph-layout {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1rem;
 	}
-
-	.toggle-dot {
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		background: var(--bg-tertiary);
-		border: 2px solid var(--cat-color);
-		transition: all 0.15s;
+	.graph-layout.has-selection {
+		grid-template-columns: minmax(0, 1fr) 280px;
 	}
-
-	.category-toggle input:checked + .toggle-dot {
-		background: var(--cat-color);
-	}
-
-	.reset-btn {
-		padding: 0.5rem 0.75rem;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-md);
-		color: var(--text-secondary);
-		font-size: 0.8125rem;
-		font-family: inherit;
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s;
-	}
-
-	.reset-btn:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--text-primary);
-	}
-
-	.reset-btn:active {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-	}
-
 	.graph-container {
-		width: 100%;
-		height: 100%;
+		position: relative;
+		height: clamp(300px, 55dvh, 620px);
+		min-width: 0;
+		overflow: hidden;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-subtle);
+		border-radius: var(--radius-lg);
 	}
-
-	.loading,
-	.error-message {
+	.graph-container :global(canvas) {
+		display: block;
+		/* Canvas dimensions must match the graph's hit coordinates immediately. */
+		transition: none;
+	}
+	.graph-message {
 		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
+		inset: 0;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
+		justify-content: center;
+		gap: 0.75rem;
+		padding: 1.5rem;
 		color: var(--text-secondary);
+		text-align: center;
 	}
-
-	.spinner {
-		width: 32px;
-		height: 32px;
-		border: 3px solid var(--border-light);
-		border-top-color: #00b2ff;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.tooltip {
-		position: fixed;
-		bottom: 5rem;
-		left: 50%;
-		transform: translateX(-50%);
-		background: var(--bg-primary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-lg);
-		padding: 0.75rem 1rem;
-		max-width: 400px;
-		z-index: 20;
-		pointer-events: none;
-		box-shadow: var(--shadow-lg);
-	}
-
-	.tooltip-category {
-		font-size: 0.6875rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: 0.25rem;
-	}
-
-	.tooltip-content {
+	.graph-message p {
+		max-width: 380px;
+		margin: 0;
 		font-size: 0.875rem;
+	}
+	h3 {
+		margin: 0;
+		font-size: 0.9375rem;
+		font-weight: 600;
 		color: var(--text-primary);
-		line-height: 1.4;
-		margin-bottom: 0.5rem;
 	}
-
-	.tooltip-meta {
-		font-size: 0.75rem;
-		color: var(--text-tertiary);
-	}
-
 	.selected-detail {
-		position: absolute;
-		top: 1rem;
-		right: 1rem;
+		padding: 1rem;
+		min-width: 0;
+		align-self: start;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-subtle);
 		border-radius: var(--radius-lg);
-		padding: 1rem;
-		max-width: 300px;
-		z-index: 10;
-		box-shadow: var(--shadow-lg);
+		font-size: 0.875rem;
 	}
-
-	.detail-header {
+	.detail-heading {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: 0.5rem;
 		margin-bottom: 0.75rem;
 	}
-
-	.detail-category {
-		font-size: 0.6875rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		padding: 0.25rem 0.5rem;
-		border-radius: 0.25rem;
-		color: #fff;
+	dl {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0.5rem 0.75rem;
+		font-size: 0.75rem;
+		margin: 1rem 0;
 	}
-
-	.close-btn {
-		width: 24px;
-		height: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: transparent;
-		border: none;
-		border-radius: 50%;
+	dt {
 		color: var(--text-secondary);
-		font-size: 1rem;
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s, transform 0.15s;
 	}
-
-	.close-btn:hover {
-		background: var(--bg-secondary);
-		color: var(--text-primary);
+	dd {
+		margin: 0;
+		overflow-wrap: anywhere;
 	}
-
-	.close-btn:active {
-		transform: scale(0.95);
-	}
-
-	.detail-content {
-		font-size: 0.875rem;
-		color: var(--text-primary);
-		line-height: 1.5;
-		margin-bottom: 0.75rem;
-	}
-
-	.detail-meta {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
+	.graph-stats {
+		margin: 0;
+		color: var(--text-secondary);
 		font-size: 0.75rem;
-		color: var(--text-tertiary);
 	}
-
-	.stats {
-		position: absolute;
-		bottom: 1rem;
-		left: 1rem;
-		font-size: 0.75rem;
-		color: var(--text-tertiary);
-		background: var(--bg-primary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-md);
-		padding: 0.5rem 0.75rem;
-		box-shadow: var(--shadow-sm);
+	.expanded .graph-container {
+		height: max(320px, calc(100dvh - 245px));
+	}
+	@media (max-width: 1100px) {
+		.graph-layout.has-selection {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	@media (pointer: coarse) {
+		.controls :global(button),
+		.selected-detail :global(button) {
+			min-height: 44px;
+		}
 	}
 </style>

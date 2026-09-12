@@ -25,7 +25,7 @@ test('setChatDisplayMode updates mode and preserves sidebar position', () => {
 
 test('setSidebarPosition updates position and preserves chat display mode', () => {
 	const current = {
-		chatDisplayMode: 'both' as const,
+		chatDisplayMode: 'sidebar' as const,
 		sidebarPosition: 'right' as const
 	};
 	const next = setSidebarPosition(current, 'left');

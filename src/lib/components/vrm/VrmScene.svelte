@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { type ChatFrame } from './chat-framing';
 	import { Canvas } from '@threlte/core';
 	import { XR } from '@threlte/xr';
 	import { WebGLRenderer, SRGBColorSpace, NoToneMapping } from 'three';
@@ -13,9 +14,10 @@
 		centered?: boolean;
 		locked?: boolean;
 		overlay?: boolean;
+		framing?: ChatFrame;
 	}
 
-	let { centered = false, locked = false, overlay = false }: Props = $props();
+	let { centered = false, locked = false, overlay = false, framing }: Props = $props();
 	let mounted = $state(false);
 	let webglError = $state(false);
 
@@ -87,7 +89,7 @@
 				onsessionstart={() => arStore.setActive(true)}
 				onsessionend={() => arStore.setActive(false)}
 			/>
-			<Scene {centered} {locked} {overlay} />
+			<Scene {centered} {locked} {overlay} {framing} />
 		</Canvas>
 	{:else if webglError}
 		<div class="vrm-scene-fallback">

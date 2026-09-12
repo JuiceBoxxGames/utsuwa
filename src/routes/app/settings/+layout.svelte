@@ -1,4 +1,6 @@
 <script lang="ts">
+	import './settings-page.css';
+	import '$lib/components/settings/settings-controls.css';
 	import { page } from '$app/stores';
 	import { Icon } from '$lib/components/ui';
 	import { localPath } from '$lib/config/links';
@@ -11,6 +13,7 @@
 		{ href: localPath('app', '/settings/llm'), label: 'LLM Model', icon: 'brain' },
 		{ href: localPath('app', '/settings/tts'), label: 'TTS', icon: 'volume' },
 		{ href: localPath('app', '/settings/stt'), label: 'STT', icon: 'mic' },
+		{ href: localPath('app', '/settings/memory'), label: 'Memory', icon: 'brain' },
 		{ href: localPath('app', '/settings/data'), label: 'Data', icon: 'database' },
 		{ href: localPath('app', '/settings/developer'), label: 'Developer', icon: 'code' }
 	]);
@@ -24,7 +27,7 @@
 	<!-- Sidebar -->
 	<aside class="sidebar">
 		<div class="sidebar-header">
-			<a href={localPath('app')} class="back-button">
+			<a href={localPath('app')} class="back-button" aria-label="Back">
 				<Icon name="chevron-left" size={20} />
 				<span>Back</span>
 			</a>
@@ -35,6 +38,9 @@
 			{#each navItems as item}
 				<a
 					href={item.href}
+					aria-label={item.label}
+					title={item.label}
+					aria-current={$page.url.pathname === item.href ? 'page' : undefined}
 					class="nav-item"
 					class:active={$page.url.pathname === item.href}
 				>
@@ -48,7 +54,7 @@
 	<!-- Content -->
 	<main class="content">
 		{@render children()}
-		<div class="page-bg-icon">
+		<div class="page-bg-icon" aria-hidden="true">
 			{#if currentIcon === 'persona'}
 				<!-- User circle solid -->
 				<svg viewBox="0 0 512 512" fill="currentColor"><path d="M399 384.2C376.9 345.8 335.4 320 288 320H224c-47.4 0-88.9 25.8-111 64.2c35.2 39.2 86.2 63.8 143 63.8s107.8-24.7 143-63.8zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm256 16a72 72 0 1 0 0-144 72 72 0 1 0 0 144z"/></svg>
@@ -72,7 +78,8 @@
 <style>
 	.settings-layout {
 		display: flex;
-		height: 100vh;
+		height: 100%;
+		min-height: 0;
 		overflow: hidden;
 		background: var(--bg-page);
 	}
@@ -157,7 +164,10 @@
 	}
 
 	.content {
+		isolation: isolate;
 		flex: 1;
+		min-width: 0;
+		min-height: 0;
 		padding: 2rem;
 		overflow: hidden;
 		display: flex;
@@ -170,6 +180,8 @@
 	:global(.dark) .content {
 		background: var(--bg-page);
 	}
+
+	.content > :global(:first-child) { position: relative; z-index: 1; }
 
 	.page-bg-icon {
 		position: absolute;

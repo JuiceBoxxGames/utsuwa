@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Switch from '$lib/components/ui/Switch.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { getLLMProvider } from '$lib/services/providers/registry';
 	import { Icon, ProviderDropdown, ModelDropdown, ContextSizeSlider } from '$lib/components/ui';
@@ -38,16 +39,7 @@
 	<div class="service-header">
 		<Icon name="brain" size={14} />
 		<span>Chat (LLM)</span>
-		<button
-			class="service-toggle"
-			class:enabled={state.isLLMEnabled}
-			onclick={state.toggleLLM}
-			aria-label="Toggle chat (LLM)"
-		>
-			<span class="toggle-track">
-				<span class="toggle-thumb"></span>
-			</span>
-		</button>
+		<Switch checked={state.isLLMEnabled} onchange={state.toggleLLM} label="Chat (LLM)" />
 	</div>
 
 	{#if state.isLLMEnabled}
@@ -67,7 +59,7 @@
 						type="password"
 						class="api-key-input"
 						class:error={state.llmFetchError}
-						placeholder={provider?.custom ? 'API Key (optional)' : 'API Key'}
+						placeholder={provider?.custom ? 'API Key (optional)' : 'API Key'} aria-label={provider?.custom ? 'API Key (optional)' : 'API Key'}
 						value={settingsStore.getProviderConfig(provider.id).apiKey ?? ''}
 						oninput={(e) => state.handleApiKeyChange(provider.id, e.currentTarget.value)}
 						onblur={provider?.custom ? undefined : state.handleLLMApiKeyBlur}
@@ -108,7 +100,7 @@
 					<input
 						type="text"
 						class="api-key-input"
-						placeholder="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)"
+						placeholder="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)" aria-label="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)"
 						value={(state.consciousnessSettings.activeModel as string) ?? ''}
 						oninput={(e) => state.handleLLMModelChange(e.currentTarget.value.trim())}
 					/>
@@ -140,7 +132,7 @@
 							<input
 								id="llm-temperature"
 								type="range"
-								class="llm-param-slider"
+								class="settings-range"
 								min="0"
 								max="2"
 								step="0.05"
@@ -158,7 +150,7 @@
 							<input
 								id="llm-top-p"
 								type="range"
-								class="llm-param-slider"
+								class="settings-range"
 								min="0"
 								max="1"
 								step="0.05"
@@ -179,7 +171,7 @@
 								class="api-key-input"
 								min="1"
 								step="1"
-								placeholder="Unlimited"
+								placeholder="Unlimited" aria-label="Unlimited"
 								value={(state.consciousnessSettings.maxTokens as number) ?? ''}
 								oninput={(e) => {
 									const val = e.currentTarget.value;
@@ -197,7 +189,7 @@
 							<input
 								id="llm-presence-penalty"
 								type="range"
-								class="llm-param-slider"
+								class="settings-range"
 								min="-2"
 								max="2"
 								step="0.1"
@@ -215,7 +207,7 @@
 							<input
 								id="llm-frequency-penalty"
 								type="range"
-								class="llm-param-slider"
+								class="settings-range"
 								min="-2"
 								max="2"
 								step="0.1"
@@ -338,8 +330,4 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	.llm-param-slider {
-		width: 100%;
-		cursor: pointer;
-	}
 </style>

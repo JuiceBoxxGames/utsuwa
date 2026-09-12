@@ -1,28 +1,35 @@
-.page {
+.settings-layout .page {
+	min-height: 0;
+	max-width: 840px;
 	height: 100%;
 	overflow-y: auto;
 }
 
-.page-header {
+.settings-layout .page-header {
 	margin-bottom: 1.5rem;
 }
 
-.page-header h2 {
+.settings-layout .page-header h2 {
 	margin: 0 0 0.25rem;
 	font-size: 1.5rem;
 	font-weight: 700;
 	color: var(--text-primary);
 }
 
-.page-header p {
+.settings-layout .page-header p {
 	margin: 0;
 	font-size: 0.875rem;
-	color: var(--text-tertiary);
+	color: var(--text-secondary);
 }
 
-.section {
+.settings-layout .section {
+	min-width: 0;
 	background: var(--bg-primary);
 	border-radius: var(--radius-lg);
-	padding: 1rem;
+	padding: 1.25rem;
 	box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 640px) {
+	.settings-layout .section { padding: 1rem; }
 }

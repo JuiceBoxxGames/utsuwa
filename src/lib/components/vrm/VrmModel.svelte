@@ -1040,8 +1040,9 @@
 			// Project to screen coordinates (in place)
 			scratchProjected.project(camera.current);
 			// Convert from NDC (-1 to 1) to screen percentage (0 to 100)
-			const x = (scratchProjected.x + 1) * 50;
-			const y = (-scratchProjected.y + 1) * 50;
+			const bounds = renderer.domElement.getBoundingClientRect();
+			const x = ((bounds.left + (scratchProjected.x + 1) * bounds.width / 2) / window.innerWidth) * 100;
+			const y = ((bounds.top + (-scratchProjected.y + 1) * bounds.height / 2) / window.innerHeight) * 100;
 			vrmStore.setHeadScreenPosition({ x, y });
 		}
 

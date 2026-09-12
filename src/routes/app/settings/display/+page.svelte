@@ -1,4 +1,9 @@
 <script lang="ts">
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
+	import Switch from '$lib/components/ui/Switch.svelte';
+	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
+	import { Button } from '$lib/components/ui';
+	import { wakeLockStore } from '$lib/stores/wake-lock.svelte';
 	import {
 		displayStore,
 		type ChatDisplayMode,
@@ -10,9 +15,7 @@
 	// Stored values keep their original names; only the labels changed
 	const modes: { value: ChatDisplayMode; label: string }[] = [
 		{ value: 'bubble', label: 'Immersive' },
-		{ value: 'sidebar', label: 'Chat window' },
-		{ value: 'both', label: 'Both' },
-		{ value: 'off', label: 'Off' }
+		{ value: 'sidebar', label: 'Chat window' }
 	];
 
 	const positions: { value: SidebarPosition; label: string }[] = [
@@ -33,17 +36,7 @@
 		{ value: 'fast', label: 'Fast' }
 	];
 
-	const sidebarActive = $derived(
-		displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'
-	);
-
-	let windowResetDone = $state(false);
-
-	function resetWindowPosition() {
-		displayStore.requestChatWindowReset();
-		windowResetDone = true;
-		setTimeout(() => (windowResetDone = false), 2000);
-	}
+	const sidebarActive = $derived(displayStore.chatDisplayMode === 'sidebar');
 
 	function stepDelay(delta: number) {
 		const current = displayStore.typingIndicatorDelayMs / 1000;
@@ -58,133 +51,114 @@
 		<p>Configure how chat messages appear on screen.</p>
 	</header>
 
-	<section class="card">
-		<div class="card-header">
-			<h3>Chat Display</h3>
-			<button class="reset-btn" onclick={() => displayStore.resetChatDisplay()}>
-				Reset to defaults
-			</button>
+	<SettingsSection
+		title="Keep screen awake"
+		description="Keep the display on while Utsuwa is visible. This can use more battery."
+	>
+		<div class="setting-row">
+			<div class="setting-info">
+				<span class="setting-label">Keep screen awake</span>
+				<span class="setting-desc" role="status">
+					{#if wakeLockStore.status === 'unsupported'}Not supported in this browser or desktop
+						webview.
+					{:else if wakeLockStore.status === 'active'}Active. The display is staying awake.
+					{:else if wakeLockStore.status === 'requesting'}Requesting permission to keep the display
+						awake...
+					{:else if displayStore.keepScreenAwake}Inactive. Your browser or device released or
+						declined the request.
+					{:else}Off. Your normal display timeout applies.{/if}
+				</span>
+			</div>
+			<Switch
+				label="Keep screen awake"
+				checked={displayStore.keepScreenAwake}
+				onchange={displayStore.setKeepScreenAwake}
+				disabled={wakeLockStore.status === 'unsupported' && !displayStore.keepScreenAwake}
+			/>
 		</div>
+		{#if displayStore.keepScreenAwake && wakeLockStore.status === 'inactive'}<Button
+				variant="secondary"
+				size="sm"
+				onclick={() => wakeLockStore.retry()}>Try again</Button
+			>{/if}
+	</SettingsSection>
 
-		<div class="segment-control" role="group" aria-label="Chat display mode">
-			{#each modes as mode}
-				<button
-					class="segment-btn"
-					class:active={displayStore.chatDisplayMode === mode.value}
-					onclick={() => displayStore.setChatDisplayMode(mode.value)}
-					aria-pressed={displayStore.chatDisplayMode === mode.value}
-				>
-					{mode.label}
-				</button>
-			{/each}
-		</div>
+	<SettingsSection title="Chat display">
+		{#snippet actions()}<Button
+				variant="secondary"
+				size="sm"
+				onclick={() => displayStore.resetChatDisplay()}
+			>
+				Reset to defaults
+			</Button>{/snippet}
+
+		<SegmentedControl
+			label="Chat display mode"
+			options={modes}
+			value={displayStore.chatDisplayMode}
+			onchange={displayStore.setChatDisplayMode}
+		/>
 		<p class="hint">
-			Immersive shows her replies in a bubble by her head. Chat window is a messenger-style
-			window with the full history and the input docked inside.
+			Immersive shows her replies in a bubble by her head. Chat window is a docked chat panel with
+			the full history and the input docked inside.
 		</p>
-	</section>
+	</SettingsSection>
 
 	{#if sidebarActive}
-		<section class="card">
-			<div class="card-header">
-				<h3>Chat Window</h3>
-			</div>
-
+		<SettingsSection title="Chat window">
 			<div class="settings-stack">
 				<div class="setting-row">
 					<div class="setting-info">
-						<span class="setting-label">Snap side</span>
-						<span class="setting-desc">Which edge the window starts on</span>
+						<span class="setting-label">Dock side</span>
+						<span class="setting-desc"
+							>Dock beside the avatar on wide screens, or below it on small screens</span
+						>
 					</div>
-					<div class="segment-control compact" role="group" aria-label="Chat window snap side">
-						{#each positions as pos}
-							<button
-								class="segment-btn"
-								class:active={displayStore.sidebarPosition === pos.value}
-								onclick={() => displayStore.setSidebarPosition(pos.value)}
-								aria-pressed={displayStore.sidebarPosition === pos.value}
-							>
-								{pos.label}
-							</button>
-						{/each}
-					</div>
-				</div>
-
-				<div class="setting-row">
-					<div class="setting-info">
-						<span class="setting-label">Window position</span>
-						<span class="setting-desc">Bring the window back if it ends up off screen</span>
-					</div>
-					<button class="reset-btn" onclick={resetWindowPosition}>
-						{windowResetDone ? 'Done' : 'Reset position'}
-					</button>
+					<SegmentedControl
+						label="Chat window dock side"
+						options={positions}
+						value={displayStore.sidebarPosition}
+						onchange={displayStore.setSidebarPosition}
+						compact
+					/>
 				</div>
 			</div>
-		</section>
+		</SettingsSection>
 	{/if}
 
-	<section class="card">
-		<div class="card-header">
-			<h3>Floating Bar</h3>
-		</div>
-
-		<div class="segment-control" role="group" aria-label="Floating bar alignment">
-			{#each alignments as alignment}
-				<button
-					class="segment-btn"
-					class:active={displayStore.chatBarAlignment === alignment.value}
-					onclick={() => displayStore.setChatBarAlignment(alignment.value)}
-					aria-pressed={displayStore.chatBarAlignment === alignment.value}
-				>
-					{alignment.label}
-				</button>
-			{/each}
-		</div>
-		<p class="hint">Where the input bar sits along the bottom edge.</p>
-	</section>
-
-	<section class="card">
-		<div class="card-header">
-			<h3>Text Reveal</h3>
-		</div>
-
-		<div class="segment-control" role="group" aria-label="Text reveal speed">
-			{#each revealSpeeds as speed}
-				<button
-					class="segment-btn"
-					class:active={displayStore.textRevealSpeed === speed.value}
-					onclick={() => displayStore.setTextRevealSpeed(speed.value)}
-					aria-pressed={displayStore.textRevealSpeed === speed.value}
-				>
-					{speed.label}
-				</button>
-			{/each}
-		</div>
+	{#if !sidebarActive}
+		<SettingsSection title="Input bar">
+			<SegmentedControl
+				label="Floating bar alignment"
+				options={alignments}
+				value={displayStore.chatBarAlignment}
+				onchange={displayStore.setChatBarAlignment}
+			/>
+			<p class="hint">Where the input bar sits along the bottom edge.</p>
+		</SettingsSection>
+	{/if}
+	<SettingsSection title="Text reveal">
+		<SegmentedControl
+			label="Text reveal speed"
+			options={revealSpeeds}
+			value={displayStore.textRevealSpeed}
+			onchange={displayStore.setTextRevealSpeed}
+		/>
 		<p class="hint">How quickly her replies appear, word by word. Off shows text instantly.</p>
-	</section>
+	</SettingsSection>
 
-	<section class="card">
-		<div class="card-header">
-			<h3>Typing Indicator</h3>
-		</div>
-
+	<SettingsSection title="Typing indicator">
 		<div class="settings-stack">
 			<div class="setting-row">
 				<div class="setting-info">
 					<span class="setting-label">Wait tone</span>
 					<span class="setting-desc">Soft audio ping while the typing indicator is visible</span>
 				</div>
-				<button
-					class="service-toggle"
-					class:enabled={displayStore.waitToneEnabled}
-					onclick={() => displayStore.setWaitToneEnabled(!displayStore.waitToneEnabled)}
-					aria-label="Toggle wait tone"
-					aria-pressed={displayStore.waitToneEnabled}
-				>
-					<span class="toggle-track">
-						<span class="toggle-thumb"></span>
-					</span>
-				</button>
+				<Switch
+					label="Wait tone"
+					checked={displayStore.waitToneEnabled}
+					onchange={displayStore.setWaitToneEnabled}
+				/>
 			</div>
 
 			<div class="setting-row">
@@ -193,10 +167,16 @@
 					<span class="setting-desc">Wait before the typing dots appear</span>
 				</div>
 				<div class="delay-input-container">
-					<button class="delay-step" onclick={() => stepDelay(-0.1)} disabled={displayStore.typingIndicatorDelayMs <= 0}>−</button>
+					<button
+						class="delay-step"
+						aria-label="Decrease typing delay"
+						onclick={() => stepDelay(-0.1)}
+						disabled={displayStore.typingIndicatorDelayMs <= 0}>−</button
+					>
 					<input
 						type="number"
-						class="delay-input"
+						class="delay-input settings-field"
+						aria-label="Typing indicator delay in seconds"
 						min="0"
 						max="10"
 						step="0.1"
@@ -207,11 +187,16 @@
 						}}
 					/>
 					<span class="delay-unit">s</span>
-					<button class="delay-step" onclick={() => stepDelay(0.1)} disabled={displayStore.typingIndicatorDelayMs >= 10000}>+</button>
+					<button
+						class="delay-step"
+						aria-label="Increase typing delay"
+						onclick={() => stepDelay(0.1)}
+						disabled={displayStore.typingIndicatorDelayMs >= 10000}>+</button
+					>
 				</div>
 			</div>
 		</div>
-	</section>
+	</SettingsSection>
 </div>
 
 <style>
@@ -238,94 +223,13 @@
 	.page-header p {
 		margin: 0;
 		color: var(--text-secondary);
-		font-size: 0.9375rem;
-	}
-
-	.card {
-		background: var(--bg-primary);
-		border-radius: var(--radius-lg);
-		padding: 1rem 1.25rem;
-		box-shadow: var(--shadow-sm);
-	}
-
-	.card-header {
-		display: flex;
-		align-items: center;
-		gap: 0.625rem;
-		margin-bottom: 0.625rem;
-	}
-
-	.card-header h3 {
-		margin: 0;
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--text-primary);
+		font-size: 0.875rem;
 	}
 
 	.settings-stack {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-
-	.segment-control.compact {
-		width: auto;
-		flex-shrink: 0;
-	}
-
-	.segment-control.compact .segment-btn {
-		flex: 0 0 auto;
-		padding: 0.4rem 0.9rem;
-	}
-
-	.segment-control {
-		display: flex;
-		width: 100%;
-		background: var(--bg-secondary);
-		border-radius: var(--radius-md);
-		padding: 0.25rem;
-		gap: 0.25rem;
-	}
-
-	.segment-btn {
-		flex: 1;
-		padding: 0.5rem 0.75rem;
-		background: transparent;
-		border: none;
-		border-radius: calc(var(--radius-md) - 0.125rem);
-		color: var(--text-secondary);
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
-		white-space: nowrap;
-	}
-
-	.segment-btn:hover {
-		color: var(--text-primary);
-	}
-
-	.segment-btn.active {
-		background: var(--accent-muted);
-		color: var(--accent);
-		font-weight: 600;
-	}
-
-	.reset-btn {
-		padding: 0.375rem 0.75rem;
-		background: var(--bg-secondary);
-		border: none;
-		border-radius: var(--radius-md);
-		color: var(--text-secondary);
-		font-size: 0.8125rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
-	}
-
-	.reset-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
 	}
 
 	.hint {
@@ -358,47 +262,6 @@
 		color: var(--text-secondary);
 	}
 
-	/* Same switch as the LLM / TTS / STT pages */
-	.service-toggle {
-		position: relative;
-		width: 40px;
-		height: 22px;
-		background: transparent;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-		flex-shrink: 0;
-	}
-
-	.toggle-track {
-		display: block;
-		width: 100%;
-		height: 100%;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		transition: background 0.2s ease;
-	}
-
-	.service-toggle.enabled .toggle-track {
-		background: var(--accent);
-	}
-
-	.toggle-thumb {
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 18px;
-		height: 18px;
-		background: #fff;
-		border-radius: var(--radius-full);
-		transition: transform 0.2s ease;
-		box-shadow: var(--shadow-xs);
-	}
-
-	.service-toggle.enabled .toggle-thumb {
-		transform: translateX(18px);
-	}
-
 	.delay-input-container {
 		display: flex;
 		align-items: center;
@@ -406,8 +269,8 @@
 	}
 
 	.delay-step {
-		width: 2rem;
-		height: 2rem;
+		width: 44px;
+		height: 44px;
 		border-radius: var(--radius-md);
 		border: none;
 		background: var(--bg-secondary);
@@ -430,11 +293,7 @@
 	.delay-input {
 		width: 3.5rem;
 		padding: 0.35rem 0.5rem;
-		border-radius: var(--radius-md);
-		border: none;
-		background: var(--bg-secondary);
-		font-size: 0.875rem;
-		color: var(--text-primary);
+
 		text-align: center;
 		appearance: textfield;
 		-moz-appearance: textfield;
@@ -448,5 +307,11 @@
 	.delay-unit {
 		font-size: 0.8rem;
 		color: var(--text-secondary);
+	}
+
+	@media (max-width: 640px) {
+		.setting-row {
+			flex-wrap: wrap;
+		}
 	}
 </style>

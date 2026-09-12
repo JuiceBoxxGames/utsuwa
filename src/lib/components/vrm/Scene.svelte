@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { applyChatFraming, type ChatFrame } from './chat-framing';
 	// Minimal viewer scene: one white directional light, flat backdrop,
 	// grid + axes helpers, free orbit controls. No post-processing.
 	import { T, useThrelte, useTask } from '@threlte/core';
@@ -62,13 +63,14 @@
 		centered?: boolean;
 		locked?: boolean;
 		overlay?: boolean;
+		framing?: ChatFrame;
 	}
 
-	let { centered = false, locked = false, overlay = false }: Props = $props();
+	let { centered = false, locked = false, overlay = false, framing }: Props = $props();
 
 	const modelUrl = $derived(vrmStore.modelUrl);
 
-	const { camera, renderer, scene } = useThrelte();
+	const { camera, renderer, scene, size } = useThrelte();
 	const { isPresenting } = useXR();
 	let controls: OrbitControls | null = null;
 	let modelRoot = $state<Group | undefined>();
@@ -281,6 +283,12 @@
 	// Overlay windows frame very differently, so they keep their own profile
 	const camSettings = $derived(overlay ? displayStore.overlayCamera : displayStore.camera);
 
+	$effect(() => {
+		const cam = $camera;
+		if (!(cam instanceof PerspectiveCamera) || $isPresenting) return;
+		applyChatFraming(cam, $size, overlay || photomodeStore.active ? undefined : framing);
+	});
+
 	function computeFit(vrm: VRM): { center: number; halfSpan: number } {
 		vrm.scene.updateWorldMatrix(true, true);
 		const box = new Box3().setFromObject(vrm.scene);
@@ -318,12 +326,12 @@
 		const distance = fit.halfSpan / Math.tan((s.fov * Math.PI) / 360) / s.zoom;
 		const targetY = fit.center + s.height;
 
-		cam.position.set(0, targetY, distance);
+		cam.position.set(s.panX, targetY, distance);
 		if (controls) {
-			controls.target.set(0, targetY, 0);
+			controls.target.set(s.panX, targetY, 0);
 			controls.update();
 		} else {
-			cam.lookAt(0, targetY, 0);
+			cam.lookAt(s.panX, targetY, 0);
 		}
 	}
 
@@ -335,6 +343,7 @@
 		void camSettings.fov;
 		void camSettings.zoom;
 		void camSettings.height;
+		void camSettings.panX;
 		if (photomodeStore.active) {
 			const cam = camera.current;
 			if (cam instanceof PerspectiveCamera) {
@@ -406,7 +415,7 @@
 </script>
 
 <!-- Camera - auto-fitted to the model once it loads -->
-<T.PerspectiveCamera makeDefault position={[0, 1.1, 2]} fov={camSettings.fov} near={0.1} far={1000} />
+<T.PerspectiveCamera manual makeDefault position={[0, 1.1, 2]} fov={camSettings.fov} near={0.1} far={1000} />
 
 <!-- Overlay mode: enable raycast for click-through detection -->
 {#if overlay}
