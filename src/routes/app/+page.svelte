@@ -137,6 +137,7 @@
 	const showSidebarTrigger = $derived(
 		displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'
 	);
+	const dockedChat = $derived(displayStore.chatWindowLayout === 'docked' && sidebarOpen && showSidebarTrigger && !photomodeStore.active);
 	// Images she's currently being shown, floated above her head while she thinks
 	let thinkingImages = $state<{ id: string; url: string }[]>([]);
 
@@ -311,7 +312,7 @@
 		<MemoryGraphModal onClose={() => showMemoryGraph = false} />
 	{/if}
 
-	<main class="main-content">
+	<main class="main-content" class:docked-chat={dockedChat} class:dock-left={displayStore.sidebarPosition === 'left'}>
 		<!-- VRM Stage (Full Background) -->
 		<div class="stage-container">
 			{#if vrmStore.isLoading || !vrmStore.modelUrl}
@@ -392,6 +393,7 @@
 			<!-- Chat window (hides with the rest of the chat UI in photo mode) -->
 			<ChatWindow
 				open={sidebarOpen && showSidebarTrigger}
+				pinned={dockedChat}
 				onClose={() => sidebarOpen = false}
 				isTyping={isTyping && typingDotsVisible}
 				phase={thinkingPhase}
@@ -458,11 +460,14 @@
 	.app-container {
 		display: flex;
 		flex-direction: column;
-		height: 100vh;
+		height: 100%;
 		overflow: hidden;
 	}
 
 	.main-content {
+		--chat-dock-width: clamp(320px, 36vw, 440px);
+		--chat-dock-height: 50%;
+		min-height: 0;
 		flex: 1;
 		display: flex;
 		position: relative;
@@ -643,6 +648,14 @@
 		.chat-error-toast {
 			width: fit-content;
 			max-width: calc(100vw - 1.5rem);
+		}
+	}
+
+	.docked-chat .stage-container { right: var(--chat-dock-width); }
+	.docked-chat.dock-left .stage-container { left: var(--chat-dock-width); right: 0; }
+	@media (max-width: 720px) {
+		.docked-chat .stage-container, .docked-chat.dock-left .stage-container {
+			left: 0; right: 0; bottom: var(--chat-dock-height);
 		}
 	}
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import { chatStore } from '$lib/stores/chat.svelte';
 	import { displayStore, REVEAL_SPEED_MS } from '$lib/stores/display.svelte';
@@ -14,6 +14,7 @@
 
 	interface Props {
 		open: boolean;
+		pinned?: boolean;
 		onClose?: () => void;
 		isTyping?: boolean;
 		phase?: ThinkingPhase;
@@ -24,6 +25,7 @@
 
 	let {
 		open,
+		pinned = false,
 		onClose,
 		isTyping = false,
 		phase = 'thinking',
@@ -88,6 +90,32 @@
 
 	let rect = $state<PanelRect | null>(null);
 
+	// Keep the floating input above a mobile keyboard without saving the
+	// temporary keyboard layout as the user's preferred window geometry.
+	let visibleViewport = $state<{ height: number; top: number; width: number }>();
+	onMount(() => {
+		const viewport = window.visualViewport;
+		const update = () => {
+			visibleViewport = { height: viewport?.height ?? window.innerHeight, top: viewport?.offsetTop ?? 0, width: window.innerWidth };
+		};
+		update();
+		viewport?.addEventListener('resize', update);
+		viewport?.addEventListener('scroll', update);
+		window.addEventListener('resize', update);
+		return () => {
+			viewport?.removeEventListener('resize', update);
+			viewport?.removeEventListener('scroll', update);
+			window.removeEventListener('resize', update);
+		};
+	});
+	const visibleRect = $derived.by(() => {
+		if (!rect || !visibleViewport || (visibleViewport.width > 720 && visibleViewport.height >= window.innerHeight - 80)) return rect;
+		const h = Math.min(rect.h, Math.max(1, visibleViewport.height - MARGIN * 2));
+		const y = Math.max(visibleViewport.top, Math.min(rect.y, visibleViewport.top + visibleViewport.height - h - MARGIN));
+		return { ...rect, h, y };
+	});
+
+
 	$effect(() => {
 		if (!browser || rect) return;
 		try {
@@ -133,7 +161,7 @@
 
 	function onHeaderDown(e: PointerEvent) {
 		// Buttons in the header keep their own behavior
-		if ((e.target as HTMLElement).closest('button') || !rect) return;
+		if (pinned || (e.target as HTMLElement).closest('button') || !rect) return;
 		dragging = { pointerId: e.pointerId, offsetX: e.clientX - rect.x, offsetY: e.clientY - rect.y };
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
@@ -168,7 +196,7 @@
 	} | null = null;
 
 	function onResizeDown(e: PointerEvent, dir: ResizeDir) {
-		if (!rect) return;
+		if (pinned || !rect) return;
 		e.preventDefault();
 		resizing = {
 			dir,
@@ -216,7 +244,7 @@
 	// The dock buttons become "snap to edge" shortcuts for the floating panel
 	function snapTo(side: 'left' | 'right') {
 		displayStore.setSidebarPosition(side);
-		if (!rect) return;
+		if (pinned || !rect) return;
 		const vw = window.innerWidth;
 		rect = clampRect({ ...rect, x: side === 'left' ? MARGIN : vw - rect.w - MARGIN });
 		persistRect();
@@ -273,11 +301,14 @@
 	aria-label="Chat window"
 	role="region"
 	class:open
-	style:left={rect ? `${rect.x}px` : undefined}
-	style:top={rect ? `${rect.y}px` : undefined}
-	style:width={rect ? `${rect.w}px` : undefined}
-	style:height={rect ? `${rect.h}px` : undefined}
+	class:pinned
+	class:pin-left={displayStore.sidebarPosition === 'left'}
+	style:left={!pinned && visibleRect ? `${visibleRect.x}px` : undefined}
+	style:top={!pinned && visibleRect ? `${visibleRect.y}px` : undefined}
+	style:width={!pinned && visibleRect ? `${visibleRect.w}px` : undefined}
+	style:height={!pinned && visibleRect ? `${visibleRect.h}px` : undefined}
 >
+	{#if !pinned}
 	{#each RESIZE_DIRS as dir}
 		<div
 			class="resize-handle {dir}"
@@ -287,6 +318,7 @@
 			onpointercancel={onResizeUp}
 		></div>
 	{/each}
+	{/if}
 	<div
 		class="window-header"
 		onpointerdown={onHeaderDown}
@@ -298,10 +330,10 @@
 			<Icon name={moodInfo.icon} size={16} />
 		</span>
 		<span class="window-title">Chat</span>
-		<button class="dock-btn" onclick={() => snapTo('left')} aria-label="Snap to left edge" title="Snap left">
+		<button class="dock-btn" onclick={() => snapTo('left')} aria-label={pinned ? 'Dock on left' : 'Snap to left edge'} title={pinned ? 'Dock left' : 'Snap left'}>
 			<Icon name="chevron-left" size={16} />
 		</button>
-		<button class="dock-btn" onclick={() => snapTo('right')} aria-label="Snap to right edge" title="Snap right">
+		<button class="dock-btn" onclick={() => snapTo('right')} aria-label={pinned ? 'Dock on right' : 'Snap to right edge'} title={pinned ? 'Dock right' : 'Snap right'}>
 			<Icon name="chevron-right" size={16} />
 		</button>
 		<button
@@ -629,5 +661,35 @@
 	@keyframes dropIcon {
 		0%, 100% { transform: translateY(0) rotate(0deg); }
 		50% { transform: translateY(-4px) rotate(-6deg); }
+	}
+
+	.chat-window.pinned {
+		position: absolute;
+		top: 68px;
+		right: 0;
+		bottom: 0;
+		width: var(--chat-dock-width);
+		min-width: 0;
+		min-height: 0;
+		border-radius: var(--radius-xl) 0 0 0;
+		box-shadow: none;
+		background: var(--bg-primary);
+	}
+	.chat-window.pinned.pin-left { left: 0; right: auto; border-radius: 0 var(--radius-xl) 0 0; }
+	.pinned .window-header, .pinned .window-header:active { cursor: default; touch-action: auto; }
+	.messages { min-height: 0; overscroll-behavior: contain; }
+	@media (max-width: 720px) {
+		.chat-window.pinned, .chat-window.pinned.pin-left {
+			top: auto; left: 0; right: 0; width: 100%; height: var(--chat-dock-height);
+			border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+			padding-bottom: env(safe-area-inset-bottom, 0px);
+		}
+		.pinned .dock-btn { display: none; }
+	}
+	@media (pointer: coarse) {
+		.dock-btn, .clear-btn, .close-btn { width: 44px; height: 44px; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.chat-window { transition: none; }
 	}
 </style>

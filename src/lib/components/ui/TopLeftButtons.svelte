@@ -31,7 +31,7 @@
 		position: fixed;
 		top: 1rem;
 		left: 1rem;
-		z-index: 40;
+		z-index: 50;
 		display: flex;
 		gap: 0.5rem;
 	}

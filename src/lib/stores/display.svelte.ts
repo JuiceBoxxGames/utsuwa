@@ -15,7 +15,8 @@ import {
 	type ChatDisplayMode,
 	type SidebarPosition,
 	type TextRevealSpeed,
-	type ChatBarAlignment
+	type ChatBarAlignment,
+	type ChatWindowLayout
 } from './display-types';
 import { parseDisplaySettings, sanitizeCamera } from './display-parser';
 import {
@@ -66,6 +67,7 @@ function createDisplayStore() {
 	let chatBarAlignment = $state<ChatBarAlignment>(DEFAULT_CHAT_BAR_ALIGNMENT);
 	// Session-only counter; the chat window clears its saved rect when it changes
 	let chatWindowResetToken = $state(0);
+	let chatWindowLayout = $state<ChatWindowLayout>('floating');
 
 	if (browser) {
 		const saved = localStorage.getItem(STORAGE_KEY);
@@ -81,6 +83,7 @@ function createDisplayStore() {
 			waitToneEnabled = parsed.waitToneEnabled;
 			textRevealSpeed = parsed.textRevealSpeed;
 			chatBarAlignment = parsed.chatBarAlignment;
+			chatWindowLayout = parsed.chatWindowLayout;
 		}
 	}
 
@@ -98,7 +101,8 @@ function createDisplayStore() {
 					typingIndicatorDelayMs,
 					waitToneEnabled,
 					textRevealSpeed,
-					chatBarAlignment
+					chatBarAlignment,
+					chatWindowLayout
 				})
 			);
 		}
@@ -156,6 +160,7 @@ function createDisplayStore() {
 		waitToneEnabled = DEFAULT_WAIT_TONE_ENABLED;
 		textRevealSpeed = DEFAULT_TEXT_REVEAL_SPEED;
 		chatBarAlignment = DEFAULT_CHAT_BAR_ALIGNMENT;
+		chatWindowLayout = 'floating';
 		save();
 	}
 
@@ -185,6 +190,8 @@ function createDisplayStore() {
 	}
 
 	return {
+		get chatWindowLayout() { return chatWindowLayout; },
+		setChatWindowLayout(value: ChatWindowLayout) { chatWindowLayout = value; save(); },
 		get camera() {
 			return camera;
 		},

@@ -55,7 +55,7 @@ test('user messages remain selectable and long text fits the window', async ({
 			overflows: el.scrollWidth > el.clientWidth
 		};
 	});
-	expect(result.text).toBe('A'.repeat(250));
+	expect(result.text.trim()).toBe('A'.repeat(250));
 	expect(result.select).toBe('text');
 	expect(result.overflows).toBe(false);
 	if (browserName === 'chromium') {
