@@ -500,3 +500,8 @@ interface SaveFile {
   };
 }
 ```
+
+
+## Inspecting memory
+
+Settings > Memory lists saved facts, the current session, session summaries, and character state. Search or filter facts, add one manually, or confirm an individual deletion. Additions use the existing memory creation path, including duplicate detection and embedding when available. Deletions affect future retrieval. The Test tab parses sample responses locally without applying state changes or saving facts.
