@@ -15,11 +15,6 @@ export async function openApp(page: Page, display: Record<string, unknown> = {})
 		localStorage.setItem('utsuwa-display', JSON.stringify({ textRevealSpeed: 'off', ...settings }));
 	}, display);
 	await page.goto('/app');
-	await page.waitForFunction(
-		() =>
-			document.querySelector('.chat-window')?.hasAttribute('style') ||
-			document.querySelector('.chat-window')?.classList.contains('pinned')
-	);
 	await waitForHydration(page);
 	await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
 }
@@ -34,11 +29,13 @@ export async function setLoading(page: Page, loading: boolean) {
 
 export async function waitForHydration(page: Page) {
 	await expect
-		.poll(() =>
-			page.evaluate(async () => {
-				const path = '/src/lib/stores/modules.svelte.ts';
-				return !!(await import(/* @vite-ignore */ path)).modulesStore.getModuleState('speech');
-			})
+		.poll(
+			() =>
+				page.evaluate(async () => {
+					const path = '/src/lib/stores/modules.svelte.ts';
+					return !!(await import(/* @vite-ignore */ path)).modulesStore.getModuleState('speech');
+				}),
+			{ timeout: 15_000 }
 		)
 		.toBe(true);
 }

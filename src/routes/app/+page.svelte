@@ -89,21 +89,6 @@
 	let isTyping = $state(false);
 	// What she's doing this turn, for the shimmer label
 	let thinkingPhase = $state<ThinkingPhase>('thinking');
-	// Chat sidebar state — start open when sidebar mode is enabled
-	let sidebarOpen = $state(
-		displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'
-	);
-
-	// In sidebar-only mode the panel is the only place a reply can appear, so a
-	// closed panel reopens when she starts responding; you should never miss
-	// her answer. In 'both' mode the 3D bubble already shows it, so a manual
-	// close is respected.
-	$effect(() => {
-		if (isTyping && displayStore.chatDisplayMode === 'sidebar' && !sidebarOpen) {
-			sidebarOpen = true;
-		}
-	});
-
 	// Typing dots visibility — delayed by typingIndicatorDelayMs
 	let typingDotsVisible = $state(false);
 	$effect(() => {
@@ -132,13 +117,12 @@
 		}
 	});
 
-	const showBubble = $derived(
-		displayStore.chatDisplayMode === 'bubble' || displayStore.chatDisplayMode === 'both'
-	);
-	const showSidebarTrigger = $derived(
-		displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'
-	);
-	const dockedChat = $derived(displayStore.chatWindowLayout === 'docked' && sidebarOpen && showSidebarTrigger && !photomodeStore.active);
+	const showBubble = $derived(displayStore.chatDisplayMode === 'bubble');
+	const windowMode = $derived(displayStore.chatDisplayMode === 'sidebar');
+	const dockedChat = $derived(windowMode && !photomodeStore.active);
+	let availableHeight = $state(0);
+	let frameWidth = $state(0);
+	let frameHeight = $state(0);
 	// Images she's currently being shown, floated above her head while she thinks
 	let thinkingImages = $state<{ id: string; url: string }[]>([]);
 
@@ -300,8 +284,6 @@
 			onDeleteReminder={reminderStore.deleteReminder}
 			recentFired={reminderStore.recentFired}
 			onDismissRecentFired={reminderStore.dismissRecentFired}
-			sidebarOpen={sidebarOpen && showSidebarTrigger}
-			onSidebarToggle={() => sidebarOpen = !sidebarOpen}
 		/>
 	{/if}
 	{#if showInfoModal}
@@ -314,7 +296,10 @@
 		<MemoryGraphModal onClose={() => showMemoryGraph = false} />
 	{/if}
 
-	<main class="main-content" class:docked-chat={dockedChat} class:dock-left={displayStore.sidebarPosition === 'left'}>
+	<main class="main-content" class:docked-chat={dockedChat} class:dock-left={displayStore.sidebarPosition === 'left'}
+		bind:clientHeight={availableHeight}
+		style:--chat-dock-height={availableHeight > 0 && availableHeight < 500 ? '70%' : '50%'}>
+		<div class="character-frame" aria-hidden="true" bind:clientWidth={frameWidth} bind:clientHeight={frameHeight}></div>
 		<!-- VRM Stage (Full Background) -->
 		<div class="stage-container">
 			{#if vrmStore.isLoading || !vrmStore.modelUrl}
@@ -356,7 +341,7 @@
 				class:is-loading={vrmStore.isLoading || !vrmStore.modelUrl}
 				style:filter={photoFilterCss}
 			>
-				<VrmScene />
+				<VrmScene framing={{ width: frameWidth, height: frameHeight, left: displayStore.sidebarPosition === 'left' }} />
 			</div>
 
 			{#if photomodeStore.active && photomodeStore.vignette}
@@ -394,9 +379,7 @@
 
 			<!-- Chat window (hides with the rest of the chat UI in photo mode) -->
 			<ChatWindow
-				open={sidebarOpen && showSidebarTrigger}
-				pinned={dockedChat}
-				onClose={() => sidebarOpen = false}
+				open={windowMode}
 				isTyping={isTyping && typingDotsVisible}
 				phase={thinkingPhase}
 				onSend={handleSend}
@@ -414,7 +397,7 @@
 				{visionCapable}
 				providerLabel={imageProvider.label}
 				providerIsLocal={imageProvider.isLocal}
-				barHidden={sidebarOpen && showSidebarTrigger}
+				barHidden={windowMode}
 			/>
 		</div>
 		{#if photomodeStore.active}
@@ -475,6 +458,8 @@
 		position: relative;
 		overflow: hidden;
 	}
+
+	.character-frame { position: absolute; inset: 0; pointer-events: none; }
 
 	.stage-container {
 		position: absolute;
@@ -653,10 +638,10 @@
 		}
 	}
 
-	.docked-chat .stage-container { right: var(--chat-dock-width); }
-	.docked-chat.dock-left .stage-container { left: var(--chat-dock-width); right: 0; }
+	.docked-chat .character-frame { right: var(--chat-dock-width); }
+	.docked-chat.dock-left .character-frame { left: var(--chat-dock-width); right: 0; }
 	@media (max-width: 720px) {
-		.docked-chat .stage-container, .docked-chat.dock-left .stage-container {
+		.docked-chat .character-frame, .docked-chat.dock-left .character-frame {
 			left: 0; right: 0; bottom: var(--chat-dock-height);
 		}
 	}

@@ -106,3 +106,54 @@ test('sending through the real chat flow keeps focus before and after a streamed
 	await page.keyboard.type('My next message');
 	await expect(input).toHaveValue('My next message');
 });
+
+test('copy actions copy each message and show failure without changing the conversation', async ({
+	page,
+	context,
+	browserName
+}) => {
+	await openApp(page, { chatDisplayMode: 'sidebar' });
+	await page.evaluate(async () => {
+		const path = '/src/lib/stores/chat.svelte.ts';
+		const { chatStore } = await import(/* @vite-ignore */ path);
+		chatStore.addMessage('user', 'Please keep **this text**.');
+		chatStore.addMessage('assistant', 'Here is your reply.');
+	});
+	if (browserName === 'chromium')
+		await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	else
+		await page.evaluate(() =>
+			Object.defineProperty(navigator, 'clipboard', {
+				configurable: true,
+				value: {
+					writeText: async (text: string) => {
+						(window as any).copiedText = text;
+					}
+				}
+			})
+		);
+	const copy = page.locator('.message.user').getByRole('button', { name: 'Copy message' });
+	await copy.click();
+	await expect(copy).toHaveAttribute('title', 'Copied');
+	await expect(copy).toHaveText('');
+	expect(
+		await page.evaluate(() =>
+			navigator.clipboard.readText ? navigator.clipboard.readText() : (window as any).copiedText
+		)
+	).toBe('Please keep **this text**.');
+	await page.evaluate(() =>
+		Object.defineProperty(navigator, 'clipboard', {
+			configurable: true,
+			value: {
+				writeText: async () => {
+					throw new DOMException('Denied', 'NotAllowedError');
+				}
+			}
+		})
+	);
+	const reply = page.locator('.message.assistant');
+	await reply.getByRole('button', { name: 'Copy message' }).click();
+	await expect(reply.getByRole('status')).toContainText('Could not copy');
+	await expect(reply.locator('.bubble')).toHaveText('Here is your reply.');
+	await expect(reply.getByRole('button', { name: 'Copy message' })).toBeEnabled();
+});
