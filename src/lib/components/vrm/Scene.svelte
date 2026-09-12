@@ -318,12 +318,12 @@
 		const distance = fit.halfSpan / Math.tan((s.fov * Math.PI) / 360) / s.zoom;
 		const targetY = fit.center + s.height;
 
-		cam.position.set(0, targetY, distance);
+		cam.position.set(s.panX, targetY, distance);
 		if (controls) {
-			controls.target.set(0, targetY, 0);
+			controls.target.set(s.panX, targetY, 0);
 			controls.update();
 		} else {
-			cam.lookAt(0, targetY, 0);
+			cam.lookAt(s.panX, targetY, 0);
 		}
 	}
 
@@ -335,6 +335,7 @@
 		void camSettings.fov;
 		void camSettings.zoom;
 		void camSettings.height;
+		void camSettings.panX;
 		if (photomodeStore.active) {
 			const cam = camera.current;
 			if (cam instanceof PerspectiveCamera) {

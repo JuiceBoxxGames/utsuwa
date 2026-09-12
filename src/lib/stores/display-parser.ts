@@ -22,15 +22,13 @@ import {
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 export function sanitizeCamera(raw: Partial<CameraSettings> | undefined): CameraSettings {
-	return {
-		fov: clamp(raw?.fov ?? CAMERA_DEFAULTS.fov, CAMERA_LIMITS.fov.min, CAMERA_LIMITS.fov.max),
-		zoom: clamp(raw?.zoom ?? CAMERA_DEFAULTS.zoom, CAMERA_LIMITS.zoom.min, CAMERA_LIMITS.zoom.max),
-		height: clamp(
-			raw?.height ?? CAMERA_DEFAULTS.height,
-			CAMERA_LIMITS.height.min,
-			CAMERA_LIMITS.height.max
-		)
+	const value = (key: keyof CameraSettings) => {
+		const v = raw?.[key];
+		return typeof v === 'number' && Number.isFinite(v)
+			? clamp(v, CAMERA_LIMITS[key].min, CAMERA_LIMITS[key].max)
+			: CAMERA_DEFAULTS[key];
 	};
+	return { fov: value('fov'), zoom: value('zoom'), height: value('height'), panX: value('panX') };
 }
 
 function isChatDisplayMode(value: unknown): value is ChatDisplayMode {
