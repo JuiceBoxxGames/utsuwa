@@ -11,7 +11,7 @@ async function facts(page: import('@playwright/test').Page) {
 test('manual memory persists, is retrieved, and requires confirmation to delete', async ({
 	page
 }, info) => {
-	await page.goto('/app/settings/memory');
+	await page.goto('/app/settings/memory?view=facts');
 	await waitForHydration(page);
 	await expect(page.getByRole('heading', { name: 'Memory', exact: true })).toBeVisible();
 	await page
@@ -37,7 +37,7 @@ test('manual memory persists, is retrieved, and requires confirmation to delete'
 });
 
 test('tabs show saved data and parser samples never persist state', async ({ page }) => {
-	await page.goto('/app/settings/memory');
+	await page.goto('/app/settings/memory?view=facts');
 	await waitForHydration(page);
 	await expect(page.getByRole('tab', { name: 'Facts', exact: true })).toHaveAttribute(
 		'aria-selected',
@@ -59,14 +59,17 @@ test('tabs show saved data and parser samples never persist state', async ({ pag
 			createdAt: new Date()
 		});
 	});
-	await page.getByRole('tab', { name: 'Session', exact: true }).click();
-	await expect(page.getByText('A saved turn', { exact: true })).toBeVisible();
 	await page.getByRole('tab', { name: 'Sessions', exact: true }).click();
+	await page.getByRole('tab', { name: 'Current', exact: true }).click();
+	await expect(page.getByText('A saved turn', { exact: true })).toBeVisible();
+	await page.getByRole('tab', { name: 'Saved', exact: true }).click();
 	await expect(page.getByText('We talked about tea.', { exact: true })).toBeVisible();
+	await page.getByRole('tab', { name: 'Settings', exact: true }).click();
+	await page.getByText('Advanced', { exact: true }).click();
 	await page.getByRole('tab', { name: 'State', exact: true }).click();
 	await expect(page.getByRole('heading', { name: 'Character state', exact: true })).toBeVisible();
 	const before = await facts(page);
-	await page.getByRole('tab', { name: 'Test', exact: true }).click();
+	await page.getByRole('tab', { name: 'Parser test', exact: true }).click();
 	await page.getByRole('button', { name: 'Parse sample', exact: true }).click();
 	await expect(page.getByLabel('Parser result')).toContainText('newMemory');
 	expect(await facts(page)).toEqual(before);
@@ -75,7 +78,7 @@ test('tabs show saved data and parser samples never persist state', async ({ pag
 test('latest persisted session remains inspectable after reload and fact pagination stays bounded', async ({
 	page
 }) => {
-	await page.goto('/app/settings/memory');
+	await page.goto('/app/settings/memory?view=facts');
 	await waitForHydration(page);
 	await expect(page.getByRole('tab', { name: 'Facts', exact: true })).toBeVisible();
 	await page.evaluate(async () => {
@@ -114,6 +117,7 @@ test('latest persisted session remains inspectable after reload and fact paginat
 	await page.getByRole('button', { name: 'Delete memory', exact: true }).click();
 	await expect(page.locator('.fact-content')).toHaveCount(25);
 	await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
-	await page.getByRole('tab', { name: 'Session', exact: true }).click();
+	await page.getByRole('tab', { name: 'Sessions', exact: true }).click();
+	await page.getByRole('tab', { name: 'Current', exact: true }).click();
 	await expect(page.getByText('Most recent saved conversation', { exact: true })).toBeVisible();
 });

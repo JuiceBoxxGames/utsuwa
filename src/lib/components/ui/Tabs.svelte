@@ -23,7 +23,7 @@
 	</Tabs.List>
 	{#each items as item (item.value)}
 		<Tabs.Content value={item.value} class="ui-tab-panel">
-			{@render children(item.value)}
+			{#if value === item.value}{@render children(item.value)}{/if}
 		</Tabs.Content>
 	{/each}
 </Tabs.Root>

@@ -33,7 +33,8 @@
 	import Photoboard from '$lib/components/chat/Photoboard.svelte';
 	import { EventScene } from '$lib/components/events';
 	import { OnboardingModal } from '$lib/components/onboarding';
-	import MemoryGraphModal from '$lib/components/memory/MemoryGraphModal.svelte';
+	import { goto } from '$app/navigation';
+	import { localPath } from '$lib/config/links';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import { chatStore } from '$lib/stores/chat.svelte';
 	import { modulesStore } from '$lib/stores/modules.svelte';
@@ -76,9 +77,6 @@
 	let showBoard = $state(false);
 	// Her impression from the latest turn, attached to a kept photo as its note.
 	let lastNewMemory: string | undefined;
-
-	// Memory graph modal state
-	let showMemoryGraph = $state(false);
 
 	// Onboarding state
 	let showOnboarding = $state(false);
@@ -277,7 +275,7 @@
 <div class="app-container">
 	<div class="wake-status"><WakeLockIndicator /></div>
 {#if !photomodeStore.active}
-		<TopLeftButtons onOpenMemoryGraph={() => showMemoryGraph = true} onBoardClick={() => showBoard = true} />
+		<TopLeftButtons onOpenMemoryGraph={() => goto(localPath('app', '/settings/memory?view=graph'))} onBoardClick={() => showBoard = true} />
 		<TopRightButtons
 			onInfoClick={() => showInfoModal = true}
 			upcomingReminders={reminderStore.upcoming}
@@ -291,9 +289,6 @@
 	{/if}
 	{#if showBoard}
 		<Photoboard onClose={() => showBoard = false} />
-	{/if}
-	{#if showMemoryGraph}
-		<MemoryGraphModal onClose={() => showMemoryGraph = false} />
 	{/if}
 
 	<main class="main-content" class:docked-chat={dockedChat} class:dock-left={displayStore.sidebarPosition === 'left'}
