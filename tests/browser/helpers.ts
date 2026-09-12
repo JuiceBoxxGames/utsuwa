@@ -41,22 +41,30 @@ export async function setLoading(page: Page, loading: boolean) {
 }
 
 export async function waitForHydration(page: Page) {
+	const pathname = new URL(page.url()).pathname;
+	const hasAvatar = pathname === '/app' || pathname === '/overlay';
 	await expect
 		.poll(
 			() =>
-				page.evaluate(async () => {
+				page.evaluate(async (hasAvatar) => {
 					const path = '/src/lib/stores/modules.svelte.ts';
-					return !!(await import(/* @vite-ignore */ path)).modulesStore.getModuleState('speech');
-				}),
-			{ timeout: 15_000 }
+					if (!(await import(/* @vite-ignore */ path)).modulesStore.getModuleState('speech')) {
+						return false;
+					}
+					// Module registration precedes hydration. The layout sets its inline
+					// height on mount, after child event handlers have been attached.
+					const app = document.querySelector<HTMLElement>('.app');
+					if (app && !app.style.height) return false;
+					if (hasAvatar) {
+						// Software renderers compile the avatar during its first frame.
+						// Finish startup before timing clicks, focus, or navigation.
+						const vrmPath = '/src/lib/stores/vrm.svelte.ts';
+						const { vrmStore } = await import(/* @vite-ignore */ vrmPath);
+						return !!vrmStore.vrm && !vrmStore.isLoading && !!vrmStore.headScreenPosition;
+					}
+					return !!app;
+				}, hasAvatar),
+			{ timeout: hasAvatar ? 20_000 : 15_000 }
 		)
 		.toBe(true);
-	if (new URL(page.url()).pathname.startsWith('/app')) {
-		// Module registration precedes hydration. This inline size is set by the
-		// app layout's onMount, after its children's handlers have been attached.
-		await expect(page.locator('.app')).toHaveAttribute('style', /height:\s*[\d.]+px/);
-	} else if (new URL(page.url()).pathname === '/overlay') {
-		// The overlay's scene creates its canvas only after mounting.
-		await expect(page.locator('.vrm-scene canvas')).toBeVisible();
-	}
 }
