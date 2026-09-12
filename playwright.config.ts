@@ -6,7 +6,12 @@ export default defineConfig({
 	workers: 1,
 	reporter: 'list',
 	timeout: 45_000,
-	use: { baseURL: 'http://127.0.0.1:5188', trace: 'retain-on-failure' },
+	use: {
+		baseURL: 'http://127.0.0.1:5188',
+		// Keep DOM/action traces without continuously recording the animated 3D canvas.
+		// Visual review screenshots are captured explicitly by the tests.
+		trace: { mode: 'retain-on-failure', screenshots: false }
+	},
 	projects: [
 		{
 			name: 'desktop',
