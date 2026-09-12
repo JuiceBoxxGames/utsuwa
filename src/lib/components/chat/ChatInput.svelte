@@ -61,6 +61,8 @@
 		unlockAudioContext();
 		const { text, images } = chatDraftStore.takeAll();
 		if (!text && images.length === 0) return;
+		// Keep focus through the pending reply, including a touch on Send.
+		textareaRef?.focus({ preventScroll: true });
 		onSend(text, images);
 		if (textareaRef) textareaRef.scrollLeft = 0;
 	}
@@ -71,7 +73,7 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) {
+		if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
 			e.preventDefault();
 			doSend();
 		}
@@ -126,7 +128,7 @@
 			class="input-wrapper"
 			class:recording={isListening}
 			class:transcribing={isTranscribing}
-			class:focused={hasContent}
+			
 		>
 			{#if isTranscribing}
 				<div class="transcribing-label">Transcribing...</div>
@@ -151,6 +153,7 @@
 						class="mic-btn"
 						class:vision-off={!visionCapable}
 						onclick={openPicker}
+						{disabled}
 						aria-label="Attach an image"
 						title={visionCapable ? 'Attach an image' : 'This model cannot see images'}
 					>
@@ -164,19 +167,25 @@
 					bind:this={textareaRef}
 					bind:value={chatDraftStore.draft}
 					onkeydown={handleKeydown}
+					aria-label="Message"
+					aria-busy={disabled}
 					placeholder="Type a message..."
 					rows="1"
 					wrap="off"
-					{disabled}
+					readonly={disabled}
 				></textarea>
 				<button
 					type="button"
 					class="mic-btn"
 					onclick={handleMicClick}
+					{disabled}
 					aria-label="Voice input"
 					title="Voice input"
 				>
 					<Icon name="mic" size={20} />
+				</button>
+				<button type="submit" class="mic-btn send-btn" disabled={disabled || !hasContent} aria-label="Send message" title="Send message">
+					<Icon name="send" size={20} />
 				</button>
 			{/if}
 		</div>
@@ -280,8 +289,7 @@
 		transition: box-shadow 0.2s;
 	}
 
-	.input-wrapper:focus-within,
-	.input-wrapper.focused {
+	.input-wrapper:focus-within {
 		box-shadow: 0 0 0 3px var(--accent-muted), var(--shadow-glow);
 	}
 
@@ -308,10 +316,9 @@
 	}
 
 	.docked .input-wrapper:focus-within,
-	.docked .input-wrapper.focused,
 	.docked .input-wrapper.recording,
 	.docked .input-wrapper.transcribing {
-		box-shadow: inset 0 0 0 2px var(--accent-muted);
+		box-shadow: inset 0 0 0 2px var(--accent);
 	}
 
 	.docked .pending-row {
@@ -351,7 +358,7 @@
 	}
 
 	.docked textarea {
-		font-size: 0.875rem;
+		font-size: 1rem;
 		padding: 0.375rem 0.4rem;
 		height: calc(1.5em + 0.75rem);
 	}
@@ -360,7 +367,7 @@
 		color: var(--text-tertiary);
 	}
 
-	textarea:disabled {
+	textarea[readonly] {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
@@ -427,5 +434,19 @@
 		50% {
 			box-shadow: 0 0 0 6px transparent;
 		}
+	}
+
+	.send-btn { background: var(--accent); color: var(--text-on-accent, white); }
+	.send-btn:hover:not(:disabled) { background: var(--accent-hover); color: var(--text-on-accent, white); }
+	.send-btn:disabled { opacity: 0.4; cursor: default; }
+	.mic-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	.pending-chip:focus-within .remove-chip { opacity: 1; transform: scale(1); }
+	@media (pointer: coarse) {
+		.remove-chip { opacity: 1; transform: scale(1); }
+		.docked .input-wrapper { height: 52px; }
+		.docked .mic-btn { width: 44px; height: 44px; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.mic-btn.recording { animation: none; }
 	}
 </style>
