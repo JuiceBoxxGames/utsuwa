@@ -4,16 +4,18 @@
 		title,
 		description,
 		children,
-		actions
+		actions,
+		outlined = false
 	}: {
 		title: string;
 		description?: string;
 		children: Snippet;
 		actions?: Snippet;
+		outlined?: boolean;
 	} = $props();
 </script>
 
-<section class="settings-section">
+<section class="settings-section" class:outlined>
 	<header>
 		<div>
 			<h3>{title}</h3>
@@ -26,11 +28,16 @@
 
 <style>
 	.settings-section {
+		flex-shrink: 0;
 		background: var(--bg-primary);
 		border-radius: var(--radius-lg);
 		padding: 1.25rem;
 		box-shadow: var(--shadow-sm);
 		min-width: 0;
+	}
+	.outlined {
+		border: 1px solid var(--border-subtle);
+		box-shadow: none;
 	}
 	header {
 		display: flex;
@@ -52,6 +59,7 @@
 	}
 	@media (max-width: 640px) {
 		.settings-section {
+			flex-shrink: 0;
 			padding: 1rem;
 		}
 	}
