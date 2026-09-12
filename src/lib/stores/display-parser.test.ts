@@ -57,8 +57,8 @@ test('parses valid settings object', () => {
 		chatDisplayMode: 'sidebar',
 		sidebarPosition: 'left'
 	});
-	assert.deepEqual(result.camera, { fov: 45, zoom: 1.5, height: 0.1 });
-	assert.deepEqual(result.overlayCamera, { fov: 30, zoom: 0.8, height: -0.1 });
+	assert.deepEqual(result.camera, { fov: 45, zoom: 1.5, height: 0.1, panX: 0 });
+	assert.deepEqual(result.overlayCamera, { fov: 30, zoom: 0.8, height: -0.1, panX: 0 });
 	assert.equal(result.physicsIntensity, 0.75);
 	assert.equal(result.chatDisplayMode, 'sidebar');
 	assert.equal(result.sidebarPosition, 'left');
@@ -115,7 +115,7 @@ test('uses main camera for overlay camera when overlay camera is missing', () =>
 	const result = parseDisplaySettings({
 		camera: { fov: 45, zoom: 1.5, height: 0.1 }
 	});
-	assert.deepEqual(result.overlayCamera, { fov: 45, zoom: 1.5, height: 0.1 });
+	assert.deepEqual(result.overlayCamera, { fov: 45, zoom: 1.5, height: 0.1, panX: 0 });
 });
 
 test('returns defaults for undefined input', () => {
@@ -133,7 +133,8 @@ test('sanitizeCamera isolates and clamps camera values independently', () => {
 	assert.deepEqual(sanitized, {
 		fov: CAMERA_LIMITS.fov.max,
 		zoom: CAMERA_LIMITS.zoom.min,
-		height: CAMERA_LIMITS.height.max
+		height: CAMERA_LIMITS.height.max,
+		panX: 0
 	});
 	// Original object must not be mutated
 	assert.deepEqual(raw, { fov: 999, zoom: -10, height: 2 });
@@ -212,4 +213,23 @@ test('defaults reveal speed and alignment when absent', () => {
 	const result = parseDisplaySettings({ chatDisplayMode: 'bubble' });
 	assert.equal(result.textRevealSpeed, DEFAULT_TEXT_REVEAL_SPEED);
 	assert.equal(result.chatBarAlignment, DEFAULT_CHAT_BAR_ALIGNMENT);
+});
+
+
+test('pan persists independently for both camera profiles and clamps to limits', () => {
+	const settings = parseDisplaySettings(JSON.stringify({
+		camera: { panX: -0.3 }, overlayCamera: { panX: 0.6 }
+	}));
+	assert.equal(settings.camera.panX, -0.3);
+	assert.equal(settings.overlayCamera.panX, 0.6);
+	assert.equal(sanitizeCamera({ panX: -100 }).panX, CAMERA_LIMITS.panX.min);
+	assert.equal(sanitizeCamera({ panX: 100 }).panX, CAMERA_LIMITS.panX.max);
+	assert.equal(parseDisplaySettings({ cameraDistance: 2 }).camera.panX, 0);
+});
+
+test('camera settings reject malformed and non-finite persisted values', () => {
+	for (const bad of [NaN, Infinity, -Infinity, '0.5', null, {}, []]) {
+		const result = parseDisplaySettings({ camera: { panX: bad, zoom: bad, fov: bad, height: bad } });
+		assert.deepEqual(result.camera, CAMERA_DEFAULTS);
+	}
 });

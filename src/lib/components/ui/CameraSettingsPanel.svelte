@@ -27,7 +27,8 @@
 	const isDefault = $derived(
 		cam.fov === CAMERA_DEFAULTS.fov &&
 			cam.zoom === CAMERA_DEFAULTS.zoom &&
-			cam.height === CAMERA_DEFAULTS.height
+			cam.height === CAMERA_DEFAULTS.height &&
+			cam.panX === CAMERA_DEFAULTS.panX
 	);
 </script>
 
@@ -66,6 +67,21 @@
 			step="0.01"
 			value={cam.height}
 			oninput={(e) => displayStore.setCamera({ height: parseFloat(e.currentTarget.value) }, profile)}
+		/>
+	</label>
+
+	<label class="control">
+		<span class="control-label">
+			Horizontal pan
+			<span class="control-value">{cam.panX > 0 ? '+' : ''}{(cam.panX * 100).toFixed(0)} cm</span>
+		</span>
+		<input
+			type="range"
+			min={CAMERA_LIMITS.panX.min}
+			max={CAMERA_LIMITS.panX.max}
+			step="0.05"
+			value={cam.panX}
+			oninput={(e) => displayStore.setCamera({ panX: Number(e.currentTarget.value) }, profile)}
 		/>
 	</label>
 
@@ -138,7 +154,9 @@
 
 <style>
 	.camera-panel {
-		width: 240px;
+		width: min(280px, calc(100vw - 32px));
+		max-height: calc(100dvh - 96px);
+		overflow-y: auto;
 		padding: 1rem;
 		background: var(--bg-primary);
 		border: 1px solid var(--border-subtle);
@@ -220,6 +238,11 @@
 		background: var(--bg-tertiary);
 		outline: none;
 		cursor: pointer;
+	}
+
+	.control input[type='range']:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 5px;
 	}
 
 	.control input[type='range']::-webkit-slider-thumb {

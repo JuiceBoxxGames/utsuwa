@@ -52,7 +52,7 @@
 
 ## Features
 
-- **VRM Model Viewer**: Load and display VRM 3D avatar models with orbit controls, automatic camera framing per model, and live camera settings (zoom, height, field of view)
+- **VRM Model Viewer**: Load and display VRM 3D avatar models with orbit controls, automatic camera framing per model, and live camera settings (zoom, height, horizontal pan, field of view)
 - **Developer Tools**: Test VRM facial expressions and animations, or upload a temporary `.vrm` file for a non-persistent preview that reverts when you leave the page
 - **AR Mode**: On WebXR-capable devices (Android Chrome, headset browsers), place your companion on your real floor, drag her around, and pinch to resize
 - **Photo Mode**: Pose her from a pose library, set her expression, pick a background, add a color filter, vignette, or frame, drop draggable stickers on the shot, and capture in high resolution with a quick snap or self-timer. Head tracking keeps her eyes on your camera while she holds the pose
@@ -336,7 +336,7 @@ pnpm tauri build  # Build desktop app installer
 - [x] Show companion images (multimodal vision) with a keepsake photo board
 - [x] Custom OpenAI-compatible LLM endpoint (OpenRouter, Together, Mistral, vLLM, LiteLLM, ...)
 - [x] AR mode on WebXR-capable devices
-- [x] Live camera settings (zoom, height, field of view) with per-overlay profiles
+- [x] Live camera settings (zoom, height, horizontal pan, field of view) with per-overlay profiles
 - [x] Context window control with memory scaling and history truncation
 - [x] Reminders and timers with an alarm dropdown, multi-window aware
 - [x] Photo mode: poses, expressions, backgrounds, filters, frames, stickers, head tracking, high-res capture
