@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ScreenWakeLock from '$lib/components/display/ScreenWakeLock.svelte';
+	import WakeLockIndicator from '$lib/components/display/WakeLockIndicator.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import { pop } from '$lib/utils/motion';
 	import BottomChatBar from '$lib/components/chat/BottomChatBar.svelte';
@@ -280,6 +282,8 @@
 	}
 </script>
 
+<ScreenWakeLock />
+<div class="overlay-wake-status"><WakeLockIndicator /></div>
 <div class="overlay-container">
 	<!-- VRM Scene (fills the overlay) - locked to prevent rotation when dragging -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -610,4 +614,6 @@
 			transform: translateX(-50%) translateY(0);
 		}
 	}
+
+	.overlay-wake-status { position: fixed; top: 48px; right: 12px; z-index: 70; }
 </style>

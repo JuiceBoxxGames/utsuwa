@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ScreenWakeLock from '$lib/components/display/ScreenWakeLock.svelte';
 	import { onMount } from 'svelte';
 	import { onNavigate } from '$app/navigation';
 	import UpdateBanner from '$lib/components/updater/UpdateBanner.svelte';
@@ -31,6 +32,7 @@
 </svelte:head>
 
 <div class="app" style:height={viewportHeight ? `${viewportHeight}px` : undefined}>
+	<ScreenWakeLock />
 	{@render children()}
 	<UpdateBanner />
 </div>

@@ -68,23 +68,31 @@ function createDisplayStore() {
 	// Session-only counter; the chat window clears its saved rect when it changes
 	let chatWindowResetToken = $state(0);
 	let chatWindowLayout = $state<ChatWindowLayout>('floating');
+	let keepScreenAwake = $state(false);
 
+	function applySavedSettings(saved: string | null) {
+		const parsed = parseDisplaySettings(saved);
+		camera = parsed.camera;
+		overlayCamera = parsed.overlayCamera;
+		physicsIntensity = parsed.physicsIntensity;
+		sceneBackground = parsed.sceneBackground;
+		chatDisplayMode = parsed.chatDisplayMode;
+		sidebarPosition = parsed.sidebarPosition;
+		typingIndicatorDelayMs = parsed.typingIndicatorDelayMs;
+		waitToneEnabled = parsed.waitToneEnabled;
+		textRevealSpeed = parsed.textRevealSpeed;
+		chatBarAlignment = parsed.chatBarAlignment;
+		chatWindowLayout = parsed.chatWindowLayout;
+		keepScreenAwake = parsed.keepScreenAwake;
+	}
 	if (browser) {
-		const saved = localStorage.getItem(STORAGE_KEY);
-		if (saved) {
-			const parsed = parseDisplaySettings(saved);
-			camera = parsed.camera;
-			overlayCamera = parsed.overlayCamera;
-			physicsIntensity = parsed.physicsIntensity;
-			sceneBackground = parsed.sceneBackground;
-			chatDisplayMode = parsed.chatDisplayMode;
-			sidebarPosition = parsed.sidebarPosition;
-			typingIndicatorDelayMs = parsed.typingIndicatorDelayMs;
-			waitToneEnabled = parsed.waitToneEnabled;
-			textRevealSpeed = parsed.textRevealSpeed;
-			chatBarAlignment = parsed.chatBarAlignment;
-			chatWindowLayout = parsed.chatWindowLayout;
-		}
+		applySavedSettings(localStorage.getItem(STORAGE_KEY));
+		// Keep open browser tabs and the desktop overlay from saving stale settings.
+		window.addEventListener('storage', (event) => {
+			if (event.storageArea === localStorage && (event.key === STORAGE_KEY || event.key === null)) {
+				applySavedSettings(event.key === null ? null : event.newValue);
+			}
+		});
 	}
 
 	function save() {
@@ -102,7 +110,8 @@ function createDisplayStore() {
 					waitToneEnabled,
 					textRevealSpeed,
 					chatBarAlignment,
-					chatWindowLayout
+					chatWindowLayout,
+					keepScreenAwake
 				})
 			);
 		}
@@ -190,6 +199,8 @@ function createDisplayStore() {
 	}
 
 	return {
+		get keepScreenAwake() { return keepScreenAwake; },
+		setKeepScreenAwake(value: boolean) { keepScreenAwake = value; save(); },
 		get chatWindowLayout() { return chatWindowLayout; },
 		setChatWindowLayout(value: ChatWindowLayout) { chatWindowLayout = value; save(); },
 		get camera() {

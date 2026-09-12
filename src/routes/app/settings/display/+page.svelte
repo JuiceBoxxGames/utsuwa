@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Switch from '$lib/components/ui/Switch.svelte';
+	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
+	import { Button } from '$lib/components/ui';
+	import { wakeLockStore } from '$lib/stores/wake-lock.svelte';
 	import {
 		displayStore,
 		type ChatDisplayMode,
@@ -57,6 +61,23 @@
 		<h2>Display</h2>
 		<p>Configure how chat messages appear on screen.</p>
 	</header>
+
+	<SettingsSection title="Keep screen awake" description="Keep the display on while Utsuwa is visible. This can use more battery.">
+		<div class="setting-row">
+			<div class="setting-info">
+				<span class="setting-label">Keep screen awake</span>
+				<span class="setting-desc" role="status">
+					{#if wakeLockStore.status === 'unsupported'}Not supported in this browser or desktop webview.
+					{:else if wakeLockStore.status === 'active'}Active. The display is staying awake.
+					{:else if wakeLockStore.status === 'requesting'}Requesting permission to keep the display awake...
+					{:else if displayStore.keepScreenAwake}Inactive. Your browser or device released or declined the request.
+					{:else}Off. Your normal display timeout applies.{/if}
+				</span>
+			</div>
+			<Switch label="Keep screen awake" checked={displayStore.keepScreenAwake} onchange={displayStore.setKeepScreenAwake} disabled={wakeLockStore.status === 'unsupported' && !displayStore.keepScreenAwake} />
+		</div>
+		{#if displayStore.keepScreenAwake && wakeLockStore.status === 'inactive'}<Button variant="secondary" size="sm" onclick={() => wakeLockStore.retry()}>Try again</Button>{/if}
+	</SettingsSection>
 
 	<section class="card">
 		<div class="card-header">
