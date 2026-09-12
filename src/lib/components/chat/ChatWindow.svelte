@@ -268,6 +268,10 @@
 
 <div
 	class="chat-window"
+	inert={!open}
+	aria-hidden={!open}
+	aria-label="Chat window"
+	role="region"
 	class:open
 	style:left={rect ? `${rect.x}px` : undefined}
 	style:top={rect ? `${rect.y}px` : undefined}
@@ -519,13 +523,20 @@
 		border-radius: var(--radius-lg);
 		font-size: 0.8125rem;
 		line-height: 1.5;
-		word-wrap: break-word;
+		overflow-wrap: anywhere;
+		user-select: text;
+		-webkit-user-select: text;
 	}
 
 	.user .bubble {
 		background: var(--accent);
 		color: white;
 		border-bottom-right-radius: var(--radius-sm);
+	}
+
+	.user .bubble :global(::selection) {
+		background: var(--text-primary);
+		color: var(--bg-primary);
 	}
 
 	.assistant .bubble {

@@ -29,6 +29,21 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Install browser test dependencies
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Browser tests
+        run: pnpm test:browser
+
+      - name: Browser test artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
       # check and test don't resolve CSS side-effect imports or other
       # build-only failures; a route can 500 in production with both green.
       - name: Build
