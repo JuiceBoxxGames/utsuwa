@@ -16,6 +16,7 @@
 		...(mcpStore.capability === 'none'
 			? []
 			: [{ href: localPath('app', '/settings/mcp'), label: 'MCP', icon: 'modules' }]),
+		{ href: localPath('app', '/settings/memory'), label: 'Memory', icon: 'brain' },
 		{ href: localPath('app', '/settings/data'), label: 'Data', icon: 'database' },
 		{ href: localPath('app', '/settings/developer'), label: 'Developer', icon: 'code' }
 	]);

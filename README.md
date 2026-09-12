@@ -77,6 +77,7 @@
 - **Avatar Tasks & Timers**: Your companion can schedule reminders for itself, e.g. to check back with you later. Fired and missed timers appear in the reminder dropdown (bell icon) so you can see what happened and dismiss them. Reminders persist across browser reloads and stay in sync between the main app and the desktop overlay
 - **Companion System**: Multi-axis relationship tracking with mood, events, and semantic memory
 - **Semantic Memory**: Local AI-powered memory search using Transformers.js - finds memories by meaning, not just keywords
+- **Memory Inspector**: View, search, add, and delete facts in Settings > Memory. Inspect saved turns, session summaries, character state, and sample response parsing without changing engine behavior.
 - **Memory Graph**: Interactive visualization showing how memories connect semantically
 - **Data Export/Import**: Download your data as a save file, restore anytime
 - **Theming**: Light and dark mode support with system preference detection
