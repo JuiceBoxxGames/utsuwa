@@ -145,6 +145,11 @@ test('old floating preferences cannot restore dragging or resizing', async ({ pa
 	const panel = page.getByRole('region', { name: 'Chat window' });
 	await expect(panel).toBeVisible();
 	await expect(page.locator('.resize-handle')).toHaveCount(0);
+	await panel.evaluate(async (element) => {
+		await Promise.all(
+			element.getAnimations().map((animation) => animation.finished.catch(() => {}))
+		);
+	});
 	const before = (await panel.boundingBox())!;
 	expect(before.x).toBeGreaterThanOrEqual(0);
 	expect(before.y).toBeGreaterThanOrEqual(0);
