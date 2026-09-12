@@ -174,13 +174,14 @@
 					<div class="filters">
 						<label
 							>Search memories<input
+								class="settings-field"
 								type="search"
 								bind:value={query}
 								placeholder="Find a memory"
 							/></label
 						>
 						<label
-							>Category<select bind:value={category}
+							>Category<select class="settings-field" bind:value={category}
 								><option value="all">All categories</option>{#each categories as c}<option
 										value={c.value}>{c.label}</option
 									>{/each}</select
@@ -336,6 +337,7 @@
 			<form onsubmit={addMemory}>
 				<label
 					>Memory<textarea
+						class="settings-field"
 						bind:value={content}
 						required
 						maxlength={2000}
@@ -345,11 +347,12 @@
 				>
 				<div class="filters">
 					<label
-						>Memory category<select bind:value={newCategory} disabled={busy}
+						>Memory category<select class="settings-field" bind:value={newCategory} disabled={busy}
 							>{#each categories as c}<option value={c.value}>{c.label}</option>{/each}</select
 						></label
 					><label
 						>Importance <span>{importance}</span><input
+							class="settings-range"
 							type="range"
 							min={0}
 							max={100}
@@ -398,27 +401,6 @@
 		color: var(--text-secondary);
 		font-size: 0.875rem;
 		font-weight: 500;
-	}
-	input:not([type='range']),
-	select,
-	textarea {
-		min-width: 0;
-		width: 100%;
-		padding: 0.75rem;
-		color: var(--text-primary);
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-lg);
-		font: inherit;
-	}
-	input:focus-visible,
-	select:focus-visible,
-	textarea:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-	textarea {
-		resize: vertical;
 	}
 	input[type='range'] {
 		width: 100%;

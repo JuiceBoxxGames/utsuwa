@@ -4,16 +4,25 @@
 		checked,
 		onchange,
 		label,
-		disabled = false
+		disabled = false,
+		id
 	}: {
 		checked: boolean;
 		onchange: (checked: boolean) => void;
 		label: string;
 		disabled?: boolean;
+		id?: string;
 	} = $props();
 </script>
 
-<Switch.Root {checked} onCheckedChange={onchange} {disabled} aria-label={label} class="ui-switch">
+<Switch.Root
+	{id}
+	{checked}
+	onCheckedChange={onchange}
+	{disabled}
+	aria-label={label}
+	class="ui-switch"
+>
 	<Switch.Thumb class="ui-switch-thumb" />
 </Switch.Root>
 
@@ -50,7 +59,7 @@
 		height: 20px;
 		margin-left: 2px;
 		border-radius: 50%;
-		background: var(--bg-primary);
+		background: var(--accent-contrast, #fff);
 		box-shadow: var(--shadow-xs);
 		z-index: 1;
 		transition: transform 200ms ease-out;

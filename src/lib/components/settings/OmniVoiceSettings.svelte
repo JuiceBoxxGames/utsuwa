@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Tooltip, Icon } from '$lib/components/ui';
+	import SettingsSection from './SettingsSection.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import type { TtsSettingsState } from '$lib/stores/ai-services-settings.svelte';
 	import type { ProviderMetadata } from '$lib/services/providers/registry';
@@ -565,7 +567,7 @@
 				{#if opts.voiceId}
 					{@const cloneId = opts.voiceId.replace('clone:', '')}
 					<button
-						class="btn btn-sm btn-danger omnivoice-delete-btn"
+						class="btn btn-sm btn-danger"
 						onclick={() => opts.onDeleteClone(cloneId)}
 						disabled={cloneDeleting === cloneId}
 					>
@@ -620,7 +622,7 @@
 	<div class="omnivoice-error" role="alert">
 		{profileError || previewError}
 		<button
-			class="omnivoice-error-close"
+			class="omnivoice-error-close btn btn-ghost btn-sm"
 			onclick={() => {
 				profileError = '';
 				previewError = '';
@@ -631,8 +633,7 @@
 {/if}
 
 <!-- Primary voice card -->
-<div class="omnivoice-card">
-	<div class="omnivoice-card-label">Primary Voice</div>
+<SettingsSection title="Primary voice" outlined>
 
 	<div class="omnivoice-design-grid-2">
 		<div class="omnivoice-field">
@@ -703,26 +704,26 @@
 
 	<div class="omnivoice-design-grid-2">
 		<div class="omnivoice-design-row">
-			<span class="omnivoice-design-label">Speed</span>
-			<input
+			<label class="omnivoice-design-label" for="omnivoice-speed">Speed</label>
+			<input id="omnivoice-speed"
 				type="range"
 				min="0.5"
 				max="2.0"
 				step="0.1"
-				class="omnivoice-slider"
+				class="settings-range omnivoice-slider"
 				value={(settings.speechSettings.speed as number) ?? 1}
 				oninput={(e) => settings.handleTTSSpeedChange(parseSpeed(e.currentTarget.value))}
 			/>
 			<span class="omnivoice-slider-val">{(settings.speechSettings.speed as number) ?? 1}</span>
 		</div>
 		<div class="omnivoice-design-row">
-			<span class="omnivoice-design-label">Num Step</span>
-			<input
+			<label class="omnivoice-design-label" for="omnivoice-num-step">Num Step</label>
+			<input id="omnivoice-num-step"
 				type="range"
 				min="4"
 				max="64"
 				step="1"
-				class="omnivoice-slider"
+				class="settings-range omnivoice-slider"
 				value={(settings.speechSettings.numStep as number) ?? 32}
 				oninput={(e) => settings.handleTTSNumStepChange(parseNumber(e.currentTarget.value))}
 			/>
@@ -732,14 +733,14 @@
 
 	<div class="omnivoice-design-grid-2">
 		<div class="omnivoice-advanced-slider">
-			<span class="omnivoice-advanced-label">Position Temperature</span>
+			<label class="omnivoice-advanced-label" for="omnivoice-position-temperature">Position Temperature</label>
 			<div class="omnivoice-advanced-row">
-				<input
+				<input id="omnivoice-position-temperature"
 					type="range"
 					min="0"
 					max="2"
 					step="0.1"
-					class="omnivoice-slider"
+					class="settings-range omnivoice-slider"
 					value={(settings.speechSettings.positionTemperature as number) ?? 1}
 					oninput={(e) =>
 						settings.handleTTSPositionTemperatureChange(parseNumber(e.currentTarget.value))}
@@ -750,14 +751,14 @@
 			</div>
 		</div>
 		<div class="omnivoice-advanced-slider">
-			<span class="omnivoice-advanced-label">Class Temperature</span>
+			<label class="omnivoice-advanced-label" for="omnivoice-class-temperature">Class Temperature</label>
 			<div class="omnivoice-advanced-row">
-				<input
+				<input id="omnivoice-class-temperature"
 					type="range"
 					min="0"
 					max="2"
 					step="0.1"
-					class="omnivoice-slider"
+					class="settings-range omnivoice-slider"
 					value={(settings.speechSettings.classTemperature as number) ?? 0.2}
 					oninput={(e) =>
 						settings.handleTTSClassTemperatureChange(parseNumber(e.currentTarget.value))}
@@ -768,11 +769,10 @@
 			</div>
 		</div>
 	</div>
-</div>
+</SettingsSection>
 
 <!-- Alternative voice card -->
-<div class="omnivoice-card">
-	<div class="omnivoice-card-label">Alternative Voice</div>
+<SettingsSection title="Alternative voice" outlined>
 
 	<div class="omnivoice-voice-row">
 		<label class="omnivoice-radio">
@@ -830,15 +830,17 @@
 			})}
 		</div>
 
-		<label class="omnivoice-radio" style="display:flex;align-items:center;gap:0.5rem;">
+		<div class="omnivoice-voice-row">
+		<label class="omnivoice-radio">
 			<input
 				type="checkbox"
 				checked={toolCallingEnabled}
 				onchange={(e) => settings.handleTTSEnableToolCallingChange(e.currentTarget.checked)}
 			/>
 			<span>Force language per segment</span>
-			<span class="tooltip" data-tooltip="More reliable; needs LLM tool support">ⓘ</span>
-		</label>
+			</label>
+		<Tooltip content="More reliable; needs LLM tool support"><Icon name="info" size={16} /></Tooltip>
+		</div>
 
 		<div class="omnivoice-voice-row">
 			<span class="omnivoice-design-label" style="width:auto;flex-shrink:0;">Mode</span>
@@ -866,26 +868,26 @@
 
 		<div class="omnivoice-design-grid-2">
 			<div class="omnivoice-design-row">
-				<span class="omnivoice-design-label">Alt Speed</span>
-				<input
+				<label class="omnivoice-design-label" for="omnivoice-alt-speed">Alt Speed</label>
+				<input id="omnivoice-alt-speed"
 					type="range"
 					min="0.5"
 					max="2.0"
 					step="0.1"
-					class="omnivoice-slider"
+					class="settings-range omnivoice-slider"
 					value={(settings.speechSettings.altSpeed as number) ?? 1}
 					oninput={(e) => settings.handleTTSAltSpeedChange(parseSpeed(e.currentTarget.value))}
 				/>
 				<span class="omnivoice-slider-val">{(settings.speechSettings.altSpeed as number) ?? 1}</span>
 			</div>
 			<div class="omnivoice-design-row">
-				<span class="omnivoice-design-label">Alt Num Step</span>
-				<input
+				<label class="omnivoice-design-label" for="omnivoice-alt-num-step">Alt Num Step</label>
+				<input id="omnivoice-alt-num-step"
 					type="range"
 					min="4"
 					max="64"
 					step="1"
-					class="omnivoice-slider"
+					class="settings-range omnivoice-slider"
 					value={(settings.speechSettings.altNumStep as number) ?? 32}
 					oninput={(e) => settings.handleTTSAltNumStepChange(parseNumber(e.currentTarget.value))}
 				/>
@@ -895,14 +897,14 @@
 
 		<div class="omnivoice-design-grid-2">
 			<div class="omnivoice-advanced-slider">
-				<span class="omnivoice-advanced-label">Alt Position Temperature</span>
+				<label class="omnivoice-advanced-label" for="omnivoice-alt-position-temperature">Alt Position Temperature</label>
 				<div class="omnivoice-advanced-row">
-					<input
+					<input id="omnivoice-alt-position-temperature"
 						type="range"
 						min="0"
 						max="2"
 						step="0.1"
-						class="omnivoice-slider"
+						class="settings-range omnivoice-slider"
 						value={(settings.speechSettings.altPositionTemperature as number) ?? 1}
 						oninput={(e) =>
 							settings.handleTTSAltPositionTemperatureChange(parseNumber(e.currentTarget.value))}
@@ -913,14 +915,14 @@
 				</div>
 			</div>
 			<div class="omnivoice-advanced-slider">
-				<span class="omnivoice-advanced-label">Alt Class Temperature</span>
+				<label class="omnivoice-advanced-label" for="omnivoice-alt-class-temperature">Alt Class Temperature</label>
 				<div class="omnivoice-advanced-row">
-					<input
+					<input id="omnivoice-alt-class-temperature"
 						type="range"
 						min="0"
 						max="2"
 						step="0.1"
-						class="omnivoice-slider"
+						class="settings-range omnivoice-slider"
 						value={(settings.speechSettings.altClassTemperature as number) ?? 0.2}
 						oninput={(e) =>
 							settings.handleTTSAltClassTemperatureChange(parseNumber(e.currentTarget.value))}
@@ -932,7 +934,7 @@
 			</div>
 		</div>
 	{/if}
-</div>
+</SettingsSection>
 
 {#if showCloneModal}
 	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -1021,25 +1023,17 @@
 		background: var(--bg-primary);
 		border: 1px solid var(--border-subtle);
 		border-radius: var(--radius-lg);
-		padding: 0.75rem;
-		margin-top: 0.5rem;
+		padding: 1rem;
+		margin-top: 0.25rem;
 	}
 
-	.omnivoice-card-label {
-		display: block;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--text-tertiary);
-		margin-bottom: 0.5rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
 
 	.omnivoice-field {
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
-		margin-bottom: 0.6rem;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
 	}
 
 	.omnivoice-field:last-child {
@@ -1047,7 +1041,9 @@
 	}
 
 	.omnivoice-label {
-		font-size: 0.75rem;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		color: var(--text-secondary);
 		display: flex;
@@ -1060,7 +1056,7 @@
 		align-items: center;
 		gap: 0.3rem;
 		white-space: nowrap;
-		font-size: 0.7rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		color: var(--text-tertiary);
 	}
@@ -1088,6 +1084,7 @@
 	/* ── Voice row ──────────────────────────────────────── */
 
 	.omnivoice-voice-row {
+		flex-wrap: wrap;
 		display: flex;
 		gap: 0.4rem;
 		align-items: center;
@@ -1118,22 +1115,23 @@
 	}
 
 	.omnivoice-design-label {
-		font-size: 0.7rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		color: var(--text-tertiary);
-		width: 3.2em;
+		width: auto;
 		flex-shrink: 0;
-		text-align: right;
+		text-align: left;
 	}
 
 	.omnivoice-radio {
 		display: flex;
 		align-items: center;
-		gap: 0.15rem;
-		font-size: 0.72rem;
+		gap: 0.5rem;
+		min-height: 44px;
+		font-size: 0.875rem;
 		color: var(--text-secondary);
 		cursor: pointer;
-		white-space: nowrap;
+		white-space: normal;
 	}
 
 	.omnivoice-radio input {
@@ -1141,48 +1139,15 @@
 		margin: 0;
 	}
 
-	.tooltip {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1rem;
-		height: 1rem;
-		font-size: 0.65rem;
-		color: var(--text-secondary);
-		cursor: help;
-		opacity: 0.8;
-	}
-	.tooltip::after {
-		content: attr(data-tooltip);
-		position: absolute;
-		bottom: 125%;
-		left: 50%;
-		transform: translateX(-50%);
-		background: var(--bg-secondary, #2a2f3a);
-		color: var(--text-primary);
-		padding: 0.3rem 0.5rem;
-		border-radius: 4px;
-		font-size: 0.68rem;
-		white-space: nowrap;
-		opacity: 0;
-		pointer-events: none;
-		transition: opacity 0.15s;
-		z-index: 10;
-	}
-	.tooltip:hover::after {
-		opacity: 1;
-	}
 
 	.omnivoice-slider {
 		flex: 1;
-		height: 4px;
 		accent-color: var(--accent);
 		cursor: pointer;
 	}
 
 	.omnivoice-slider-val {
-		font-size: 0.7rem;
+		font-size: 0.8125rem;
 		color: var(--text-secondary);
 		width: 2.2em;
 		text-align: center;
@@ -1191,7 +1156,8 @@
 
 	.omnivoice-design-grid-2 {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		align-items: start;
 		gap: 0.75rem;
 	}
 
@@ -1202,14 +1168,14 @@
 	}
 
 	.omnivoice-design-grid-2 .omnivoice-design-row {
-		flex-wrap: nowrap;
+		flex-wrap: wrap;
 		min-width: 0;
 		margin-bottom: 0;
 	}
 
 	.omnivoice-design-grid-2 .omnivoice-design-label {
 		width: auto;
-		min-width: 3.2em;
+		min-width: auto;
 	}
 
 	.omnivoice-advanced-slider {
@@ -1220,7 +1186,7 @@
 	}
 
 	.omnivoice-advanced-label {
-		font-size: 0.7rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		color: var(--text-tertiary);
 	}
@@ -1243,8 +1209,8 @@
 		display: inline-block;
 		width: 12px;
 		height: 12px;
-		border: 2px solid rgba(255, 255, 255, 0.3);
-		border-top-color: #fff;
+		border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+		border-top-color: currentColor;
 		border-radius: 50%;
 		animation: ov-spin 0.6s linear infinite;
 		vertical-align: middle;
@@ -1285,9 +1251,6 @@
 
 	/* ── Cloned voices ──────────────────────────────────── */
 
-	.omnivoice-delete-btn {
-		padding: 0.25rem 0.5rem;
-	}
 
 	/* ── Modal ──────────────────────────────────────────── */
 
@@ -1307,8 +1270,10 @@
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-lg);
 		padding: 1.25rem;
-		min-width: 360px;
-		max-width: 90vw;
+		width: 480px;
+		max-width: calc(100vw - 32px);
+		max-height: calc(100dvh - 32px);
+		overflow-y: auto;
 	}
 
 	.omnivoice-modal-title {
@@ -1324,7 +1289,7 @@
 
 	.omnivoice-modal-label {
 		display: block;
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		color: var(--text-tertiary);
 		margin-bottom: 0.3rem;
@@ -1358,7 +1323,7 @@
 	}
 
 	.omnivoice-file-name {
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		color: var(--text-secondary);
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1368,4 +1333,12 @@
 	.omnivoice-hidden-input {
 		display: none;
 	}
+
+	@media (max-width: 640px) {
+		.omnivoice-design-grid-2 { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+		.omnivoice-field {
+		min-width: 0; min-width: 0; }
+		.omnivoice-voice-row .btn { min-height: 44px; }
+	}
+	@media (prefers-reduced-motion: reduce) { .omnivoice-spinner { animation: none; } }
 </style>

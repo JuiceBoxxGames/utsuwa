@@ -41,9 +41,16 @@
 			}}>{sample.label}</Button
 		>{/each}
 </div>
-<label>User message<textarea bind:value={message} maxlength={2000} rows={2}></textarea></label>
 <label
-	>Raw model response<textarea bind:value={response} maxlength={20000} rows={7}></textarea></label
+	>User message<textarea class="settings-field" bind:value={message} maxlength={2000} rows={2}
+	></textarea></label
+>
+<label
+	>Raw model response<textarea
+		class="settings-field"
+		bind:value={response}
+		maxlength={20000}
+		rows={7}></textarea></label
 >
 <Button onclick={parse}>Parse sample</Button>
 {#if result}<pre aria-label="Parser result">{result}</pre>{/if}
@@ -65,21 +72,6 @@
 		gap: 0.5rem;
 		margin: 1rem 0;
 		font-size: 0.875rem;
-	}
-	textarea {
-		width: 100%;
-		resize: vertical;
-		min-height: 64px;
-		padding: 0.75rem;
-		font: inherit;
-		color: var(--text-primary);
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-lg);
-	}
-	textarea:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
 	}
 	pre {
 		white-space: pre-wrap;

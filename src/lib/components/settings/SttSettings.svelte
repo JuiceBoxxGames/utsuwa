@@ -16,7 +16,7 @@
 		<input
 			type="password"
 			class="api-key-input"
-			placeholder="Groq API Key"
+			placeholder="Groq API Key" aria-label="Groq API Key"
 			value={settingsStore.getProviderConfig('groq-stt').apiKey ?? ''}
 			oninput={(e) => {
 				const v = e.currentTarget.value;
@@ -32,7 +32,7 @@
 		<input
 			type="password"
 			class="api-key-input"
-			placeholder="OpenAI API Key"
+			placeholder="OpenAI API Key" aria-label="OpenAI API Key"
 			value={settingsStore.getProviderConfig('openai-stt').apiKey ?? ''}
 			oninput={(e) => {
 				const v = e.currentTarget.value;
@@ -48,7 +48,7 @@
 		<input
 			type="text"
 			class="api-key-input"
-			placeholder="http://localhost:8000/v1/"
+			placeholder="http://localhost:8000/v1/" aria-label="http://localhost:8000/v1/"
 			value={settingsStore.getProviderConfig('local-stt').baseUrl ?? ''}
 			oninput={(e) => {
 				const v = e.currentTarget.value.trim();
@@ -62,7 +62,7 @@
 		<input
 			type="text"
 			class="api-key-input"
-			placeholder="Model (e.g. Systran/faster-whisper-large-v3)"
+			placeholder="Model (e.g. Systran/faster-whisper-large-v3)" aria-label="Model (e.g. Systran/faster-whisper-large-v3)"
 			value={settingsStore.getProviderConfig('local-stt').modelId ?? ''}
 			oninput={(e) => {
 				settingsStore.setProviderConfig('local-stt', { modelId: e.currentTarget.value.trim() });
@@ -73,7 +73,7 @@
 
 <style>
 	.stt-hint {
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		color: var(--text-tertiary);
 		margin: 0;
 		line-height: 1.4;
@@ -81,7 +81,7 @@
 
 	.stt-sublabel {
 		display: block;
-		font-size: 0.7rem;
+		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--text-secondary);
 		margin-top: 0.25rem;
