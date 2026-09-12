@@ -77,8 +77,13 @@ for (const mode of ['bubble', 'sidebar']) {
 		await expect(panel).not.toBeVisible();
 		await expect(trigger).toBeFocused();
 		await trigger.click();
+		await expect(panel).toBeVisible();
+		await expect(panel).toBeFocused();
 		// The upward panel covers the field on narrow screens. Dismiss from the scene first.
-		await page.mouse.click(5, 80);
+		await page
+			.locator('.stage-container canvas')
+			.first()
+			.click({ position: { x: 5, y: 80 } });
 		await expect(panel).not.toBeVisible();
 		await input.click();
 		await expect(input).toBeFocused();
@@ -111,9 +116,11 @@ for (const mode of ['bubble', 'sidebar']) {
 		await expect(panel.getByRole('region', { name: 'Relationship stats' })).toHaveCount(0);
 		await expect(panel.getByRole('region', { name: 'Character stats' })).toBeVisible();
 		await expect(panel.getByRole('link', { name: 'Character settings' })).toBeVisible();
-		const box = (await panel.boundingBox())!;
-		expect(box.y).toBeGreaterThanOrEqual(0);
-		expect(box.y + box.height).toBeLessThanOrEqual((await trigger.boundingBox())!.y);
+		await expect(async () => {
+			const box = (await panel.boundingBox())!;
+			expect(box.y).toBeGreaterThanOrEqual(0);
+			expect(box.y + box.height).toBeLessThanOrEqual((await trigger.boundingBox())!.y);
+		}).toPass({ timeout: 5000 });
 		const details = panel.getByRole('region', { name: 'Stats details' });
 		await details.focus();
 		await details.press('End');

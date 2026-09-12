@@ -13,6 +13,19 @@ export async function openApp(page: Page, display: Record<string, unknown> = {})
 		characterStore.markOnboardingComplete();
 		await characterStore.save(true);
 		localStorage.setItem('utsuwa-display', JSON.stringify({ textRevealSpeed: 'off', ...settings }));
+		// Exercise the normal cached-preview state. The active avatar still loads
+		// and renders; unrelated thumbnail generation is not part of these UI tests.
+		const vrmPath = '/src/lib/stores/vrm.svelte.ts';
+		const { vrmStore } = await import(/* @vite-ignore */ vrmPath);
+		await vrmStore.whenReady();
+		await Promise.all(
+			vrmStore.models.map((model: { id: string }) =>
+				vrmStore.setModelPreview(
+					model.id,
+					'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jD1sAAAAASUVORK5CYII='
+				)
+			)
+		);
 	}, display);
 	await page.goto('/app');
 	await waitForHydration(page);
@@ -38,4 +51,12 @@ export async function waitForHydration(page: Page) {
 			{ timeout: 15_000 }
 		)
 		.toBe(true);
+	if (new URL(page.url()).pathname.startsWith('/app')) {
+		// Module registration precedes hydration. This inline size is set by the
+		// app layout's onMount, after its children's handlers have been attached.
+		await expect(page.locator('.app')).toHaveAttribute('style', /height:\s*[\d.]+px/);
+	} else if (new URL(page.url()).pathname === '/overlay') {
+		// The overlay's scene creates its canvas only after mounting.
+		await expect(page.locator('.vrm-scene canvas')).toBeVisible();
+	}
 }
