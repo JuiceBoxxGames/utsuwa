@@ -61,7 +61,7 @@
 - **Physics Intensity**: A Movement slider from Subtle to Lively scales how much her hair and outfit respond to motion, respecting each model's own rig tuning
 - **Model-Centric UI**: Full-screen 3D model with unobtrusive overlay controls
 - **3D Speech Bubbles**: Chat responses appear as bubbles that track the model's head in 3D space, revealed word by word at a configurable speed
-- **Chat Window**: Optional messenger-style floating window with the full conversation history and the input docked inside; drag it anywhere, resize from any edge, snap it left or right. Choose a floating or docked layout; docking reserves space beside the avatar on wide screens and below it on mobile. Display modes (Immersive, Chat window, Both, Off) live in Settings > Display
+- **Chat Window**: A docked panel with conversation history, message copying, and an input. It stays open in Chat window mode, beside the avatar on wide screens and below it on mobile. The full scene continues behind the panel. Choose Immersive for the standalone input bar in Settings > Display.
 - **Keep Screen Awake**: Opt in under Settings > Display to keep the screen on while Utsuwa is visible. The indicator reports the actual lock state; unsupported webviews show a clear unavailable state.
 - **Thinking Status**: A shimmer label narrates what she is actually doing (Remembering, Looking at your photo, Thinking), with a configurable delay and an optional soft audio ping
 - **Chat Interface**: Floating input bar (left, center, or right aligned) with streaming responses
@@ -348,12 +348,13 @@ pnpm tauri build  # Build desktop app installer
 - [x] OmniVoice Local TTS - Self-hosted OmniVoice proxy support for local text-to-speech
 - [x] MCP Tool Calling - Connect Model Context Protocol servers (HTTP + stdio) and let the companion call their tools during chat, with per-server toggles and an `MCP_ENABLED=server` gate for self-hosted web deployments
 
+- [x] **Chat layouts** - Choose an immersive composer or a docked conversation window, with character stats available from either composer
+
 ### In Progress / Planned
 
 - [ ] **File and Video Uploads** - Add support for attaching files and videos for multimodal LLM workflows and providers that can use richer context or web-aware tools (image support has shipped)
 - [ ] **Live2D Support** - Alternative to VRM for 2D animated avatars
 - [ ] **Hands-Free Voice Mode** - Full duplex conversation: speak naturally and she answers, no push-to-talk, with voice activity detection
-- [ ] **Flexible Chat Layout** - Choose between the floating chat bar, a full conversation sidebar, or both at once
 
 ## Contributing
 

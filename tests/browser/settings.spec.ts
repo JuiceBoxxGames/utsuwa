@@ -163,11 +163,13 @@ test('shared LLM and display controls keep their existing values and callbacks',
 	await waitForHydration(page);
 	await page
 		.getByRole('group', { name: 'Chat display mode' })
-		.getByRole('button', { name: 'Both', exact: true })
+		.getByRole('button', { name: 'Chat window', exact: true })
 		.click();
+	await expect(page.getByRole('group', { name: 'Chat window layout' })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Reset position' })).toHaveCount(0);
 	await page
-		.getByRole('group', { name: 'Chat window layout' })
-		.getByRole('button', { name: 'Docked', exact: true })
+		.getByRole('group', { name: 'Chat window dock side' })
+		.getByRole('button', { name: 'Left', exact: true })
 		.click();
 	await page.getByRole('switch', { name: 'Wait tone', exact: true }).check();
 	await page.getByRole('button', { name: 'Increase typing delay' }).click();

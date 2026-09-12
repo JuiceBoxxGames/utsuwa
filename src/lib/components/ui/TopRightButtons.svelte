@@ -6,7 +6,6 @@
 	import { localPath } from '$lib/config/links';
 	import { isTauri } from '$lib/services/platform';
 	import { arStore } from '$lib/stores/ar.svelte';
-	import { displayStore } from '$lib/stores/display.svelte';
 	import { getColorMode, cycleColorMode, type ColorMode } from '$lib/utils/color-mode';
 	import { onMount } from 'svelte';
 	import type { Reminder } from '$lib/types/memory';
@@ -17,8 +16,6 @@
 		onDeleteReminder?: (id: number) => void;
 		recentFired?: Reminder[];
 		onDismissRecentFired?: (id: number) => void;
-		sidebarOpen?: boolean;
-		onSidebarToggle?: () => void;
 	}
 
 	let {
@@ -26,9 +23,7 @@
 		upcomingReminders = [],
 		onDeleteReminder,
 		recentFired = [],
-		onDismissRecentFired,
-		sidebarOpen = false,
-		onSidebarToggle
+		onDismissRecentFired
 	}: Props = $props();
 	let showOverlayBtn = $state(false);
 	let clusterOpen = $state(false);
@@ -179,17 +174,6 @@
 				</div>
 			{/if}
 		</div>
-		{#if displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'}
-			<button
-				class="icon-btn"
-				class:active={sidebarOpen}
-				onclick={onSidebarToggle}
-				aria-label="Chat history"
-				title="Chat history"
-			>
-				<Icon name="message" size={20} />
-			</button>
-		{/if}
 		{#if showOverlayBtn}
 			<button class="icon-btn overlay-btn" onclick={launchOverlay} aria-label="Launch overlay" title="Launch Overlay Mode">
 				<Icon name="monitor" size={20} />

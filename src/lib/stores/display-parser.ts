@@ -16,8 +16,7 @@ import {
 	type ChatDisplayMode,
 	type SidebarPosition,
 	type TextRevealSpeed,
-	type ChatBarAlignment,
-	type ChatWindowLayout
+	type ChatBarAlignment
 } from './display-types.ts';
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -33,7 +32,7 @@ export function sanitizeCamera(raw: Partial<CameraSettings> | undefined): Camera
 }
 
 function isChatDisplayMode(value: unknown): value is ChatDisplayMode {
-	return value === 'bubble' || value === 'sidebar' || value === 'both' || value === 'off';
+	return value === 'bubble' || value === 'sidebar';
 }
 
 function isSidebarPosition(value: unknown): value is SidebarPosition {
@@ -63,7 +62,6 @@ export interface ParsedDisplaySettings {
 	typingIndicatorDelayMs: number;
 	textRevealSpeed: TextRevealSpeed;
 	chatBarAlignment: ChatBarAlignment;
-	chatWindowLayout: ChatWindowLayout;
 	keepScreenAwake: boolean;
 }
 
@@ -97,7 +95,6 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 			typingIndicatorDelayMs: DEFAULT_TYPING_INDICATOR_DELAY_MS,
 			textRevealSpeed: DEFAULT_TEXT_REVEAL_SPEED,
 			chatBarAlignment: DEFAULT_CHAT_BAR_ALIGNMENT,
-			chatWindowLayout: 'floating',
 			keepScreenAwake: false
 		};
 	}
@@ -130,7 +127,7 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 
 	const sceneBackground = sanitizeSceneBackground(parsed.sceneBackground);
 
-	const chatDisplayMode = isChatDisplayMode(parsed.chatDisplayMode)
+	const chatDisplayMode = parsed.chatDisplayMode === 'both' ? 'sidebar' : isChatDisplayMode(parsed.chatDisplayMode)
 		? parsed.chatDisplayMode
 		: DEFAULT_CHAT_DISPLAY_MODE;
 
@@ -156,6 +153,5 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 		? parsed.chatBarAlignment
 		: DEFAULT_CHAT_BAR_ALIGNMENT;
 
-	const chatWindowLayout = parsed.chatWindowLayout === 'docked' ? 'docked' : 'floating';
-	return { keepScreenAwake: parsed.keepScreenAwake === true, chatWindowLayout, camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
+	return { keepScreenAwake: parsed.keepScreenAwake === true, camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
 }

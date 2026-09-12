@@ -5,6 +5,7 @@
 	import { queueFiles, showVisionHint } from './attach-files';
 	import { unlockAudioContext } from '$lib/services/tts';
 	import { type PreparedImage } from '$lib/services/storage/keepsakes';
+	import CompanionStats from '$lib/components/ui/CompanionStats.svelte';
 	import AudioVisualizer from './AudioVisualizer.svelte';
 	import { pop, fadeFast } from '$lib/utils/motion';
 
@@ -14,17 +15,9 @@
 		visionCapable?: boolean;
 		/** Overlay window: image-showing is disabled (no native file dialog / drop). */
 		overlay?: boolean;
-		/** Flat row inside the chat window instead of the floating pill. */
-		docked?: boolean;
 	}
 
-	let {
-		onSend,
-		disabled = false,
-		visionCapable = true,
-		overlay = false,
-		docked = false
-	}: Props = $props();
+	let { onSend, disabled = false, visionCapable = true, overlay = false }: Props = $props();
 
 	let textareaRef = $state<HTMLTextAreaElement | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
@@ -95,11 +88,15 @@
 	}
 </script>
 
-<div class="chat-input" class:docked>
+<div class="chat-input" class:stacked={!overlay}>
 	{#if chatDraftStore.pending.length > 0}
 		<div class="pending-row" out:fadeFast={{ duration: 150 }}>
 			{#each chatDraftStore.pending as p (p.image.id)}
-				<div class="pending-chip" in:pop={{ duration: 200, y: 6, scale: 0.9 }} out:fadeFast={{ duration: 120 }}>
+				<div
+					class="pending-chip"
+					in:pop={{ duration: 200, y: 6, scale: 0.9 }}
+					out:fadeFast={{ duration: 120 }}
+				>
 					<img src={p.url} alt="To show her" />
 					<button
 						type="button"
@@ -124,12 +121,7 @@
 				onchange={(e) => handlePicked(e.currentTarget.files)}
 			/>
 		{/if}
-		<div
-			class="input-wrapper"
-			class:recording={isListening}
-			class:transcribing={isTranscribing}
-			
-		>
+		<div class="input-wrapper" class:recording={isListening} class:transcribing={isTranscribing}>
 			{#if isTranscribing}
 				<div class="transcribing-label">Transcribing...</div>
 				<button type="button" class="mic-btn recording" disabled aria-label="Transcribing">
@@ -147,10 +139,22 @@
 					<Icon name="stop" size={16} />
 				</button>
 			{:else}
+				<!-- Main composers wrap; the compact desktop overlay stays on one line. -->
+				<textarea
+					bind:this={textareaRef}
+					bind:value={chatDraftStore.draft}
+					onkeydown={handleKeydown}
+					aria-label="Message"
+					aria-busy={disabled}
+					placeholder="Type a message..."
+					rows={overlay ? 1 : 2}
+					wrap={overlay ? 'off' : 'soft'}
+					readonly={disabled}></textarea>
+				{#if !overlay}<div class="stats-slot"><CompanionStats /></div>{/if}
 				{#if !overlay}
 					<button
 						type="button"
-						class="mic-btn"
+						class="mic-btn attach-btn"
 						class:vision-off={!visionCapable}
 						onclick={openPicker}
 						{disabled}
@@ -160,23 +164,10 @@
 						<Icon name="paperclip" size={20} />
 					</button>
 				{/if}
-				<!-- wrap="off" keeps long messages trailing forward on one line
-				     instead of stacking; pasted newlines are preserved, just not
-				     shown as extra rows -->
-				<textarea
-					bind:this={textareaRef}
-					bind:value={chatDraftStore.draft}
-					onkeydown={handleKeydown}
-					aria-label="Message"
-					aria-busy={disabled}
-					placeholder="Type a message..."
-					rows="1"
-					wrap="off"
-					readonly={disabled}
-				></textarea>
+
 				<button
 					type="button"
-					class="mic-btn"
+					class="mic-btn voice-btn"
 					onclick={handleMicClick}
 					{disabled}
 					aria-label="Voice input"
@@ -184,7 +175,13 @@
 				>
 					<Icon name="mic" size={20} />
 				</button>
-				<button type="submit" class="mic-btn send-btn" disabled={disabled || !hasContent} aria-label="Send message" title="Send message">
+				<button
+					type="submit"
+					class="mic-btn send-btn"
+					disabled={disabled || !hasContent}
+					aria-label="Send message"
+					title="Send message"
+				>
 					<Icon name="send" size={20} />
 				</button>
 			{/if}
@@ -233,7 +230,9 @@
 		border-radius: var(--radius-md);
 		border: 1px solid var(--border-light);
 		box-shadow: var(--shadow-sm);
-		transition: box-shadow 0.2s ease, border-color 0.2s ease;
+		transition:
+			box-shadow 0.2s ease,
+			border-color 0.2s ease;
 	}
 
 	.pending-chip:hover img {
@@ -259,7 +258,9 @@
 		box-shadow: var(--shadow-sm);
 		opacity: 0;
 		transform: scale(0.4);
-		transition: opacity 0.16s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+		transition:
+			opacity 0.16s ease,
+			transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.pending-chip:hover .remove-chip {
@@ -290,38 +291,62 @@
 	}
 
 	.input-wrapper:focus-within {
-		box-shadow: 0 0 0 3px var(--accent-muted), var(--shadow-glow);
+		box-shadow:
+			0 0 0 3px var(--accent-muted),
+			var(--shadow-glow);
 	}
 
 	.input-wrapper.recording {
-		box-shadow: 0 0 0 3px var(--accent-muted), var(--shadow-glow);
+		box-shadow:
+			0 0 0 3px var(--accent-muted),
+			var(--shadow-glow);
 	}
 
 	.input-wrapper.transcribing {
-		box-shadow: 0 0 0 3px var(--accent-muted), var(--shadow-md);
+		box-shadow:
+			0 0 0 3px var(--accent-muted),
+			var(--shadow-md);
 	}
 
-	/* Docked: flat compact row that reads as part of the chat window and
-	   keeps shrinking gracefully as the window narrows */
-	.docked .input-wrapper {
-		border-radius: var(--radius-md);
-		border: none;
+	.stacked .input-wrapper {
+		border-radius: var(--radius-xl);
+		border: 1px solid var(--border-subtle);
 		box-shadow: none;
-		height: 42px;
+		height: auto;
+		min-height: 116px;
 		min-width: 0;
 		gap: 0.25rem;
-		padding: 0.25rem 0.35rem;
+		padding: 0.5rem;
 		backdrop-filter: none;
 		-webkit-backdrop-filter: none;
 	}
-
-	.docked .input-wrapper:focus-within,
-	.docked .input-wrapper.recording,
-	.docked .input-wrapper.transcribing {
-		box-shadow: inset 0 0 0 2px var(--accent);
+	.stacked .input-wrapper:not(.recording):not(.transcribing) {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto auto;
+		grid-template-areas: 'message message message message' 'stats attach voice send';
+	}
+	.stats-slot {
+		grid-area: stats;
+		min-width: 0;
+	}
+	.stacked .attach-btn {
+		grid-area: attach;
+		justify-self: start;
+	}
+	.stacked .voice-btn {
+		grid-area: voice;
+	}
+	.stacked .send-btn {
+		grid-area: send;
+	}
+	.stacked .input-wrapper:focus-within,
+	.stacked .input-wrapper.recording,
+	.stacked .input-wrapper.transcribing {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 2px var(--accent-muted);
 	}
 
-	.docked .pending-row {
+	.stacked .pending-row {
 		margin-bottom: 0.35rem;
 		padding: 0 0.25rem;
 	}
@@ -357,10 +382,16 @@
 		display: none;
 	}
 
-	.docked textarea {
+	.stacked textarea {
+		grid-area: message;
+		width: 100%;
 		font-size: 1rem;
-		padding: 0.375rem 0.4rem;
-		height: calc(1.5em + 0.75rem);
+		padding: 0.375rem 0.5rem;
+		height: 64px;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		overflow-y: auto;
+		scrollbar-width: thin;
 	}
 
 	textarea::placeholder {
@@ -381,19 +412,23 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
+		transition:
+			background 0.2s,
+			color 0.2s,
+			box-shadow 0.2s,
+			transform 0.15s;
 		flex-shrink: 0;
 		position: relative;
 		background: transparent;
 		color: var(--text-tertiary);
 	}
 
-	.docked .mic-btn {
+	.stacked .mic-btn {
 		width: 34px;
 		height: 34px;
 	}
 
-	.docked .pending-chip {
+	.stacked .pending-chip {
 		width: 44px;
 		height: 44px;
 	}
@@ -428,7 +463,8 @@
 	}
 
 	@keyframes recording-pulse {
-		0%, 100% {
+		0%,
+		100% {
 			box-shadow: 0 0 0 0 var(--accent-muted);
 		}
 		50% {
@@ -436,17 +472,40 @@
 		}
 	}
 
-	.send-btn { background: var(--accent); color: var(--text-on-accent, white); }
-	.send-btn:hover:not(:disabled) { background: var(--accent-hover); color: var(--text-on-accent, white); }
-	.send-btn:disabled { opacity: 0.4; cursor: default; }
-	.mic-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-	.pending-chip:focus-within .remove-chip { opacity: 1; transform: scale(1); }
+	.send-btn {
+		background: var(--accent);
+		color: var(--text-on-accent, white);
+	}
+	.send-btn:hover:not(:disabled) {
+		background: var(--accent-hover);
+		color: var(--text-on-accent, white);
+	}
+	.send-btn:disabled {
+		opacity: 0.4;
+		cursor: default;
+	}
+	.mic-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+	.pending-chip:focus-within .remove-chip {
+		opacity: 1;
+		transform: scale(1);
+	}
 	@media (pointer: coarse) {
-		.remove-chip { opacity: 1; transform: scale(1); }
-		.docked .input-wrapper { height: 52px; }
-		.docked .mic-btn { width: 44px; height: 44px; }
+		.remove-chip {
+			opacity: 1;
+			transform: scale(1);
+		}
+
+		.stacked .mic-btn {
+			width: 44px;
+			height: 44px;
+		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.mic-btn.recording { animation: none; }
+		.mic-btn.recording {
+			animation: none;
+		}
 	}
 </style>

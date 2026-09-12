@@ -71,7 +71,7 @@ test('parses valid settings from JSON string', () => {
 		sidebarPosition: 'right'
 	});
 	const result = parseDisplaySettings(raw);
-	assert.equal(result.chatDisplayMode, 'both');
+	assert.equal(result.chatDisplayMode, 'sidebar');
 	assert.equal(result.sidebarPosition, 'right');
 });
 
@@ -235,11 +235,9 @@ test('camera settings reject malformed and non-finite persisted values', () => {
 });
 
 
-test('docking is opt-in and survives serialization', () => {
-	for (const raw of [undefined, 'invalid', true, null]) {
-		assert.equal(parseDisplaySettings({ chatWindowLayout: raw }).chatWindowLayout, 'floating');
-	}
-	assert.equal(parseDisplaySettings(JSON.stringify({ chatWindowLayout: 'docked' })).chatWindowLayout, 'docked');
+test('obsolete floating layout does not change the remaining display preferences', () => {
+ const saved = { chatDisplayMode: 'sidebar', sidebarPosition: 'left', camera: { panX: 0.25 } };
+ assert.deepEqual(parseDisplaySettings({ ...saved, chatWindowLayout: 'floating' }), parseDisplaySettings(saved));
 });
 
 test('keep-awake requires an explicit boolean opt-in', () => {
@@ -247,4 +245,8 @@ test('keep-awake requires an explicit boolean opt-in', () => {
 		assert.equal(parseDisplaySettings({ keepScreenAwake: value }).keepScreenAwake, false);
 	}
 	assert.equal(parseDisplaySettings(JSON.stringify({ keepScreenAwake: true })).keepScreenAwake, true);
+});
+
+test('retired off mode becomes immersive', () => {
+	assert.equal(parseDisplaySettings({ chatDisplayMode: 'off' }).chatDisplayMode, 'bubble');
 });

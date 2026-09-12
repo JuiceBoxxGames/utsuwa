@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import { chatStore } from '$lib/stores/chat.svelte';
 	import { displayStore, REVEAL_SPEED_MS } from '$lib/stores/display.svelte';
-	import { characterStore } from '$lib/stores/character.svelte';
 	import { Icon, ShimmerLabel } from '$lib/components/ui';
 	import { renderMarkdown } from './render-markdown';
 	import { wrapWordsInHtml } from './reveal-markup';
@@ -11,11 +9,10 @@
 	import { type PreparedImage } from '$lib/services/storage/keepsakes';
 	import { chatDraftStore } from '$lib/stores/chat-draft.svelte';
 	import ChatInput from './ChatInput.svelte';
+	import CopyButton from '$lib/components/ui/CopyButton.svelte';
 
 	interface Props {
 		open: boolean;
-		pinned?: boolean;
-		onClose?: () => void;
 		isTyping?: boolean;
 		phase?: ThinkingPhase;
 		onSend: (content: string, images?: PreparedImage[]) => void;
@@ -25,8 +22,6 @@
 
 	let {
 		open,
-		pinned = false,
-		onClose,
 		isTyping = false,
 		phase = 'thinking',
 		onSend,
@@ -34,223 +29,8 @@
 		visionCapable = true
 	}: Props = $props();
 
-	const moodInfo = $derived(characterStore.moodInfo);
-
 	let messagesEl: HTMLDivElement | null = $state(null);
 	let scrollRaf: number | null = null;
-
-	// --- Floating geometry -----------------------------------------------------
-	// The panel floats: drag it by the header, resize it from any edge. Its
-	// rect persists so it comes back where you left it. Until the user drags,
-	// it anchors to the docked side from settings.
-	const GEOMETRY_KEY = 'utsuwa-chat-panel';
-	const DEFAULT_WIDTH = 460;
-	const DEFAULT_HEIGHT_VH = 0.72;
-	const MIN_WIDTH = 260;
-	const MIN_HEIGHT = 220;
-	const MARGIN = 12;
-	const TOP_OFFSET = 68; // below the top button row
-
-	interface PanelRect {
-		x: number;
-		y: number;
-		w: number;
-		h: number;
-	}
-
-	function defaultRect(): PanelRect {
-		const vw = window.innerWidth;
-		const vh = window.innerHeight;
-		// Mobile: dock low in the viewport so her face stays visible above the
-		// chat, hugging the snap side with a slim margin
-		if (vw <= 640) {
-			const w = Math.max(MIN_WIDTH, Math.round(vw * 0.7));
-			const h = Math.round(vh * 0.42);
-			const x = displayStore.sidebarPosition === 'left' ? MARGIN : vw - w - MARGIN;
-			return { x, y: vh - h - MARGIN * 2, w, h };
-		}
-		const w = DEFAULT_WIDTH;
-		const h = Math.round(vh * DEFAULT_HEIGHT_VH);
-		const x = displayStore.sidebarPosition === 'left' ? MARGIN : vw - w - MARGIN;
-		return { x, y: TOP_OFFSET, w, h };
-	}
-
-	function clampRect(r: PanelRect): PanelRect {
-		const vw = window.innerWidth;
-		const vh = window.innerHeight;
-		const w = Math.min(Math.max(r.w, MIN_WIDTH), vw - MARGIN * 2);
-		const h = Math.min(Math.max(r.h, MIN_HEIGHT), vh - MARGIN * 2);
-		return {
-			x: Math.min(Math.max(r.x, MARGIN - w + 80), vw - 80),
-			y: Math.min(Math.max(r.y, 0), vh - 48),
-			w,
-			h
-		};
-	}
-
-	let rect = $state<PanelRect | null>(null);
-
-	// Keep the floating input above a mobile keyboard without saving the
-	// temporary keyboard layout as the user's preferred window geometry.
-	let visibleViewport = $state<{ height: number; top: number; width: number }>();
-	onMount(() => {
-		const viewport = window.visualViewport;
-		const update = () => {
-			visibleViewport = { height: viewport?.height ?? window.innerHeight, top: viewport?.offsetTop ?? 0, width: window.innerWidth };
-		};
-		update();
-		viewport?.addEventListener('resize', update);
-		viewport?.addEventListener('scroll', update);
-		window.addEventListener('resize', update);
-		return () => {
-			viewport?.removeEventListener('resize', update);
-			viewport?.removeEventListener('scroll', update);
-			window.removeEventListener('resize', update);
-		};
-	});
-	const visibleRect = $derived.by(() => {
-		if (!rect || !visibleViewport || (visibleViewport.width > 720 && visibleViewport.height >= window.innerHeight - 80)) return rect;
-		const h = Math.min(rect.h, Math.max(1, visibleViewport.height - MARGIN * 2));
-		const y = Math.max(visibleViewport.top, Math.min(rect.y, visibleViewport.top + visibleViewport.height - h - MARGIN));
-		return { ...rect, h, y };
-	});
-
-
-	$effect(() => {
-		if (!browser || rect) return;
-		try {
-			const saved = localStorage.getItem(GEOMETRY_KEY);
-			rect = saved ? clampRect(JSON.parse(saved)) : defaultRect();
-		} catch {
-			rect = defaultRect();
-		}
-	});
-
-	// Reopening after a viewport change must never leave the panel stranded.
-	// untrack keeps rect out of the dependency list; reacting to our own
-	// rect write would loop the effect forever.
-	$effect(() => {
-		if (!open) return;
-		untrack(() => {
-			if (rect) rect = clampRect(rect);
-		});
-	});
-
-	// Settings can rescue a lost window: clear the saved rect, start fresh
-	$effect(() => {
-		const token = displayStore.chatWindowResetToken;
-		if (token > 0 && browser) {
-			localStorage.removeItem(GEOMETRY_KEY);
-			rect = defaultRect();
-		}
-	});
-
-	function persistRect() {
-		if (browser && rect) localStorage.setItem(GEOMETRY_KEY, JSON.stringify(rect));
-	}
-
-	function handleViewportResize() {
-		if (rect) {
-			rect = clampRect(rect);
-			persistRect();
-		}
-	}
-
-	// Dragging via the header
-	let dragging: { pointerId: number; offsetX: number; offsetY: number } | null = null;
-
-	function onHeaderDown(e: PointerEvent) {
-		// Buttons in the header keep their own behavior
-		if (pinned || (e.target as HTMLElement).closest('button') || !rect) return;
-		dragging = { pointerId: e.pointerId, offsetX: e.clientX - rect.x, offsetY: e.clientY - rect.y };
-		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-	}
-
-	function onHeaderMove(e: PointerEvent) {
-		if (!dragging || !rect) return;
-		rect = clampRect({
-			...rect,
-			x: e.clientX - dragging.offsetX,
-			y: e.clientY - dragging.offsetY
-		});
-	}
-
-	function onHeaderUp() {
-		if (!dragging) return;
-		dragging = null;
-		persistRect();
-	}
-
-	// --- Custom resize ---------------------------------------------------------
-	// Native CSS resize only offers the bottom-right corner and fought the
-	// clamping logic; these handles cover every edge and corner.
-	type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-	const RESIZE_DIRS: ResizeDir[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
-
-	let resizing: {
-		dir: ResizeDir;
-		pointerId: number;
-		startX: number;
-		startY: number;
-		start: PanelRect;
-	} | null = null;
-
-	function onResizeDown(e: PointerEvent, dir: ResizeDir) {
-		if (pinned || !rect) return;
-		e.preventDefault();
-		resizing = {
-			dir,
-			pointerId: e.pointerId,
-			startX: e.clientX,
-			startY: e.clientY,
-			start: { ...rect }
-		};
-		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-	}
-
-	function onResizeMove(e: PointerEvent) {
-		if (!resizing) return;
-		const { dir, start } = resizing;
-		const dx = e.clientX - resizing.startX;
-		const dy = e.clientY - resizing.startY;
-		const vw = window.innerWidth;
-		const vh = window.innerHeight;
-
-		let { x, y, w, h } = start;
-		if (dir.includes('e')) w = start.w + dx;
-		if (dir.includes('w')) w = start.w - dx;
-		if (dir.includes('s')) h = start.h + dy;
-		if (dir.includes('n')) h = start.h - dy;
-
-		w = Math.min(Math.max(w, MIN_WIDTH), vw - MARGIN * 2);
-		h = Math.min(Math.max(h, MIN_HEIGHT), vh - MARGIN * 2);
-
-		// Dragging a west or north edge moves the origin; anchor the opposite edge
-		if (dir.includes('w')) x = start.x + start.w - w;
-		if (dir.includes('n')) y = start.y + start.h - h;
-
-		x = Math.min(Math.max(x, MARGIN - w + 80), vw - 80);
-		y = Math.min(Math.max(y, 0), vh - 48);
-
-		rect = { x, y, w, h };
-	}
-
-	function onResizeUp() {
-		if (!resizing) return;
-		resizing = null;
-		persistRect();
-	}
-
-	// The dock buttons become "snap to edge" shortcuts for the floating panel
-	function snapTo(side: 'left' | 'right') {
-		displayStore.setSidebarPosition(side);
-		if (pinned || !rect) return;
-		const vw = window.innerWidth;
-		rect = clampRect({ ...rect, x: side === 'left' ? MARGIN : vw - rect.w - MARGIN });
-		persistRect();
-	}
-
-	// --- Messages ---------------------------------------------------------------
 
 	// Auto-scroll whenever messages change or typing state changes.
 	// requestAnimationFrame collapses rapid streaming chunks into one smooth scroll.
@@ -292,50 +72,16 @@
 	}
 </script>
 
-<svelte:window onresize={handleViewportResize} />
-
 <div
-	class="chat-window"
+	class="chat-window docked"
 	inert={!open}
 	aria-hidden={!open}
 	aria-label="Chat window"
 	role="region"
 	class:open
-	class:pinned
 	class:pin-left={displayStore.sidebarPosition === 'left'}
-	style:left={!pinned && visibleRect ? `${visibleRect.x}px` : undefined}
-	style:top={!pinned && visibleRect ? `${visibleRect.y}px` : undefined}
-	style:width={!pinned && visibleRect ? `${visibleRect.w}px` : undefined}
-	style:height={!pinned && visibleRect ? `${visibleRect.h}px` : undefined}
 >
-	{#if !pinned}
-	{#each RESIZE_DIRS as dir}
-		<div
-			class="resize-handle {dir}"
-			onpointerdown={(e) => onResizeDown(e, dir)}
-			onpointermove={onResizeMove}
-			onpointerup={onResizeUp}
-			onpointercancel={onResizeUp}
-		></div>
-	{/each}
-	{/if}
-	<div
-		class="window-header"
-		onpointerdown={onHeaderDown}
-		onpointermove={onHeaderMove}
-		onpointerup={onHeaderUp}
-		onpointercancel={onHeaderUp}
-	>
-		<span class="mood-chip" style="color: {moodInfo.color}" title={moodInfo.description}>
-			<Icon name={moodInfo.icon} size={16} />
-		</span>
-		<span class="window-title">Chat</span>
-		<button class="dock-btn" onclick={() => snapTo('left')} aria-label={pinned ? 'Dock on left' : 'Snap to left edge'} title={pinned ? 'Dock left' : 'Snap left'}>
-			<Icon name="chevron-left" size={16} />
-		</button>
-		<button class="dock-btn" onclick={() => snapTo('right')} aria-label={pinned ? 'Dock on right' : 'Snap to right edge'} title={pinned ? 'Dock right' : 'Snap right'}>
-			<Icon name="chevron-right" size={16} />
-		</button>
+	<div class="window-header">
 		<button
 			class="clear-btn"
 			onclick={handleClearHistory}
@@ -344,9 +90,6 @@
 			disabled={visibleMessages.length === 0}
 		>
 			<Icon name="trash" size={14} />
-		</button>
-		<button class="close-btn" onclick={onClose} aria-label="Close chat" title="Close chat">
-			<Icon name="x" size={16} />
 		</button>
 	</div>
 
@@ -360,7 +103,11 @@
 				     streaming message; rendering partial content would restart the
 				     reveal animation on every delta -->
 				{#if !(isLastAssistant && isTyping)}
-					<div class="message" class:user={msg.role === 'user'} class:assistant={msg.role === 'assistant'}>
+					<div
+						class="message"
+						class:user={msg.role === 'user'}
+						class:assistant={msg.role === 'assistant'}
+					>
 						<div class="bubble">
 							{#if isLastAssistant && revealCadenceMs > 0 && msg.content}
 								<p style="--reveal-cadence: {revealCadenceMs}ms">
@@ -370,6 +117,7 @@
 								<p>{@html renderMarkdown(msg.content)}</p>
 							{/if}
 						</div>
+						{#if msg.content}<CopyButton text={msg.content} label="Copy message" />{/if}
 					</div>
 				{/if}
 			{/each}
@@ -384,7 +132,7 @@
 	</div>
 
 	<div class="input-dock">
-		<ChatInput {onSend} {disabled} {visionCapable} docked />
+		<ChatInput {onSend} {disabled} {visionCapable} />
 	</div>
 
 	{#if open && chatDraftStore.dropActive}
@@ -397,7 +145,7 @@
 
 <style>
 	.chat-window {
-		position: fixed;
+		position: absolute;
 		display: flex;
 		flex-direction: column;
 		background: color-mix(in srgb, var(--bg-primary), transparent 6%);
@@ -410,10 +158,12 @@
 		pointer-events: none;
 		opacity: 0;
 		transform: translateY(6px) scale(0.985);
-		transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+		transition:
+			opacity 0.22s ease,
+			transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 		overflow: hidden;
-		min-width: 260px;
-		min-height: 220px;
+		min-width: 0;
+		min-height: 0;
 	}
 
 	.chat-window.open {
@@ -422,100 +172,35 @@
 		pointer-events: auto;
 	}
 
-	/* Invisible grab areas along every edge and corner */
-	.resize-handle {
-		position: absolute;
-		z-index: 3;
-	}
-
-	.resize-handle.n,
-	.resize-handle.s {
-		left: 10px;
-		right: 10px;
-		height: 6px;
-		cursor: ns-resize;
-	}
-
-	.resize-handle.n { top: -3px; }
-	.resize-handle.s { bottom: -3px; }
-
-	.resize-handle.e,
-	.resize-handle.w {
-		top: 10px;
-		bottom: 10px;
-		width: 6px;
-		cursor: ew-resize;
-	}
-
-	.resize-handle.e { right: -3px; }
-	.resize-handle.w { left: -3px; }
-
-	.resize-handle.ne,
-	.resize-handle.nw,
-	.resize-handle.se,
-	.resize-handle.sw {
-		width: 12px;
-		height: 12px;
-	}
-
-	.resize-handle.ne { top: -4px; right: -4px; cursor: nesw-resize; }
-	.resize-handle.sw { bottom: -4px; left: -4px; cursor: nesw-resize; }
-	.resize-handle.nw { top: -4px; left: -4px; cursor: nwse-resize; }
-	.resize-handle.se { bottom: -4px; right: -4px; cursor: nwse-resize; }
-
 	.window-header {
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
 		padding: 0.5rem 0.625rem;
-		border-bottom: 1px solid var(--border-subtle);
 		flex-shrink: 0;
-		cursor: grab;
 		user-select: none;
-		touch-action: none;
+		-webkit-user-select: none;
 	}
 
-	.window-header:active {
-		cursor: grabbing;
-	}
-
-	.mood-chip {
+	.clear-btn {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 28px;
-		height: 28px;
-		flex-shrink: 0;
-	}
-
-	.window-title {
-		flex: 1;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.dock-btn,
-	.clear-btn,
-	.close-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
+		width: 32px;
+		height: 32px;
 		background: transparent;
 		border: none;
-		border-radius: var(--radius-md);
+		border-radius: var(--radius-full);
 		color: var(--text-tertiary);
 		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
 	}
-
-	.dock-btn:hover,
-	.clear-btn:hover:not(:disabled),
-	.close-btn:hover {
-		background: var(--bg-tertiary);
+	.clear-btn:hover:not(:disabled) {
 		color: var(--text-primary);
+		background: var(--bg-tertiary);
+	}
+	.clear-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.clear-btn:disabled {
@@ -539,10 +224,13 @@
 
 	.message {
 		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.125rem;
 	}
 
 	.message.user {
-		justify-content: flex-end;
+		align-items: flex-end;
 	}
 
 	.message.assistant {
@@ -631,9 +319,7 @@
 
 	.input-dock {
 		flex-shrink: 0;
-		padding: 0.5rem 0.625rem;
-		border-top: 1px solid var(--border-subtle);
-		background: var(--bg-secondary);
+		padding: 0.75rem;
 	}
 
 	/* Drag-to-show target while the window owns the input */
@@ -659,11 +345,16 @@
 	}
 
 	@keyframes dropIcon {
-		0%, 100% { transform: translateY(0) rotate(0deg); }
-		50% { transform: translateY(-4px) rotate(-6deg); }
+		0%,
+		100% {
+			transform: translateY(0) rotate(0deg);
+		}
+		50% {
+			transform: translateY(-4px) rotate(-6deg);
+		}
 	}
 
-	.chat-window.pinned {
+	.chat-window.docked {
 		position: absolute;
 		top: 68px;
 		right: 0;
@@ -673,23 +364,38 @@
 		min-height: 0;
 		border-radius: var(--radius-xl) 0 0 0;
 		box-shadow: none;
-		background: var(--bg-primary);
+		background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
 	}
-	.chat-window.pinned.pin-left { left: 0; right: auto; border-radius: 0 var(--radius-xl) 0 0; }
-	.pinned .window-header, .pinned .window-header:active { cursor: default; touch-action: auto; }
-	.messages { min-height: 0; overscroll-behavior: contain; }
+	.chat-window.docked.pin-left {
+		left: 0;
+		right: auto;
+		border-radius: 0 var(--radius-xl) 0 0;
+	}
+	.messages {
+		min-height: 0;
+		overscroll-behavior: contain;
+	}
 	@media (max-width: 720px) {
-		.chat-window.pinned, .chat-window.pinned.pin-left {
-			top: auto; left: 0; right: 0; width: 100%; height: var(--chat-dock-height);
+		.chat-window.docked,
+		.chat-window.docked.pin-left {
+			top: auto;
+			left: 0;
+			right: 0;
+			width: 100%;
+			height: var(--chat-dock-height);
 			border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 			padding-bottom: env(safe-area-inset-bottom, 0px);
 		}
-		.pinned .dock-btn { display: none; }
 	}
 	@media (pointer: coarse) {
-		.dock-btn, .clear-btn, .close-btn { width: 44px; height: 44px; }
+		.clear-btn {
+			width: 44px;
+			height: 44px;
+		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.chat-window { transition: none; }
+		.chat-window {
+			transition: none;
+		}
 	}
 </style>

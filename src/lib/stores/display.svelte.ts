@@ -15,8 +15,7 @@ import {
 	type ChatDisplayMode,
 	type SidebarPosition,
 	type TextRevealSpeed,
-	type ChatBarAlignment,
-	type ChatWindowLayout
+	type ChatBarAlignment
 } from './display-types';
 import { parseDisplaySettings, sanitizeCamera } from './display-parser';
 import {
@@ -65,9 +64,6 @@ function createDisplayStore() {
 	let textRevealSpeed = $state<TextRevealSpeed>(DEFAULT_TEXT_REVEAL_SPEED);
 	// Where the floating bar sits along the bottom edge
 	let chatBarAlignment = $state<ChatBarAlignment>(DEFAULT_CHAT_BAR_ALIGNMENT);
-	// Session-only counter; the chat window clears its saved rect when it changes
-	let chatWindowResetToken = $state(0);
-	let chatWindowLayout = $state<ChatWindowLayout>('floating');
 	let keepScreenAwake = $state(false);
 
 	function applySavedSettings(saved: string | null) {
@@ -82,7 +78,6 @@ function createDisplayStore() {
 		waitToneEnabled = parsed.waitToneEnabled;
 		textRevealSpeed = parsed.textRevealSpeed;
 		chatBarAlignment = parsed.chatBarAlignment;
-		chatWindowLayout = parsed.chatWindowLayout;
 		keepScreenAwake = parsed.keepScreenAwake;
 	}
 	if (browser) {
@@ -110,7 +105,6 @@ function createDisplayStore() {
 					waitToneEnabled,
 					textRevealSpeed,
 					chatBarAlignment,
-					chatWindowLayout,
 					keepScreenAwake
 				})
 			);
@@ -169,7 +163,6 @@ function createDisplayStore() {
 		waitToneEnabled = DEFAULT_WAIT_TONE_ENABLED;
 		textRevealSpeed = DEFAULT_TEXT_REVEAL_SPEED;
 		chatBarAlignment = DEFAULT_CHAT_BAR_ALIGNMENT;
-		chatWindowLayout = 'floating';
 		save();
 	}
 
@@ -181,10 +174,6 @@ function createDisplayStore() {
 	function setChatBarAlignment(alignment: ChatBarAlignment) {
 		chatBarAlignment = alignment;
 		save();
-	}
-
-	function requestChatWindowReset() {
-		chatWindowResetToken += 1;
 	}
 
 	function setTypingIndicatorDelayMs(ms: number) {
@@ -201,8 +190,6 @@ function createDisplayStore() {
 	return {
 		get keepScreenAwake() { return keepScreenAwake; },
 		setKeepScreenAwake(value: boolean) { keepScreenAwake = value; save(); },
-		get chatWindowLayout() { return chatWindowLayout; },
-		setChatWindowLayout(value: ChatWindowLayout) { chatWindowLayout = value; save(); },
 		get camera() {
 			return camera;
 		},
@@ -233,9 +220,6 @@ function createDisplayStore() {
 		get chatBarAlignment() {
 			return chatBarAlignment;
 		},
-		get chatWindowResetToken() {
-			return chatWindowResetToken;
-		},
 		setCamera,
 		resetCamera,
 		setPhysicsIntensity,
@@ -246,8 +230,7 @@ function createDisplayStore() {
 		setTypingIndicatorDelayMs,
 		setWaitToneEnabled,
 		setTextRevealSpeed,
-		setChatBarAlignment,
-		requestChatWindowReset
+		setChatBarAlignment
 	};
 }
 

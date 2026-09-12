@@ -15,9 +15,7 @@
 	// Stored values keep their original names; only the labels changed
 	const modes: { value: ChatDisplayMode; label: string }[] = [
 		{ value: 'bubble', label: 'Immersive' },
-		{ value: 'sidebar', label: 'Chat window' },
-		{ value: 'both', label: 'Both' },
-		{ value: 'off', label: 'Off' }
+		{ value: 'sidebar', label: 'Chat window' }
 	];
 
 	const positions: { value: SidebarPosition; label: string }[] = [
@@ -38,17 +36,7 @@
 		{ value: 'fast', label: 'Fast' }
 	];
 
-	const sidebarActive = $derived(
-		displayStore.chatDisplayMode === 'sidebar' || displayStore.chatDisplayMode === 'both'
-	);
-
-	let windowResetDone = $state(false);
-
-	function resetWindowPosition() {
-		displayStore.requestChatWindowReset();
-		windowResetDone = true;
-		setTimeout(() => (windowResetDone = false), 2000);
-	}
+	const sidebarActive = $derived(displayStore.chatDisplayMode === 'sidebar');
 
 	function stepDelay(delta: number) {
 		const current = displayStore.typingIndicatorDelayMs / 1000;
@@ -111,8 +99,8 @@
 			onchange={displayStore.setChatDisplayMode}
 		/>
 		<p class="hint">
-			Immersive shows her replies in a bubble by her head. Chat window is a messenger-style window
-			with the full history and the input docked inside.
+			Immersive shows her replies in a bubble by her head. Chat window is a docked chat panel with
+			the full history and the input docked inside.
 		</p>
 	</SettingsSection>
 
@@ -121,57 +109,34 @@
 			<div class="settings-stack">
 				<div class="setting-row">
 					<div class="setting-info">
-						<span class="setting-label">Layout</span>
-						<span class="setting-desc">Dock beside the avatar, or below it on small screens</span>
+						<span class="setting-label">Dock side</span>
+						<span class="setting-desc"
+							>Dock beside the avatar on wide screens, or below it on small screens</span
+						>
 					</div>
 					<SegmentedControl
-						label="Chat window layout"
-						options={[
-							{ value: 'floating', label: 'Floating' },
-							{ value: 'docked', label: 'Docked' }
-						]}
-						value={displayStore.chatWindowLayout}
-						onchange={displayStore.setChatWindowLayout}
-						compact
-					/>
-				</div>
-				<div class="setting-row">
-					<div class="setting-info">
-						<span class="setting-label">Snap side</span>
-						<span class="setting-desc">Which edge the window uses on wide screens</span>
-					</div>
-					<SegmentedControl
-						label="Chat window snap side"
+						label="Chat window dock side"
 						options={positions}
 						value={displayStore.sidebarPosition}
 						onchange={displayStore.setSidebarPosition}
 						compact
 					/>
 				</div>
-
-				<div class="setting-row">
-					<div class="setting-info">
-						<span class="setting-label">Window position</span>
-						<span class="setting-desc">Bring the window back if it ends up off screen</span>
-					</div>
-					<Button variant="secondary" size="sm" onclick={resetWindowPosition}>
-						{windowResetDone ? 'Done' : 'Reset position'}
-					</Button>
-				</div>
 			</div>
 		</SettingsSection>
 	{/if}
 
-	<SettingsSection title="Floating bar">
-		<SegmentedControl
-			label="Floating bar alignment"
-			options={alignments}
-			value={displayStore.chatBarAlignment}
-			onchange={displayStore.setChatBarAlignment}
-		/>
-		<p class="hint">Where the input bar sits along the bottom edge.</p>
-	</SettingsSection>
-
+	{#if !sidebarActive}
+		<SettingsSection title="Input bar">
+			<SegmentedControl
+				label="Floating bar alignment"
+				options={alignments}
+				value={displayStore.chatBarAlignment}
+				onchange={displayStore.setChatBarAlignment}
+			/>
+			<p class="hint">Where the input bar sits along the bottom edge.</p>
+		</SettingsSection>
+	{/if}
 	<SettingsSection title="Text reveal">
 		<SegmentedControl
 			label="Text reveal speed"
