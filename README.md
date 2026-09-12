@@ -62,6 +62,7 @@
 - **Model-Centric UI**: Full-screen 3D model with unobtrusive overlay controls
 - **3D Speech Bubbles**: Chat responses appear as bubbles that track the model's head in 3D space, revealed word by word at a configurable speed
 - **Chat Window**: Optional messenger-style floating window with the full conversation history and the input docked inside; drag it anywhere, resize from any edge, snap it left or right. Choose a floating or docked layout; docking reserves space beside the avatar on wide screens and below it on mobile. Display modes (Immersive, Chat window, Both, Off) live in Settings > Display
+- **Keep Screen Awake**: Opt in under Settings > Display to keep the screen on while Utsuwa is visible. The indicator reports the actual lock state; unsupported webviews show a clear unavailable state.
 - **Thinking Status**: A shimmer label narrates what she is actually doing (Remembering, Looking at your photo, Thinking), with a configurable delay and an optional soft audio ping
 - **Chat Interface**: Floating input bar (left, center, or right aligned) with streaming responses
 - **Voice Input**: Speech-to-text via a local Whisper server (Speaches, faster-whisper-server, whisper.cpp), Groq (Whisper), or the browser's Web Speech API, with real-time audio visualization

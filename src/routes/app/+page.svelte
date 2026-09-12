@@ -1,4 +1,5 @@
 <script lang="ts">
+	import WakeLockIndicator from '$lib/components/display/WakeLockIndicator.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
 	import { TopRightButtons, TopLeftButtons, InfoModal } from '$lib/components/ui';
@@ -290,6 +291,7 @@
 </script>
 
 <div class="app-container">
+	<div class="wake-status"><WakeLockIndicator /></div>
 {#if !photomodeStore.active}
 		<TopLeftButtons onOpenMemoryGraph={() => showMemoryGraph = true} onBoardClick={() => showBoard = true} />
 		<TopRightButtons
@@ -658,4 +660,6 @@
 			left: 0; right: 0; bottom: var(--chat-dock-height);
 		}
 	}
+
+	.wake-status { position: fixed; top: 68px; left: 1rem; z-index: 46; }
 </style>

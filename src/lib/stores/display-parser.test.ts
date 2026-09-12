@@ -241,3 +241,10 @@ test('docking is opt-in and survives serialization', () => {
 	}
 	assert.equal(parseDisplaySettings(JSON.stringify({ chatWindowLayout: 'docked' })).chatWindowLayout, 'docked');
 });
+
+test('keep-awake requires an explicit boolean opt-in', () => {
+	for (const value of [undefined, null, false, 'true', 1, {}]) {
+		assert.equal(parseDisplaySettings({ keepScreenAwake: value }).keepScreenAwake, false);
+	}
+	assert.equal(parseDisplaySettings(JSON.stringify({ keepScreenAwake: true })).keepScreenAwake, true);
+});
