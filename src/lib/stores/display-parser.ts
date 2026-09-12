@@ -16,7 +16,8 @@ import {
 	type ChatDisplayMode,
 	type SidebarPosition,
 	type TextRevealSpeed,
-	type ChatBarAlignment
+	type ChatBarAlignment,
+	type ChatWindowLayout
 } from './display-types.ts';
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -62,6 +63,7 @@ export interface ParsedDisplaySettings {
 	typingIndicatorDelayMs: number;
 	textRevealSpeed: TextRevealSpeed;
 	chatBarAlignment: ChatBarAlignment;
+	chatWindowLayout: ChatWindowLayout;
 }
 
 /**
@@ -93,7 +95,8 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 			waitToneEnabled: DEFAULT_WAIT_TONE_ENABLED,
 			typingIndicatorDelayMs: DEFAULT_TYPING_INDICATOR_DELAY_MS,
 			textRevealSpeed: DEFAULT_TEXT_REVEAL_SPEED,
-			chatBarAlignment: DEFAULT_CHAT_BAR_ALIGNMENT
+			chatBarAlignment: DEFAULT_CHAT_BAR_ALIGNMENT,
+			chatWindowLayout: 'floating'
 		};
 	}
 
@@ -151,5 +154,6 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 		? parsed.chatBarAlignment
 		: DEFAULT_CHAT_BAR_ALIGNMENT;
 
-	return { camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
+	const chatWindowLayout = parsed.chatWindowLayout === 'docked' ? 'docked' : 'floating';
+	return { chatWindowLayout, camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
 }

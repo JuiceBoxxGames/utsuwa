@@ -11,6 +11,7 @@ export interface CameraSettings {
 
 export type CameraProfile = 'main' | 'overlay';
 export type ChatDisplayMode = 'bubble' | 'sidebar' | 'both' | 'off';
+export type ChatWindowLayout = 'floating' | 'docked';
 export type SidebarPosition = 'left' | 'right';
 export type TextRevealSpeed = 'off' | 'slow' | 'normal' | 'fast';
 export type ChatBarAlignment = 'left' | 'center' | 'right';

@@ -233,3 +233,11 @@ test('camera settings reject malformed and non-finite persisted values', () => {
 		assert.deepEqual(result.camera, CAMERA_DEFAULTS);
 	}
 });
+
+
+test('docking is opt-in and survives serialization', () => {
+	for (const raw of [undefined, 'invalid', true, null]) {
+		assert.equal(parseDisplaySettings({ chatWindowLayout: raw }).chatWindowLayout, 'floating');
+	}
+	assert.equal(parseDisplaySettings(JSON.stringify({ chatWindowLayout: 'docked' })).chatWindowLayout, 'docked');
+});

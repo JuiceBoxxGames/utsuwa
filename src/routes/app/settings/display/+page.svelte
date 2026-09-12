@@ -93,8 +93,23 @@
 			<div class="settings-stack">
 				<div class="setting-row">
 					<div class="setting-info">
+						<span class="setting-label">Layout</span>
+						<span class="setting-desc">Dock beside the avatar, or below it on small screens</span>
+					</div>
+					<div class="segment-control compact" role="group" aria-label="Chat window layout">
+						{#each ['floating', 'docked'] as layout}
+							<button class="segment-btn" class:active={displayStore.chatWindowLayout === layout}
+								aria-pressed={displayStore.chatWindowLayout === layout}
+								onclick={() => displayStore.setChatWindowLayout(layout as 'floating' | 'docked')}>
+								{layout === 'floating' ? 'Floating' : 'Docked'}
+							</button>
+						{/each}
+					</div>
+				</div>
+				<div class="setting-row">
+					<div class="setting-info">
 						<span class="setting-label">Snap side</span>
-						<span class="setting-desc">Which edge the window starts on</span>
+						<span class="setting-desc">Which edge the window uses on wide screens</span>
 					</div>
 					<div class="segment-control compact" role="group" aria-label="Chat window snap side">
 						{#each positions as pos}
@@ -448,5 +463,10 @@
 	.delay-unit {
 		font-size: 0.8rem;
 		color: var(--text-secondary);
+	}
+
+	@media (max-width: 640px) {
+		.setting-row { flex-wrap: wrap; }
+		.segment-btn { white-space: normal; }
 	}
 </style>

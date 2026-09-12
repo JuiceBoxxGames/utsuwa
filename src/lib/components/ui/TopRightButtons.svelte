@@ -269,7 +269,7 @@
 		position: fixed;
 		top: 1rem;
 		right: 1rem;
-		z-index: 40;
+		z-index: 50;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
