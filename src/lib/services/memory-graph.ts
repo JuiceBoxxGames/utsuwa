@@ -8,6 +8,7 @@ export interface GraphNode {
 	content: string;
 	category: FactCategory;
 	importance: number;
+	confidence?: number;
 	referenceCount: number;
 	createdAt: Date;
 	lastAccessed?: Date;
@@ -45,6 +46,7 @@ export function buildGraph(facts: Fact[], threshold = 0.5): GraphData {
 		content: fact.content,
 		category: fact.category,
 		importance: fact.importance,
+		confidence: fact.confidence,
 		referenceCount: fact.referenceCount,
 		createdAt: fact.createdAt,
 		lastAccessed: fact.lastAccessed

@@ -42,6 +42,7 @@ textarea.settings-field {
 }
 select.settings-field,
 select.api-key-input {
+	height: 44px;
 	cursor: pointer;
 }
 .settings-range {

@@ -1,112 +1,93 @@
 <script lang="ts">
+	import { Dialog } from 'bits-ui';
 	import { Icon } from '$lib/components/ui';
+	import type { FactCategory } from '$lib/types/memory';
 	import MemoryGraph from './MemoryGraph.svelte';
-	import { fadeFast } from '$lib/utils/motion';
-
-	interface Props {
-		onClose: () => void;
-	}
-
-	let { onClose }: Props = $props();
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			onClose();
-		}
-	}
+	let {
+		open = $bindable(false),
+		selectedId = $bindable(null),
+		categories = $bindable<FactCategory[]>(['user', 'relationship', 'shared_experience']),
+		onInspect,
+		onOpenFacts
+	}: {
+		open?: boolean;
+		selectedId?: number | null;
+		categories?: FactCategory[];
+		onInspect: (id: number) => void;
+		onOpenFacts: () => void;
+	} = $props();
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
-<div class="modal-overlay" out:fadeFast={{ duration: 160 }} role="dialog" aria-modal="true" aria-label="Memory Graph">
-	<div class="modal-container">
-		<header class="modal-header">
-			<div class="header-info">
-				<Icon name="brain" size={20} />
-				<h2>Memory Graph</h2>
+<Dialog.Root bind:open>
+	<Dialog.Portal>
+		<Dialog.Content class="expanded-memory-graph">
+			<header>
+				<div>
+					<Dialog.Title class="expanded-memory-title">Memory graph</Dialog.Title>
+					<Dialog.Description class="expanded-memory-description"
+						>Select a memory to inspect it, or drag and zoom to explore connections.</Dialog.Description
+					>
+				</div>
+				<Dialog.Close class="icon-btn" aria-label="Collapse graph"
+					><Icon name="x" size={20} /></Dialog.Close
+				>
+			</header>
+			<div class="graph-content">
+				<MemoryGraph bind:selectedId bind:categories {onInspect} {onOpenFacts} expanded />
 			</div>
-			<button class="close-btn" onclick={onClose} aria-label="Close">
-				<Icon name="x" size={20} />
-			</button>
-		</header>
-
-		<div class="modal-content">
-			<MemoryGraph />
-		</div>
-	</div>
-</div>
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
 
 <style>
-	.modal-overlay {
+	:global(.expanded-memory-graph) {
 		position: fixed;
 		inset: 0;
-		background: var(--bg-primary);
 		z-index: 1000;
-		animation: fadeIn 0.2s ease-out;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
-	}
-
-	.modal-container {
-		width: 100%;
-		height: 100%;
 		display: flex;
 		flex-direction: column;
+		padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+			max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+		background: var(--bg-page);
+		outline: none;
 	}
-
-	.modal-header {
+	header {
 		display: flex;
-		align-items: center;
 		justify-content: space-between;
-		padding: 1rem 1.5rem;
-		border-bottom: 1px solid var(--border-subtle);
-		background: var(--bg-primary);
-		flex-shrink: 0;
-	}
-
-	.header-info {
-		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		color: var(--text-secondary);
+		gap: 1rem;
+		margin-bottom: 1rem;
 	}
-
-	.header-info h2 {
+	:global(.expanded-memory-title) {
 		margin: 0;
 		font-size: 1.125rem;
 		font-weight: 600;
-		color: var(--text-primary);
 	}
-
-	.close-btn {
+	:global(.expanded-memory-description) {
+		margin: 0.25rem 0 0;
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+	}
+	:global(.expanded-memory-graph .icon-btn) {
+		flex-shrink: 0;
+		width: 44px;
+		height: 44px;
+		border: 0;
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		border-radius: var(--radius-md);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 2.5rem;
-		height: 2.5rem;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-md);
-		color: var(--text-secondary);
 		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
 	}
-
-	.close-btn:hover {
-		background: var(--bg-secondary);
-		color: var(--text-primary);
+	:global(.expanded-memory-graph .icon-btn:focus-visible) {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
-
-	.modal-content {
+	.graph-content {
 		flex: 1;
 		min-height: 0;
-		overflow: hidden;
+		overflow-y: auto;
 	}
 </style>
