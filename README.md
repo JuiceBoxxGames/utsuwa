@@ -68,6 +68,7 @@
 - **Show Her Photos**: Show your companion an image via the attach (paperclip) button in the chat bar or drag-and-drop. Vision-capable models (GPT-4o, Claude, Gemini, or local ones like LLaVA) actually see it and can remember the moment, and kept photos live on a scrapbook-style board. Images stay on your device and only ever reach vision-capable models
 - **LLM Integration**: Support for 8 LLM providers: OpenAI, Anthropic, Google, xAI, DeepSeek, Ollama, LM Studio, and any OpenAI-compatible endpoint (OpenRouter, Together, vLLM, ...)
 - **Local Model Discovery**: Ollama and LM Studio discover installed local models directly from your device
+- **MCP Tools**: Connect Model Context Protocol servers — Home Assistant's official MCP integration, web search via SearXNG, and more — and let the companion call their tools during chat. Per-server HTTP/stdio transports, bearer-token authentication, and an `MCP_ENABLED=server` gate for self-hosted web deployments (see [MCP Servers](https://docs.utsuwa.ai/docs/guides/mcp))
 - **Text-to-Speech**: Support for ElevenLabs and OpenAI TTS, local voices via any OpenAI-compatible server (Kokoro-FastAPI, openedai-speech), and local OmniVoice. OmniVoice streams: speech starts while the model is still writing, and foreign words can be spoken per word in their own language and voice. With OmniVoice + Alternative Voice, the model controls its spoken reply via native `speak_segment` / `pause_segment` / `gesture_segment` tool calls (when tool calling is enabled); otherwise the documented inline `speak()` / `pause()` / `gesture()` syntax is used
 - **Fully Local Option**: Run the whole stack offline — local LLM (Ollama/LM Studio), local TTS, and local Whisper STT — so nothing leaves your device
 - **Lip-sync**: Audio-driven mouth animation synced to TTS playback
@@ -343,13 +344,13 @@ pnpm tauri build  # Build desktop app installer
 - [x] Persistent scene backgrounds (pastel gradients and patterns)
 - [x] Spring-bone physics intensity slider
 - [x] OmniVoice Local TTS - Self-hosted OmniVoice proxy support for local text-to-speech
+- [x] MCP Tool Calling - Connect Model Context Protocol servers (HTTP + stdio) and let the companion call their tools during chat, with per-server toggles and an `MCP_ENABLED=server` gate for self-hosted web deployments
 
 ### In Progress / Planned
 
 - [ ] **File and Video Uploads** - Add support for attaching files and videos for multimodal LLM workflows and providers that can use richer context or web-aware tools (image support has shipped)
 - [ ] **Live2D Support** - Alternative to VRM for 2D animated avatars
 - [ ] **Hands-Free Voice Mode** - Full duplex conversation: speak naturally and she answers, no push-to-talk, with voice activity detection
-- [ ] **MCP Tool Calling** - Model Context Protocol support so your companion can reach beyond the chat: search the web for news, pull live data, or quiz you on Spanish vocabulary, through MCP servers you run yourself
 - [ ] **Flexible Chat Layout** - Choose between the floating chat bar, a full conversation sidebar, or both at once
 
 ## Contributing
