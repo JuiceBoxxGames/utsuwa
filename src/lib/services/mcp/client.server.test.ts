@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStdioSession } from './client.server.ts';
+import { createHostGuard, createServerHttpClient, createStdioSession } from './client.server.ts';
+import type { FetchLike } from './http-client.ts';
 import type { McpServerConfig } from '$lib/types/mcp';
 
 function stdioConfig(overrides: Partial<McpServerConfig> = {}): McpServerConfig {
@@ -79,4 +80,58 @@ test('stdio servers receive a minimal environment plus their configured vars', a
 	assert.equal(state.db, null, 'app secrets must not leak into the stdio server');
 	assert.equal(state.brave, 'brave-secret', 'per-server env reaches the child');
 	assert.equal(state.path, true, 'PATH is required to spawn interpreters');
+});
+
+function rpcResponse(body: string): Response {
+	const msg = JSON.parse(body) as { id?: number; method?: string };
+	return new Response(
+		JSON.stringify({
+			jsonrpc: '2.0',
+			id: msg.id,
+			result: msg.method === 'tools/list' ? { tools: [] } : {}
+		}),
+		{ headers: { 'Content-Type': 'application/json' } }
+	);
+}
+
+test('the DNS guard blocks a hostname that resolves to link-local before any request', async () => {
+	const requests: string[] = [];
+	const fetchImpl: FetchLike = async (input) => {
+		requests.push(String(input));
+		return rpcResponse('{}');
+	};
+	const guard = createHostGuard(async () => [{ address: '169.254.169.254' }]);
+	const client = createServerHttpClient(guard, fetchImpl);
+
+	await assert.rejects(
+		client.listTools({
+			id: 'meta',
+			name: 'Metadata',
+			transport: 'http',
+			url: 'http://metadata.internal/api/mcp',
+			enabled: true
+		}),
+		/blocked \(resolves to link-local\/metadata\)/
+	);
+	assert.deepEqual(requests, [], 'no request may leave before the DNS check');
+});
+
+test('the DNS guard caches an allowed resolution and lets requests through', async () => {
+	let lookups = 0;
+	const guard = createHostGuard(async () => {
+		lookups++;
+		return [{ address: '192.168.10.3' }];
+	});
+	const fetchImpl: FetchLike = async (_input, init) => rpcResponse(String(init?.body));
+	const client = createServerHttpClient(guard, fetchImpl);
+
+	const tools = await client.listTools({
+		id: 'ha',
+		name: 'Home Assistant',
+		transport: 'http',
+		url: 'http://ha.internal:8125/api/mcp',
+		enabled: true
+	});
+	assert.deepEqual(tools, []);
+	assert.equal(lookups, 1, 'the resolution is cached for the session');
 });

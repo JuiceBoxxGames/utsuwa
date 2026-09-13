@@ -19,6 +19,7 @@ import {
 	parseToolNameList,
 	parseToolsList,
 	pickStdioEnv,
+	resolveCapabilityFromProbe,
 	singleFlight,
 	stdioDenyReason,
 	stringifyToolResult
@@ -36,6 +37,18 @@ test('isServerMcpEnabled: unset, off and reserved modes stay off', () => {
 	assert.equal(isServerMcpEnabled('off'), false);
 	assert.equal(isServerMcpEnabled('client'), false);
 	assert.equal(isServerMcpEnabled('true'), false);
+});
+
+test('resolveCapabilityFromProbe maps 404 to none and success to server', () => {
+	assert.equal(resolveCapabilityFromProbe(404, 'unknown'), 'none');
+	assert.equal(resolveCapabilityFromProbe(200, 'unknown'), 'server');
+});
+
+test('resolveCapabilityFromProbe keeps a known capability on transient errors', () => {
+	assert.equal(resolveCapabilityFromProbe(500, 'server'), 'server');
+	assert.equal(resolveCapabilityFromProbe(503, 'client'), 'client');
+	assert.equal(resolveCapabilityFromProbe(500, 'unknown'), 'none');
+	assert.equal(resolveCapabilityFromProbe(401, 'none'), 'none');
 });
 
 test('mcpUrlCandidates tries the configured form first, then the slash variant', () => {

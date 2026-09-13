@@ -4,7 +4,7 @@
  * and stateless; long-lived sessions can come later if a server needs them.
  */
 import type { McpServerConfig, McpTool, McpToolResult } from '$lib/types/mcp';
-import { createHttpMcpClient, type FetchLike } from './http-client.ts';
+import { createHttpMcpClient, type FetchLike, type HttpMcpClient } from './http-client.ts';
 import {
 	buildInitializedNotification,
 	buildInitializeRequest,
@@ -19,68 +19,82 @@ import {
 
 const STDIO_REQUEST_TIMEOUT_MS = 15_000;
 
-const hostCheckCache = new Map<string, { blocked: boolean; checkedAt: number }>();
 const HOST_CHECK_TTL_MS = 5 * 60 * 1000;
-let warnedDnsUnavailable = false;
 
-function warnDnsCheckUnavailable(): void {
-	if (warnedDnsUnavailable) return;
-	warnedDnsUnavailable = true;
-	console.warn(
-		'[MCP] node:dns is unavailable — only literal link-local/metadata addresses are filtered.'
-	);
+export type DnsLookup = (hostname: string) => Promise<Array<{ address: string }>>;
+
+async function nodeDnsLookup(hostname: string): Promise<Array<{ address: string }>> {
+	const { lookup } = await import('node:dns/promises');
+	return lookup(hostname, { all: true });
+}
+
+function isModuleNotFound(err: unknown): boolean {
+	return err instanceof Error && (err as { code?: string }).code === 'ERR_MODULE_NOT_FOUND';
 }
 
 /**
- * Server-side SSRF guard: link-local and metadata hosts are rejected before
- * any request, including hostnames that resolve to such an address. Loopback
- * and RFC1918 stay allowed — self-hosted MCP servers live there.
+ * Server-side SSRF guard factory: link-local and metadata hosts are rejected
+ * before any request, including hostnames that resolve to such an address.
+ * Loopback and RFC1918 stay allowed — self-hosted MCP servers live there.
+ * The DNS lookup is injectable so the resolution layer is testable.
  */
-async function assertAllowedHost(rawUrl: string): Promise<void> {
-	let hostname: string;
-	try {
-		hostname = new URL(rawUrl).hostname;
-	} catch {
-		return; // let fetch report the invalid URL
-	}
-	if (isBlockedMcpHost(hostname)) {
-		throw new Error(`MCP HTTP host "${hostname}" is blocked (link-local/metadata)`);
-	}
-	// Literal addresses are covered above; only resolve names.
-	if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.includes(':')) return;
-	const cached = hostCheckCache.get(hostname);
-	if (cached && Date.now() - cached.checkedAt < HOST_CHECK_TTL_MS) {
-		if (cached.blocked) {
-			throw new Error(`MCP HTTP host "${hostname}" is blocked (resolves to link-local/metadata)`);
+export function createHostGuard(dnsLookup: DnsLookup = nodeDnsLookup) {
+	const cache = new Map<string, { blocked: boolean; checkedAt: number }>();
+	let warnedDnsUnavailable = false;
+
+	return async function assertAllowedHost(rawUrl: string): Promise<void> {
+		let hostname: string;
+		try {
+			hostname = new URL(rawUrl).hostname;
+		} catch {
+			return; // let fetch report the invalid URL
 		}
-		return;
-	}
-	let lookup: typeof import('node:dns/promises').lookup;
-	try {
-		({ lookup } = await import('node:dns/promises'));
-	} catch {
-		warnDnsCheckUnavailable();
-		return;
-	}
-	try {
-		const addresses = await lookup(hostname, { all: true });
+		if (isBlockedMcpHost(hostname)) {
+			throw new Error(`MCP HTTP host "${hostname}" is blocked (link-local/metadata)`);
+		}
+		// Literal addresses are covered above; only resolve names.
+		if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.includes(':')) return;
+		const cached = cache.get(hostname);
+		if (cached && Date.now() - cached.checkedAt < HOST_CHECK_TTL_MS) {
+			if (cached.blocked) {
+				throw new Error(`MCP HTTP host "${hostname}" is blocked (resolves to link-local/metadata)`);
+			}
+			return;
+		}
+		let addresses: Array<{ address: string }>;
+		try {
+			addresses = await dnsLookup(hostname);
+		} catch (err) {
+			if (!warnedDnsUnavailable && isModuleNotFound(err)) {
+				warnedDnsUnavailable = true;
+				console.warn(
+					'[MCP] node:dns is unavailable — only literal link-local/metadata addresses are filtered.'
+				);
+			}
+			// DNS failures surface through fetch with their real message.
+			return;
+		}
 		const blocked = addresses.some((entry) => isBlockedMcpHost(entry.address));
-		hostCheckCache.set(hostname, { blocked, checkedAt: Date.now() });
+		cache.set(hostname, { blocked, checkedAt: Date.now() });
 		if (blocked) {
 			throw new Error(`MCP HTTP host "${hostname}" is blocked (resolves to link-local/metadata)`);
 		}
-	} catch (err) {
-		// DNS failures surface through fetch with their real message.
-		if (err instanceof Error && err.message.includes('is blocked')) throw err;
-	}
+	};
 }
 
-const serverFetch: FetchLike = async (input, init) => {
-	await assertAllowedHost(String(input));
-	return fetch(input, init);
-};
+/** HTTP client whose fetch re-validates every request (and redirect hop). */
+export function createServerHttpClient(
+	assertAllowedHost: (url: string) => Promise<void>,
+	fetchImpl: FetchLike = globalThis.fetch
+): HttpMcpClient {
+	const serverFetch: FetchLike = async (input, init) => {
+		await assertAllowedHost(String(input));
+		return fetchImpl(input, init);
+	};
+	return createHttpMcpClient(serverFetch);
+}
 
-const httpClient = createHttpMcpClient(serverFetch);
+const httpClient = createServerHttpClient(createHostGuard());
 
 interface StdioSession {
 	request(method: string, params: Record<string, unknown>): Promise<unknown>;

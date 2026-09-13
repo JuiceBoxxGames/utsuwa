@@ -517,6 +517,26 @@ test('a cut between an assistant tool call and its result is repaired by ensureT
 	assert.equal(repaired[repaired.length - 1].content, 'newest message');
 });
 
+test('truncation keeps the current user question when the newest entry is a tool result', () => {
+	const messages = [
+		{ role: 'user', content: 'q'.repeat(400) },
+		{
+			role: 'assistant',
+			content: 'a'.repeat(1600),
+			tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'get_state', arguments: '{}' } }]
+		},
+		{ role: 'tool', tool_call_id: 'call_1', content: 'r'.repeat(2000) }
+	];
+	const systemPrompt = 'x'.repeat(400);
+
+	// The question plus the assistant turn fit; the tool result pushes the
+	// budget over. The cut must not remove the question itself.
+	const result = truncateChatHistory(messages, systemPrompt, 1500);
+	assert.equal(result[0].role, 'user');
+	assert.equal(result[0].content, messages[0].content);
+	assert.equal(result[result.length - 1].role, 'tool');
+});
+
 test('truncateChatHistory handles image content placeholders', () => {
 	const messages = [
 		{ role: 'user', content: 'a'.repeat(400) },

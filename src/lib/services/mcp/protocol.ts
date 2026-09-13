@@ -25,6 +25,24 @@ export function isServerMcpEnabled(raw: string | undefined | null): boolean {
 	return raw === 'server' || raw === 'both';
 }
 
+/** Capability of the current runtime as seen by the client store. */
+export type McpCapabilityState = 'unknown' | 'server' | 'client' | 'none';
+
+/**
+ * Map a capability-probe response to the new state. A 404 means MCP is
+ * disabled on this deployment; a success means the server routes are active.
+ * Anything else (e.g. a transient 500) must not downgrade a capability we
+ * already know — otherwise the settings entry and tools flicker off.
+ */
+export function resolveCapabilityFromProbe(
+	status: number,
+	current: McpCapabilityState
+): McpCapabilityState {
+	if (status === 404) return 'none';
+	if (status >= 200 && status < 300) return 'server';
+	return current === 'unknown' ? 'none' : current;
+}
+
 /**
  * MCP Streamable HTTP endpoints are mounted differently across servers: most
  * accept a trailing slash (and some redirect to it), while strict routers like

@@ -7,11 +7,13 @@
 import { browser } from '$app/environment';
 import type { McpServerConfig, McpServerError, McpTool } from '$lib/types/mcp';
 import { getMcpCapability, listTools } from '$lib/services/mcp/capability';
-import { singleFlight } from '$lib/services/mcp/protocol';
+import {
+	resolveCapabilityFromProbe,
+	singleFlight,
+	type McpCapabilityState
+} from '$lib/services/mcp/protocol';
 
 const STORAGE_KEY = 'utsuwa-mcp-v1';
-
-export type McpCapabilityState = 'unknown' | 'server' | 'client' | 'none';
 
 function loadSaved(): McpServerConfig[] {
 	if (!browser) return [];
@@ -54,7 +56,7 @@ const detectCapability = singleFlight(async (): Promise<void> => {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ servers: [] })
 		});
-		capability = res.status === 404 ? 'none' : res.ok ? 'server' : 'none';
+		capability = resolveCapabilityFromProbe(res.status, capability);
 	} catch {
 		// Network hiccup: keep a capability we already know instead of
 		// downgrading (re-probes happen on every settings visit now).
