@@ -280,6 +280,7 @@ export async function sendCompanionMessage(
 		const selectedModel = model || providerMeta?.models?.[0]?.id || '';
 		const baseURL = providerConfig.baseUrl || providerMeta?.defaultBaseUrl;
 		let messages: ChatLoopMessage[] = buildMessages(images);
+		const currentQuestion = [...messages].reverse().find((message) => message.role === 'user');
 
 		// Snapshot speech settings at turn start so mid-stream changes cannot
 		// corrupt an ongoing TTS session, then start OmniVoice streaming before
@@ -537,7 +538,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			if (contextSize && contextSize > 0 && messages.length > 0) {
 				messages = ensureToolPairs(
 					messages,
-					truncateChatHistory(messages, systemPrompt, contextSize, toolSchemaContext)
+					truncateChatHistory(messages, systemPrompt, contextSize, toolSchemaContext, currentQuestion)
 				);
 			}
 

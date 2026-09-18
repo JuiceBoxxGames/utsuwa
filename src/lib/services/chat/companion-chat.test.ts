@@ -15,6 +15,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	const speech = { activeProvider: 'omnivoice', activeLanguage: 'en', altLanguage: 'es', enableAltLanguage: true, enableToolCalling: true };
 	let direct = true;
 	let llmProvider = 'openai-compatible';
+	let contextSize: number | undefined;
 	let buffer: StreamingSpeechBuffer | undefined;
 	let spoken: SpeechSegment[] = [];
 	const turns: ReturnType<typeof parseResponse>[] = [];
@@ -37,7 +38,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		modulesStore: {
 			isModuleEnabled: () => true,
 			getModuleState: () => ({ enabled: speechEnabled }),
-			getModuleSettings: (id: string) => id === 'speech' ? speech : { activeProvider: llmProvider, activeModel: 'test-model' }
+			getModuleSettings: (id: string) => id === 'speech' ? speech : { activeProvider: llmProvider, activeModel: 'test-model', contextSize }
 		},
 		vrmStore: { startTalking: () => {} },
 		reminderStore: { upcoming: [] },
@@ -308,7 +309,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
 		});
 		await t.test('text and an MCP tool call in the same round are both preserved', async (t) => {
-			direct = false; llmProvider = 'openai-compatible';
+			direct = false; llmProvider = 'openai-compatible'; contextSize = 4096;
 			speechEnabled = true; messages.length = 0; spoken = []; turns.length = 0;
 			const mcp = fixtures.mcpStore as {
 				hasActiveTools: boolean;
@@ -320,7 +321,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				serverId: 'ha', serverName: 'Home Assistant', name: 'get_state',
 				description: 'Read an entity state', inputSchema: { type: 'object' }
 			}];
-			mcp.servers = [{ id: 'ha', name: 'Home Assistant', transport: 'http', url: 'http://ha.local/api/mcp', enabled: true }];
+			mcp.servers = [{ id: 'ha', name: 'Home Assistant', transport: 'http', url: 'http://ha.local/api/mcp', enabled: true, injectResultsAsUser: true }];
 
 			let providerRound = 0;
 			const mixedWire = `data: ${JSON.stringify({ choices: [{ delta: { content: 'Let me check the sensor. ' } }] })}\n\n` +
@@ -328,11 +329,18 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			const speechWire = `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call_2', type: 'function', function: { name: 'speak_segment', arguments: JSON.stringify({ text: 'It is 21 degrees.', language: 'en' }) } }] } }] })}\n\n` + 'data: [DONE]\n\n';
 
 			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
-				if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+				if (url === '/api/chat') {
+					if (providerRound === 1) {
+						const body = JSON.parse(String(init.body));
+						assert.ok(body.messages.some((m: { content: string }) => m.content === 'How warm is it?'));
+						assert.deepEqual(body.messages.map((m: { role: string }) => m.role), ['user', 'assistant', 'tool', 'user']);
+					}
+					return POST({ request: new Request('http://localhost/api/chat', init) });
+				}
 				if (url === '/api/mcp/call') {
 					const body = JSON.parse(String(init.body));
 					assert.equal(body.toolName, 'get_state');
-					return new Response(JSON.stringify({ toolName: 'get_state', content: '21 degrees', isError: false }), {
+					return new Response(JSON.stringify({ toolName: 'get_state', content: '21 degrees. '.repeat(1000), isError: false }), {
 						headers: { 'Content-Type': 'application/json' }
 					});
 				}
@@ -347,7 +355,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			const dialogue = turns.at(-1)?.dialogue ?? '';
 			assert.match(dialogue, /Let me check the sensor\./);
 			assert.match(dialogue, /It is 21 degrees\./);
-			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
+			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; contextSize = undefined;
 		});
 		await t.test('Anthropic never receives MCP tool definitions', async (t) => {
 			direct = true; llmProvider = 'anthropic';

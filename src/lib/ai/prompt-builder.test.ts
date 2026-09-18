@@ -598,3 +598,24 @@ test('buildMcpSecurityInstructions omits the confirmation rule for an empty list
 	assert.ok(layer);
 	assert.doesNotMatch(layer, /blocked and never run/);
 });
+
+test('injected tool results never replace the real question during context trimming', () => {
+	const question = { role: 'user', content: 'Compare the two results.' };
+	const messages = [
+		{ role: 'user', content: 'Old history'.repeat(1000) },
+		{ role: 'assistant', content: 'Old answer' },
+		question,
+		{ role: 'assistant', content: '', tool_calls: [{ id: 'a' }, { id: 'b' }] },
+		{ role: 'tool', content: 'a'.repeat(8000), tool_call_id: 'a' },
+		{ role: 'tool', content: 'b'.repeat(8000), tool_call_id: 'b' },
+		{ role: 'user', content: 'Injected result a'.repeat(500) },
+		{ role: 'user', content: 'Injected result b'.repeat(500) }
+	];
+	for (const size of [2048, 4096, 8192]) {
+		let kept = truncateChatHistory(messages, 'system', size, undefined, question);
+		assert.equal(kept[0], question);
+		assert.deepEqual(kept, messages.slice(2));
+		kept = truncateChatHistory(kept, 'system', size, undefined, question);
+		assert.deepEqual(kept, messages.slice(2), 'the same question survives successive rounds');
+	}
+});

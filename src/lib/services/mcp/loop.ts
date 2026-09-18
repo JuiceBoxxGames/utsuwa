@@ -119,9 +119,11 @@ export function buildAssistantToolMessage(text: string, calls: McpCollectedToolC
  * strict tool role.
  */
 export function buildToolResultMessages(entries: ToolResultEntry[]): LoopMessage[] {
-	const messages: LoopMessage[] = [];
+	const messages: LoopMessage[] = entries.map((entry) => ({
+		role: 'tool', tool_call_id: entry.call.id, content: entry.content
+	}));
+	// Finish the complete tool response group before adding user-side copies.
 	for (const entry of entries) {
-		messages.push({ role: 'tool', tool_call_id: entry.call.id, content: entry.content });
 		if (entry.injectAsUser) {
 			messages.push({
 				role: 'user',

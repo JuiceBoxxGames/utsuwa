@@ -609,7 +609,8 @@ const isDev = typeof import.meta !== 'undefined' && (import.meta as { env?: { DE
  */
 export function truncateMessagesToContext(
 	messages: Array<{ role: string; content: string }>,
-	contextSize: number
+	contextSize: number,
+	currentQuestionIndex?: number
 ): void {
 	if (messages.length === 0) return;
 
@@ -626,11 +627,13 @@ export function truncateMessagesToContext(
 	// The newest user message is the current question. In multi-round MCP turns
 	// the newest entries are tool results, so a purely positional cut could
 	// drop the question the model is supposed to answer.
-	let lastUserIndex = -1;
-	for (let i = messages.length - 1; i >= historyStart; i--) {
-		if (messages[i].role === 'user') {
-			lastUserIndex = i;
-			break;
+	let lastUserIndex = currentQuestionIndex ?? -1;
+	if (lastUserIndex === -1) {
+		for (let i = messages.length - 1; i >= historyStart; i--) {
+			if (messages[i].role === 'user') {
+				lastUserIndex = i;
+				break;
+			}
 		}
 	}
 
@@ -670,7 +673,8 @@ export function truncateChatHistory<T extends { role: string; content: unknown }
 	messages: T[],
 	systemPrompt: string,
 	contextSize: number,
-	extraContext?: string
+	extraContext?: string,
+	currentQuestion?: T
 ): T[] {
 	const messagesWithSystem = [
 		{ role: 'system' as const, content: extraContext ? `${systemPrompt}\n\n${extraContext}` : systemPrompt },
@@ -679,8 +683,10 @@ export function truncateChatHistory<T extends { role: string; content: unknown }
 			content: typeof m.content === 'string' ? m.content : '[image content]'
 		}))
 	];
-	truncateMessagesToContext(messagesWithSystem, contextSize);
+	// Tool-result copies use the user role too. Preserve the actual question
+	// captured before the tool loop, along with its complete tool-call groups.
+	const questionIndex = currentQuestion ? messages.indexOf(currentQuestion) : -1;
+	truncateMessagesToContext(messagesWithSystem, contextSize, questionIndex < 0 ? undefined : questionIndex + 1);
 	const keptHistoryCount = messagesWithSystem.length - 1;
 	return messages.slice(-keptHistoryCount);
 }
-

@@ -135,3 +135,11 @@ test('ensureToolPairs re-attaches the assistant parent of a kept tool message', 
 	assert.deepEqual(ensureToolPairs(all, all.slice(4)), all.slice(4));
 	assert.deepEqual(ensureToolPairs(all, []), []);
 });
+
+test('user-side result copies follow the complete tool response group', () => {
+	const messages = buildToolResultMessages(['c1', 'c2'].map((id) => ({
+		call: { id, name: 'search', args: {} }, content: id, injectAsUser: true
+	})));
+	assert.deepEqual(messages.map((message) => message.role), ['tool', 'tool', 'user', 'user']);
+	assert.deepEqual(messages.slice(0, 2).map((message) => message.tool_call_id), ['c1', 'c2']);
+});
