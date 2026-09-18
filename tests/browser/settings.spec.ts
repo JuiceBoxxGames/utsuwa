@@ -41,6 +41,7 @@ async function prepareOmniVoice(page: Page) {
 for (const theme of ['light', 'dark']) {
 	test(`every settings page fits the viewport in ${theme} mode`, async ({ page }, info) => {
 		test.setTimeout(90_000);
+		await page.route('**/api/mcp/tools', (route) => route.fulfill({ json: { tools: [], errors: [] } }));
 		await prepareOmniVoice(page);
 		await page.emulateMedia({ colorScheme: theme as 'light' | 'dark', reducedMotion: 'reduce' });
 		for (const route of [
@@ -49,6 +50,7 @@ for (const theme of ['light', 'dark']) {
 			'llm',
 			'tts',
 			'stt',
+			'mcp',
 			'memory',
 			'data',
 			'developer'
@@ -60,6 +62,10 @@ for (const theme of ['light', 'dark']) {
 				await expect(
 					page.getByRole('heading', { name: 'Primary voice', exact: true })
 				).toBeVisible();
+			if (route === 'mcp') {
+				await page.getByRole('button', { name: 'Add Server', exact: true }).click();
+				await page.getByRole('radio', { name: 'Bearer', exact: true }).check();
+			}
 			await page.evaluate(
 				(theme) => document.documentElement.classList.toggle('dark', theme === 'dark'),
 				theme

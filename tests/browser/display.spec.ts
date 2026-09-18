@@ -35,6 +35,8 @@ for (const side of ['left', 'right']) {
 }
 
 test('camera pan persists and reset clears only the main profile', async ({ page }) => {
+	// Two avatar loads plus interactions exceed 45 seconds on CI software rendering.
+	test.setTimeout(90_000);
 	await openApp(page, { camera: { panX: 0.25 }, overlayCamera: { panX: -0.5 } });
 	await page.getByRole('button', { name: 'Controls', exact: true }).click();
 	await page.getByRole('button', { name: 'Camera settings', exact: true }).click();
@@ -136,6 +138,8 @@ for (const layout of [undefined, 'floating']) {
 }
 
 test('old floating preferences cannot restore dragging or resizing', async ({ page }, info) => {
+	// Two avatar loads plus interactions exceed 45 seconds on CI software rendering.
+	test.setTimeout(90_000);
 	await openApp(page, { chatDisplayMode: 'sidebar', chatWindowLayout: 'floating' });
 	await page.evaluate(() =>
 		localStorage.setItem('utsuwa-chat-panel', JSON.stringify({ x: -900, y: -900, w: 20, h: 20 }))
