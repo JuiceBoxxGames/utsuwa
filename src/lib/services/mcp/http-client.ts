@@ -67,7 +67,8 @@ function guardRedirects(fetchImpl: FetchLike): FetchLike {
 		};
 		for (let hop = 0; ; hop++) {
 			assertSafeMcpUrl(url);
-			const res = await fetchImpl(url, requestInit);
+			// Tauri consumes and deletes maxRedirections from the passed options.
+			const res = await fetchImpl(url, { ...requestInit });
 			if (!isRedirectStatus(res.status)) return res;
 			const location = res.headers.get('location');
 			if (!location) return res;

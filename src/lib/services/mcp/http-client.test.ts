@@ -164,6 +164,23 @@ test('a 307 redirect is followed manually with method and body preserved', async
 	assert.equal(toolListCall.method, 'POST');
 });
 
+test('desktop redirect protection survives Tauri consuming its request options', async () => {
+	const limits: Array<number | undefined> = [];
+	const client = createHttpMcpClient(async (input, init) => {
+		const options = init as RequestInit & { maxRedirections?: number };
+		limits.push(options.maxRedirections);
+		// The Tauri plugin deletes this option before constructing its Request.
+		delete options.maxRedirections;
+		if (String(input) === CONFIG.url) {
+			return new Response(null, { status: 307, headers: { Location: '/moved/mcp' } });
+		}
+		return rpcReply(String(init?.body));
+	});
+	assert.equal((await client.listTools(CONFIG)).length, 1);
+	assert.ok(limits.length > 1);
+	assert.deepEqual([...new Set(limits)], [0]);
+});
+
 test('a redirect to a metadata host is rejected before the second request', async () => {
 	const calls: string[] = [];
 	const fetchImpl: FetchLike = async (input) => {
