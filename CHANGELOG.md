@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MCP tools in companion chat, contributed by @dezihh in [#177](https://github.com/JuiceBoxxGames/utsuwa/pull/177). Desktop connects directly to HTTP MCP servers. Self-hosted web deployments can opt into HTTP and stdio servers.
 - Settings > MCP manages servers, bearer authentication, and tool discovery. Speech tools continue to work alongside MCP calls.
 
+- A docked chat window and immersive composer share message controls and companion stats. Camera pan persists separately for the main and overlay views.
+- A Memory workspace combines the graph, saved facts, sessions, and settings, with links from graph details to individual facts.
+- An optional screen wake lock keeps supported devices awake while the app is visible.
+
+### Changed
+- Settings share responsive controls and styles across providers and MCP. Chat controls support keyboard focus and accessible copying.
+
 ### Fixed
 - MCP requests keep credentials on the configured origin, reject metadata addresses, and apply timeouts while reading responses. Expired HTTP sessions reconnect once, and SSE replies match the pending request.
 - Tool rounds preserve the original question and keep tool responses together when optional user-message copies are enabled.
