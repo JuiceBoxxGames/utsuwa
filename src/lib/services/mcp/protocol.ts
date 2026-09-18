@@ -118,26 +118,30 @@ export function parseJsonRpcResult(json: unknown): unknown {
 }
 
 /**
- * Parse the first `data:` line of an SSE response. Streamable HTTP servers may
- * answer JSON-RPC requests with `text/event-stream` instead of plain JSON.
+ * Match a response after any SSE notifications or unrelated responses.
+ * Multiple data lines belong to one event and are joined with newlines.
  */
-export function parseSseResult(text: string): unknown {
-	for (const line of text.split('\n')) {
-		if (!line.startsWith('data:')) continue;
-		const payload = line.slice('data:'.length).trim();
+export function parseSseResult(text: string, expectedId?: number): unknown {
+	for (const event of text.split(/\r\n\r\n|\n\n|\r\r/)) {
+		const payload = event.split(/\r\n|\n|\r/)
+			.filter((line) => line.startsWith('data:'))
+			.map((line) => line.slice(5).replace(/^ /, ''))
+			.join('\n').trim();
 		if (!payload || payload === '[DONE]') continue;
-		let json: { result?: unknown; error?: JsonRpcError };
+		let json: unknown;
 		try {
-			json = JSON.parse(payload) as { result?: unknown; error?: JsonRpcError };
+			json = JSON.parse(payload);
 		} catch {
 			throw new Error('MCP error: invalid JSON in SSE response');
 		}
-		if (json.error) {
-			throw new Error(rpcErrorMessage(json.error));
+		for (const message of Array.isArray(json) ? json : [json]) {
+			if (!message || typeof message !== 'object' || 'method' in message) continue;
+			if (expectedId !== undefined && message.id !== expectedId) continue;
+			if (message.error) throw new Error(rpcErrorMessage(message.error));
+			if ('result' in message) return message.result;
 		}
-		return json.result;
 	}
-	throw new Error('MCP error: no data found in SSE response');
+	throw new Error('MCP error: no data for the requested response found in SSE stream');
 }
 
 interface RawMcpTool {
@@ -257,8 +261,16 @@ export function parseToolNameList(raw: string | undefined | null): string[] {
  * other self-hosted MCP servers live on the local network.
  */
 export function isBlockedMcpHost(rawHostname: string): boolean {
-	const host = rawHostname.trim().toLowerCase().replace(/^\[|\]$/g, '');
+	let host = rawHostname.trim().toLowerCase().replace(/^\[|\]$/g, '');
 	if (!host) return false;
+	if (host.includes(':')) {
+		try { host = new URL(`http://[${host}]/`).hostname.slice(1, -1); } catch { /* invalid host */ }
+		const mapped = host.match(/^::ffff:([0-9a-f]+):([0-9a-f]+)$/);
+		if (mapped) {
+			const high = parseInt(mapped[1], 16), low = parseInt(mapped[2], 16);
+			host = `${high >>> 8}.${high & 255}.${low >>> 8}.${low & 255}`;
+		}
+	}
 	// Cloud metadata hostnames (GCP, AWS, Azure, generic aliases).
 	if (
 		host === 'metadata' ||

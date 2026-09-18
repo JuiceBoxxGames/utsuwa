@@ -332,3 +332,19 @@ test('parseEnvLines parses KEY=value, ignores comments and blanks', () => {
 	});
 	assert.deepEqual(parseEnvLines(''), {});
 });
+
+test('metadata addresses are blocked after URL normalization of mapped IPv6', () => {
+	for (const address of ['::ffff:169.254.169.254', '::ffff:a9fe:a9fe', '0:0:0:0:0:ffff:a9fe:a9fe', '::ffff:100.100.100.200']) {
+		assert.equal(isBlockedMcpHost(new URL(`http://[${address}]/`).hostname), true);
+		assert.equal(isBlockedMcpHost(address), true);
+	}
+	assert.equal(isBlockedMcpHost(new URL('http://[::ffff:192.168.1.10]/').hostname), false);
+});
+
+test('SSE response matching supports multiline data and ignores unrelated errors', () => {
+	const events = 'data: {"id":2,"error":{"message":"unrelated"}}\n\n' +
+		'data: {"id":1,\ndata: "result":{"ok":true}}\n\n';
+	assert.deepEqual(parseSseResult(events, 1), { ok: true });
+	assert.throws(() => parseSseResult(events, 3), /no data/);
+	assert.throws(() => parseSseResult(events, 2), /unrelated/);
+});

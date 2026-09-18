@@ -71,14 +71,19 @@ function guardRedirects(fetchImpl: FetchLike): FetchLike {
 			if (!isRedirectStatus(res.status)) return res;
 			const location = res.headers.get('location');
 			if (!location) return res;
-			await res.text().catch(() => '');
+			void res.body?.cancel().catch(() => {});
 			if (res.status !== 307 && res.status !== 308) {
 				throw new Error(
 					`MCP HTTP redirect (${res.status}) is not followed (JSON-RPC requires POST)`
 				);
 			}
 			if (hop >= MAX_REDIRECTS) throw new Error('MCP HTTP too many redirects');
-			url = new URL(location, url).toString();
+			const target = new URL(location, url);
+			assertSafeMcpUrl(target.toString());
+			if (target.origin !== new URL(url).origin) {
+				throw new Error('MCP HTTP cross-origin redirects are not allowed');
+			}
+			url = target.toString();
 		}
 	};
 }
@@ -124,22 +129,40 @@ export function createHttpMcpClient(
 		return headers;
 	}
 
-	async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+	async function fetchWithTimeout<T>(
+		url: string,
+		init: RequestInit,
+		read: (response: Response) => Promise<T>
+	): Promise<T> {
 		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), timeoutMs);
+		let timer: ReturnType<typeof setTimeout>;
+		const timeout = new Promise<never>((_, reject) => {
+			timer = setTimeout(() => {
+				controller.abort();
+				reject(new Error(`MCP HTTP timeout after ${timeoutMs}ms`));
+			}, timeoutMs);
+		});
 		try {
-			return await safeFetch(url, { ...init, signal: controller.signal });
+			return await Promise.race([
+				safeFetch(url, { ...init, signal: controller.signal }).then(read),
+				timeout
+			]);
 		} catch (err) {
 			if (controller.signal.aborted) {
 				throw new Error(`MCP HTTP timeout after ${timeoutMs}ms`);
 			}
 			throw err;
 		} finally {
-			clearTimeout(timer);
+			clearTimeout(timer!);
 		}
 	}
 
-	async function rpc(config: McpServerConfig, method: string, params: unknown = {}): Promise<unknown> {
+	async function rpc(
+		config: McpServerConfig,
+		method: string,
+		params: unknown = {},
+		recoverSession = true
+	): Promise<unknown> {
 		const key = (config.url ?? '').trim();
 		if (!isAllowedMcpHttpUrl(key)) {
 			throw new Error('MCP HTTP URL must use http: or https:');
@@ -149,22 +172,40 @@ export function createHttpMcpClient(
 
 		let lastError: Error | null = null;
 		for (const url of urls) {
-			const res = await fetchWithTimeout(url, {
+			const id = nextRpcId();
+			const headers = headersFor(config, url);
+			const { res, result, errText } = await fetchWithTimeout(url, {
 				method: 'POST',
-				headers: headersFor(config, url),
-				body: JSON.stringify(buildRpcRequest(nextRpcId(), method, params))
+				headers,
+				body: JSON.stringify(buildRpcRequest(id, method, params))
+			}, async (res) => {
+				const text = await res.text();
+				return {
+					res,
+					errText: res.ok ? '' : text,
+					result: !res.ok ? undefined : res.headers.get('content-type')?.includes('text/event-stream')
+						? parseSseResult(text, id)
+						: parseJsonRpcResult(JSON.parse(text))
+				};
 			});
+
+			if (res.status === 404 && headers['mcp-session-id']) {
+				sessionIds.delete(sessionKey(config, url));
+				if (recoverSession && method !== 'initialize') {
+					await initialize(config);
+					return rpc(config, method, params, false);
+				}
+				throw new Error(`MCP HTTP error 404: ${url}`);
+			}
 
 			// Wrong URL variant (e.g. Home Assistant 404s on a trailing slash):
 			// drain and try the next candidate. Auth errors are not retried.
 			if (res.status === 404 || res.status === 405) {
-				await res.text().catch(() => '');
 				lastError = new Error(`MCP HTTP error ${res.status}: ${url}`);
 				continue;
 			}
 
 			if (!res.ok) {
-				const errText = await res.text().catch(() => '');
 				const detail = errText ? `: ${errText.slice(0, 300)}` : '';
 				throw new Error(`MCP HTTP error ${res.status}${detail}`);
 			}
@@ -176,11 +217,7 @@ export function createHttpMcpClient(
 			const newSessionId = res.headers.get('mcp-session-id');
 			if (newSessionId) sessionIds.set(sessionKey(config, url), newSessionId);
 
-			const contentType = res.headers.get('content-type') ?? '';
-			if (contentType.includes('text/event-stream')) {
-				return parseSseResult(await res.text());
-			}
-			return parseJsonRpcResult(await res.json());
+			return result;
 		}
 		throw lastError ?? new Error('MCP HTTP request failed');
 	}
@@ -190,6 +227,7 @@ export function createHttpMcpClient(
 	 * Servers that don't care simply ignore it — failures are non-fatal.
 	 */
 	async function initialize(config: McpServerConfig): Promise<void> {
+		if (candidatesFor(config).some((url) => sessionIds.has(sessionKey(config, url)))) return;
 		try {
 			await rpc(config, 'initialize', {
 				protocolVersion: '2024-11-05',
@@ -199,12 +237,12 @@ export function createHttpMcpClient(
 			const key = (config.url ?? '').trim();
 			const url = resolvedUrls.get(key) ?? mcpUrlCandidates(key)[0];
 			if (!url) return;
-			// Fire-and-forget notification, exactly as the spec prescribes.
+			// Notifications have no JSON-RPC response body.
 			await fetchWithTimeout(url, {
 				method: 'POST',
 				headers: headersFor(config, url),
 				body: JSON.stringify(buildInitializedNotification())
-			}).catch(() => {});
+			}, async (res) => { await res.body?.cancel(); }).catch(() => {});
 		} catch {
 			// Servers without a handshake still work; the real call reports errors.
 		}

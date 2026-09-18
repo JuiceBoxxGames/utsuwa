@@ -206,3 +206,107 @@ test('redirect loops are capped', async () => {
 	const client = createHttpMcpClient(fetchImpl);
 	await assert.rejects(client.listTools(CONFIG), /too many redirects/);
 });
+
+for (const location of ['https://other.example/mcp', 'http://ha.local:8123/api/mcp']) {
+	test(`redirect credentials never leave the configured origin: ${location}`, async () => {
+		const urls: string[] = [];
+		const client = createHttpMcpClient(async (url) => {
+			urls.push(String(url));
+			return new Response(null, { status: 307, headers: { location } });
+		});
+		const config = { ...CONFIG, url: 'https://ha.local:8123/api/mcp' };
+		await assert.rejects(client.listTools(config), /cross-origin/);
+		assert.ok(urls.every((url) => url === config.url));
+	});
+}
+
+test('HTTP timeout includes a stalled response body for JSON and SSE', async () => {
+	for (const contentType of ['application/json', 'text/event-stream']) {
+		let aborted = false;
+		const client = createHttpMcpClient(async (_url, init) => {
+			const { method } = JSON.parse(String(init?.body));
+			if (method !== 'tools/list') return rpcReply(String(init?.body));
+			return new Response(new ReadableStream({
+				start(controller) {
+					init?.signal?.addEventListener('abort', () => {
+						aborted = true;
+						controller.error(new Error('body aborted'));
+					});
+				}
+			}), { headers: { 'Content-Type': contentType } });
+		}, { timeoutMs: 20 });
+		await assert.rejects(client.listTools(CONFIG), /timeout after 20ms/);
+		assert.equal(aborted, true);
+	}
+});
+
+test('HTTP SSE discovery ignores notifications and matches the request ID', async () => {
+	const client = createHttpMcpClient(async (_url, init) => {
+		const request = JSON.parse(String(init?.body));
+		if (request.method !== 'tools/list') return rpcReply(String(init?.body));
+		const events = [
+			{ jsonrpc: '2.0', method: 'notifications/progress', params: {} },
+			{ jsonrpc: '2.0', id: request.id + 1, result: { tools: [{ name: 'wrong' }] } },
+			{ jsonrpc: '2.0', id: request.id, result: { tools: [{ name: 'get_state' }] } }
+		];
+		return new Response(events.map((event) => `data: ${JSON.stringify(event)}\r\n\r\n`).join(''), {
+			headers: { 'Content-Type': 'text/event-stream' }
+		});
+	});
+	assert.deepEqual((await client.listTools(CONFIG)).map((tool) => tool.name), ['get_state']);
+});
+
+for (const operation of ['list', 'call']) {
+	test(`expired sessions reinitialize without the old ID before retrying ${operation}`, async () => {
+		let initializations = 0;
+		let expired = false;
+		let executed = 0;
+		const client = createHttpMcpClient(async (_url, init) => {
+			const request = JSON.parse(String(init?.body));
+			const session = new Headers(init?.headers).get('mcp-session-id');
+			if (request.method === 'initialize') {
+				assert.equal(session, null);
+				initializations++;
+				return new Response(JSON.stringify({ id: request.id, result: {} }), {
+					headers: { 'mcp-session-id': `session-${initializations}` }
+				});
+			}
+			if (expired && session === 'session-1') return new Response('expired', { status: 404 });
+			if (request.method === 'notifications/initialized') return new Response(null, { status: 202 });
+			assert.equal(session, `session-${initializations}`);
+			if (request.method === 'tools/call') {
+				executed++;
+				return jsonResponse({ id: request.id, result: { content: [{ type: 'text', text: 'done' }] } });
+			}
+			return rpcReply(String(init?.body));
+		});
+		await client.listTools(CONFIG);
+		await client.listTools(CONFIG);
+		assert.equal(initializations, 1, 'live sessions are reused');
+		expired = true;
+		if (operation === 'list') assert.equal((await client.listTools(CONFIG)).length, 1);
+		else assert.equal((await client.callTool(CONFIG, 'get_state', {})).content, 'done');
+		assert.equal(initializations, 2);
+		assert.equal(executed, operation === 'call' ? 1 : 0);
+	});
+}
+
+test('a server that expires every session is retried only once', async () => {
+	let initializations = 0;
+	let calls = 0;
+	const client = createHttpMcpClient(async (_url, init) => {
+		const request = JSON.parse(String(init?.body));
+		if (request.method === 'initialize') {
+			initializations++;
+			return new Response(JSON.stringify({ id: request.id, result: {} }), {
+				headers: { 'mcp-session-id': `session-${initializations}` }
+			});
+		}
+		if (request.method === 'notifications/initialized') return new Response(null, { status: 202 });
+		calls++;
+		return new Response('expired', { status: 404 });
+	});
+	await assert.rejects(client.listTools(CONFIG), /404/);
+	assert.equal(initializations, 2);
+	assert.equal(calls, 2);
+});

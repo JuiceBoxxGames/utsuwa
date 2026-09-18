@@ -135,3 +135,13 @@ test('the DNS guard caches an allowed resolution and lets requests through', asy
 	assert.deepEqual(tools, []);
 	assert.equal(lookups, 1, 'the resolution is cached for the session');
 });
+
+test('mapped IPv6 metadata URLs are rejected before DNS or fetch', async () => {
+	const guard = createHostGuard(async () => { assert.fail('literal addresses must not use DNS'); });
+	const client = createServerHttpClient(guard, async () => { assert.fail('metadata must not be fetched'); });
+	await assert.rejects(client.listTools({
+		id: 'blocked', name: 'Blocked', transport: 'http', enabled: true,
+		url: 'http://[::ffff:169.254.169.254]/mcp'
+	}), /blocked/);
+	await assert.rejects(guard('http://[::ffff:169.254.169.254]/mcp'), /blocked/);
+});
