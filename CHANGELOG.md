@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-09-18
+
+### Added
+- MCP tools in companion chat, contributed by @dezihh in [#177](https://github.com/JuiceBoxxGames/utsuwa/pull/177). Desktop connects directly to HTTP MCP servers. Self-hosted web deployments can opt into HTTP and stdio servers.
+- Settings > MCP manages servers, bearer authentication, and tool discovery. Speech tools continue to work alongside MCP calls.
+
+### Fixed
+- MCP requests keep credentials on the configured origin, reject metadata addresses, and apply timeouts while reading responses. Expired HTTP sessions reconnect once, and SSE replies match the pending request.
+- Tool rounds preserve the original question and keep tool responses together when optional user-message copies are enabled.
+
+### Upgrade notes
+- MCP remains off by default on web. Operators can enable it with `MCP_ENABLED=server`; stdio also requires an explicit command allowlist. Protect enabled web deployments with authentication. See the [MCP guide](https://docs.utsuwa.ai/docs/guides/mcp).
+- Desktop supports HTTP MCP servers only. Anthropic does not support the MCP tool loop yet.
+
 ## [0.14.0] - 2026-09-09
 
 ### Added
