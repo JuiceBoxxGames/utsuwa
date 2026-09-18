@@ -5,7 +5,6 @@ import type { LLMProvider } from '$lib/types';
 import { ensureOpenAIPath, getChatBaseUrl } from '$lib/services/providers/local-endpoints';
 import { assertSafeProviderUrl } from '$lib/services/providers/url-guard';
 import { sanitizeProviderError } from '$lib/services/providers/provider-errors';
-import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { DEFAULT_CHAT_BASE_URLS } from '$lib/services/providers/provider-defaults';
 
 // Providers that don't require API keys
@@ -166,20 +165,19 @@ export const POST: RequestHandler = async ({ request }) => {
 							controller.enqueue(encoder.encode(data));
 						} else if (value.type === 'tool-call') {
 							// Keep native calls separate from text so the client can
-							// process speech even after the textual state fence.
-							// Unknown tools, invalid args or unparsable JSON yield
-							// null and are dropped — identical to the direct client
-							// path. A malformed call must not kill the stream.
+							// process speech even after the textual state fence. The
+							// client classifies each call: speech tools become
+							// speak() pseudo-calls, MCP tools feed the client-side
+							// tool loop. Malformed calls are dropped — a bad call
+							// must not kill the stream.
 							try {
 								const args =
 									typeof value.args === 'string' ? JSON.parse(value.args) : value.args;
-								const pseudo = pseudoCallFromTool(
-									value.toolName,
-									args as Record<string, unknown>
+								controller.enqueue(
+									encoder.encode(
+										`t:${JSON.stringify({ id: value.toolCallId, name: value.toolName, args })}\n`
+									)
 								);
-								if (pseudo) {
-									controller.enqueue(encoder.encode(`t:${JSON.stringify({ name: value.toolName, args })}\n`));
-								}
 							} catch {
 								// Malformed tool-call args: drop the call, keep streaming.
 							}

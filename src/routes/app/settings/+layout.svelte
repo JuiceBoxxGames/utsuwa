@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { Icon } from '$lib/components/ui';
 	import { localPath } from '$lib/config/links';
+	import { mcpStore } from '$lib/stores/mcp.svelte';
 
 	let { children } = $props();
 
@@ -11,9 +13,16 @@
 		{ href: localPath('app', '/settings/llm'), label: 'LLM Model', icon: 'brain' },
 		{ href: localPath('app', '/settings/tts'), label: 'TTS', icon: 'volume' },
 		{ href: localPath('app', '/settings/stt'), label: 'STT', icon: 'mic' },
+		...(mcpStore.capability === 'none'
+			? []
+			: [{ href: localPath('app', '/settings/mcp'), label: 'MCP', icon: 'modules' }]),
 		{ href: localPath('app', '/settings/data'), label: 'Data', icon: 'database' },
 		{ href: localPath('app', '/settings/developer'), label: 'Developer', icon: 'code' }
 	]);
+
+	onMount(() => {
+		if (mcpStore.capability === 'unknown') void mcpStore.detectCapability();
+	});
 
 	const currentIcon = $derived(
 		navItems.find((item) => $page.url.pathname === item.href)?.icon || 'settings'

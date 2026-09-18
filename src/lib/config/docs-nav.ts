@@ -25,6 +25,7 @@ export const docsNav: DocsNavSection[] = [
 			{ title: 'Local TTS Setup', slug: 'guides/local-tts-setup' },
 			{ title: 'OmniVoice Setup', slug: 'guides/omnivoice' },
 			{ title: 'Local STT Setup', slug: 'guides/local-stt-setup' },
+			{ title: 'MCP Servers', slug: 'guides/mcp' },
 			{ title: 'Troubleshooting', slug: 'guides/troubleshooting' }
 		]
 	},

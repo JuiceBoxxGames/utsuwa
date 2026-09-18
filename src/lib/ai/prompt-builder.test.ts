@@ -4,12 +4,14 @@ import assert from 'node:assert/strict';
 import {
 	buildSystemPrompt,
 	buildExtractionSystemPrompt,
+	buildMcpSecurityInstructions,
 	truncateMessagesToContext,
 	truncateChatHistory,
 	estimateTokens,
 	type PromptContext
 } from './prompt-builder.ts';
 import { shouldUseSpeechTools } from '../services/tts/tool-definitions.ts';
+import { ensureToolPairs } from '../services/mcp/loop.ts';
 import type { CharacterState } from '$lib/types/character';
 import type { RelevantContext } from '$lib/types/memory';
 import { getMemoryBudget } from '../types/memory.ts';
@@ -479,6 +481,62 @@ test('truncateChatHistory combines system prompt budgeting with original message
 	assert.equal(result[result.length - 1].content, 'newest message');
 });
 
+test('truncateChatHistory counts extra tool context against the budget', () => {
+	const messages = [
+		{ role: 'user', content: 'a'.repeat(400) },
+		{ role: 'assistant', content: 'b'.repeat(400) },
+		{ role: 'user', content: 'newest message' }
+	];
+	const systemPrompt = 'x'.repeat(400);
+	const withoutTools = truncateChatHistory(messages, systemPrompt, 900);
+	const withTools = truncateChatHistory(messages, systemPrompt, 900, 'y'.repeat(1200));
+	assert.ok(withTools.length < withoutTools.length, 'tool schemas shrink the history budget');
+	assert.equal(withTools[withTools.length - 1].content, 'newest message');
+});
+
+test('a cut between an assistant tool call and its result is repaired by ensureToolPairs', () => {
+	const toolCalls = [
+		{ id: 'call_1', type: 'function', function: { name: 'get_state', arguments: '{}' } }
+	];
+	const messages = [
+		{ role: 'user', content: 'old '.repeat(400) },
+		{ role: 'assistant', content: 'a'.repeat(1600), tool_calls: toolCalls },
+		{ role: 'tool', tool_call_id: 'call_1', content: 'r'.repeat(2000) },
+		{ role: 'user', content: 'newest message' }
+	];
+	const systemPrompt = 'x'.repeat(400);
+
+	// Budget forces the cut exactly between the assistant tool call and its
+	// result, leaving the tool message as the oldest kept entry.
+	const truncated = truncateChatHistory(messages, systemPrompt, 1500);
+	assert.equal(truncated[0].role, 'tool');
+
+	const repaired = ensureToolPairs(messages, truncated);
+	assert.equal(repaired[0].role, 'assistant');
+	assert.deepEqual(repaired[0].tool_calls, toolCalls);
+	assert.equal(repaired[repaired.length - 1].content, 'newest message');
+});
+
+test('truncation keeps the current user question when the newest entry is a tool result', () => {
+	const messages = [
+		{ role: 'user', content: 'q'.repeat(400) },
+		{
+			role: 'assistant',
+			content: 'a'.repeat(1600),
+			tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'get_state', arguments: '{}' } }]
+		},
+		{ role: 'tool', tool_call_id: 'call_1', content: 'r'.repeat(2000) }
+	];
+	const systemPrompt = 'x'.repeat(400);
+
+	// The question plus the assistant turn fit; the tool result pushes the
+	// budget over. The cut must not remove the question itself.
+	const result = truncateChatHistory(messages, systemPrompt, 1500);
+	assert.equal(result[0].role, 'user');
+	assert.equal(result[0].content, messages[0].content);
+	assert.equal(result[result.length - 1].role, 'tool');
+});
+
 test('truncateChatHistory handles image content placeholders', () => {
 	const messages = [
 		{ role: 'user', content: 'a'.repeat(400) },
@@ -508,4 +566,56 @@ test('speech tool policy keeps Anthropic on the inline prompt and honors speech 
 	assert.equal(shouldUseSpeechTools('openai', true, { ...settings, enableAltLanguage: false }), false);
 	assert.equal(shouldUseSpeechTools('openai', true, { ...settings, enableToolCalling: false }), false);
 	assert.equal(shouldUseSpeechTools('openai', true, { ...settings, activeProvider: 'openai-tts' }), false);
+});
+
+test('buildMcpSecurityInstructions is off unless MCP is active and hardening is enabled', () => {
+	assert.equal(buildMcpSecurityInstructions({ mcpActive: false, hardeningEnabled: true }), null);
+	assert.equal(buildMcpSecurityInstructions({ mcpActive: true, hardeningEnabled: false }), null);
+});
+
+test('buildMcpSecurityInstructions marks tool results as untrusted data', () => {
+	const layer = buildMcpSecurityInstructions({ mcpActive: true, hardeningEnabled: true });
+	assert.ok(layer);
+	assert.match(layer, /UNTRUSTED external DATA/);
+	assert.match(layer, /never instructions/i);
+	assert.match(layer, /explicitly asked/);
+	assert.doesNotMatch(layer, /blocked and never run/);
+});
+
+test('buildMcpSecurityInstructions lists confirmation tools when configured', () => {
+	const layer = buildMcpSecurityInstructions({
+		mcpActive: true,
+		hardeningEnabled: true,
+		confirmTools: ['unlock_door', 'set_alarm', '']
+	});
+	assert.ok(layer);
+	assert.match(layer, /blocked and never run automatically: unlock_door, set_alarm/);
+	assert.doesNotMatch(layer, /unlock_door, set_alarm,/);
+});
+
+test('buildMcpSecurityInstructions omits the confirmation rule for an empty list', () => {
+	const layer = buildMcpSecurityInstructions({ mcpActive: true, hardeningEnabled: true, confirmTools: [] });
+	assert.ok(layer);
+	assert.doesNotMatch(layer, /blocked and never run/);
+});
+
+test('injected tool results never replace the real question during context trimming', () => {
+	const question = { role: 'user', content: 'Compare the two results.' };
+	const messages = [
+		{ role: 'user', content: 'Old history'.repeat(1000) },
+		{ role: 'assistant', content: 'Old answer' },
+		question,
+		{ role: 'assistant', content: '', tool_calls: [{ id: 'a' }, { id: 'b' }] },
+		{ role: 'tool', content: 'a'.repeat(8000), tool_call_id: 'a' },
+		{ role: 'tool', content: 'b'.repeat(8000), tool_call_id: 'b' },
+		{ role: 'user', content: 'Injected result a'.repeat(500) },
+		{ role: 'user', content: 'Injected result b'.repeat(500) }
+	];
+	for (const size of [2048, 4096, 8192]) {
+		let kept = truncateChatHistory(messages, 'system', size, undefined, question);
+		assert.equal(kept[0], question);
+		assert.deepEqual(kept, messages.slice(2));
+		kept = truncateChatHistory(kept, 'system', size, undefined, question);
+		assert.deepEqual(kept, messages.slice(2), 'the same question survives successive rounds');
+	}
 });

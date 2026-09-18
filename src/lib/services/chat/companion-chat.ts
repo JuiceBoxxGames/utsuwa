@@ -26,7 +26,7 @@ import { streamChatDirect } from '$lib/services/chat/client-chat';
 
 import { processCompanionTurn } from '$lib/services/chat/companion-turn';
 import { retrieveRelevantContext } from '$lib/engine/memory';
-import { buildSystemPrompt, truncateChatHistory, type PromptContext } from '$lib/ai/prompt-builder';
+import { buildSystemPrompt, buildMcpSecurityInstructions, truncateChatHistory, type PromptContext } from '$lib/ai/prompt-builder';
 import { keepImage, type PreparedImage } from '$lib/services/storage/keepsakes';
 import { extractReminderTags, tryExtractReminderFromUserMessage } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
@@ -35,8 +35,37 @@ import { toOpenAIContent, type ContentPart } from '$lib/services/chat/content';
 import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { shouldUseSpeechTools } from '$lib/services/tts/tool-definitions';
 import { isTauri } from '$lib/services/platform';
+import { env as publicEnv } from '$env/dynamic/public';
+import { parseToolNameList } from '$lib/services/mcp/protocol';
+import { mcpStore } from '$lib/stores/mcp.svelte';
+import { callTool } from '$lib/services/mcp/capability';
+import {
+	MCP_MAX_ROUNDS,
+	MAX_TOOL_CALLS_PER_ROUND,
+	buildAssistantToolMessage,
+	buildToolResultMessages,
+	capToolResult,
+	ensureToolPairs,
+	findMcpTool,
+	mcpCallsOnly,
+	splitToolCalls,
+	speechToolAck,
+	stripFromStateFence,
+	toOpenAiTool,
+	type OpenAiToolCall
+} from '$lib/services/mcp/loop';
+import type { McpCollectedToolCall } from '$lib/types/mcp';
 import type { LLMProvider, TTSProvider } from '$lib/types';
 import type { EventDefinition } from '$lib/types/events';
+
+/** Message shape used by the chat loop; extends the plain history with the
+ *  tool-role entries the MCP loop appends between rounds. */
+interface ChatLoopMessage {
+	role: 'user' | 'assistant' | 'tool';
+	content: string | ContentPart[];
+	tool_calls?: OpenAiToolCall[];
+	tool_call_id?: string;
+}
 
 export interface CompanionChatHooks {
 	/** Toggle the typing indicator. */
@@ -112,7 +141,7 @@ function buildMessages(images: PreparedImage[]) {
 async function streamServerRoute(
 	body: unknown,
 	onDelta: (fullContent: string) => void,
-	onToolCall?: (name: string, args: Record<string, unknown>) => void
+	onToolCall?: (name: string, args: Record<string, unknown>, id?: string) => void
 ): Promise<string> {
 	const response = await fetch('/api/chat', {
 		method: 'POST',
@@ -135,8 +164,12 @@ async function streamServerRoute(
 			fullContent += JSON.parse(line.slice(2));
 			onDelta(fullContent);
 		} else if (line.startsWith('t:')) {
-			const { name, args } = JSON.parse(line.slice(2));
-			onToolCall?.(name, args);
+			const { id, name, args } = JSON.parse(line.slice(2)) as {
+				id?: string;
+				name: string;
+				args: Record<string, unknown>;
+			};
+			onToolCall?.(name, args, id);
 		} else if (line.startsWith('e:')) {
 			throw new Error(JSON.parse(line.slice(2)).error);
 		}
@@ -232,7 +265,7 @@ export async function sendCompanionMessage(
 			throw new Error(`Please configure API key for ${providerMeta.name} in Settings > Providers`);
 		}
 
-		const systemPrompt = await buildCompanionPrompt(
+		let systemPrompt = await buildCompanionPrompt(
 			content,
 			images.length > 0,
 			provider,
@@ -246,7 +279,8 @@ export async function sendCompanionMessage(
 		chatStore.addMessage('assistant', '');
 		const selectedModel = model || providerMeta?.models?.[0]?.id || '';
 		const baseURL = providerConfig.baseUrl || providerMeta?.defaultBaseUrl;
-		let messages = buildMessages(images);
+		let messages: ChatLoopMessage[] = buildMessages(images);
+		const currentQuestion = [...messages].reverse().find((message) => message.role === 'user');
 
 		// Snapshot speech settings at turn start so mid-stream changes cannot
 		// corrupt an ongoing TTS session, then start OmniVoice streaming before
@@ -295,20 +329,23 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			speechState?.enabled && displayTtsProvider === 'omnivoice'
 				? await ttsStore.beginStreaming(ttsOptions)
 				: false;
-		let streamedLength = 0;
+		let roundTextLen = 0;
+		let roundText = '';
+		let assembledContent = '';
 		let ttsFedUntil = 0;
 		const displayCleaner = new StreamingDisplayCleaner();
 		let pendingRaw = '';
 		let displayCapped = false;
 
-		const onDelta = (full: string) => {
+		const onDelta = (roundFull: string) => {
 			if (displayTtsProvider !== 'omnivoice') {
-				chatStore.updateLastMessage(full);
-				streamedLength = full.length;
+				// Across MCP rounds the message shows everything produced so far.
+				chatStore.updateLastMessage(assembledContent + roundFull);
+				roundTextLen = roundFull.length;
 				return;
 			}
 
-			const delta = full.slice(streamedLength);
+			const delta = roundFull.slice(roundTextLen);
 
 			// Feed the live display only until the ```json state fence appears:
 			// what follows the fence is the model's post-state repeat, and the
@@ -339,13 +376,13 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 
 			chatStore.updateLastMessage(displayCleaner.text);
 
-			if (streamingTTS && full.length > streamedLength) {
+			if (streamingTTS && roundFull.length > roundTextLen) {
 				// Reasoning blocks (<thinking>…) and the trailing JSON state
 				// block are instructions, not speech — never feed them to TTS.
 				// These cuts mirror parseResponse so chat, display and speech
 				// agree; they also stop repeated text after the state block
 				// from being spoken twice.
-				const speechSource = stripThinkingBlocks(full);
+				const speechSource = stripThinkingBlocks(roundFull);
 				const fenceIndex = speechSource.match(STATE_FENCE_OPEN)?.index ?? -1;
 				const speechEnd = fenceIndex === -1 ? speechSource.length : fenceIndex;
 				if (ttsFedUntil < speechEnd) {
@@ -353,16 +390,53 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 				}
 				ttsFedUntil = speechEnd;
 			}
-			streamedLength = full.length;
+			roundTextLen = roundFull.length;
 		};
 
-		// Truncate message history to the configured context window. This applies
-		// to every provider so users can size prompts to their model's limit.
-		// Image turns use a non-string content shape; token estimation for them is
-		// handled by substituting a placeholder inside the helper.
-		if (contextSize && contextSize > 0 && messages.length > 0) {
-			messages = truncateChatHistory(messages, systemPrompt, contextSize);
+		// MCP tools for this turn (client-side loop). Without configured servers
+		// the whole path is skipped — no probe, no request fields, so users who
+		// never touch MCP see the exact same chat behavior as before.
+		// Anthropic requests carry no tool definitions at all, so MCP stays out
+		// of that path.
+		const mcpConfigured = mcpStore.servers.some((s) => s.enabled);
+		if (mcpConfigured) {
+			try {
+				await mcpStore.ensureTools();
+			} catch {
+				// Tool discovery must never break the chat turn — MCP stays off.
+			}
 		}
+		// Snapshot only tools whose server is still enabled: a server disabled
+		// while tools were cached must not stay callable in this turn.
+		const enabledServerIds = new Set(
+			mcpStore.servers.filter((s) => s.enabled).map((s) => s.id)
+		);
+		const mcpTools =
+			mcpConfigured && provider !== 'anthropic' && mcpStore.hasActiveTools
+				? mcpStore.tools.filter((tool) => enabledServerIds.has(tool.serverId))
+				: [];
+		const mcpToolNames = new Set(mcpTools.map((tool) => tool.name));
+		const useMcpLoop = mcpTools.length > 0;
+
+		// Optional env-gated hardening (default off): tool results are untrusted
+		// data and state-changing actions need an explicit user request. Added
+		// before truncation so the layer counts against the context budget.
+		const confirmToolNames = new Set(parseToolNameList(publicEnv.PUBLIC_MCP_CONFIRM_TOOLS));
+		const hardeningEnabled =
+			publicEnv.PUBLIC_MCP_PROMPT_HARDENING === 'true' || publicEnv.PUBLIC_MCP_PROMPT_HARDENING === '1';
+		if (mcpTools.length > 0) {
+			const security = buildMcpSecurityInstructions({
+				mcpActive: true,
+				hardeningEnabled,
+				confirmTools: [...confirmToolNames]
+			});
+			if (security) systemPrompt += '\n\n' + security;
+		}
+
+		// Tool schemas are sent with every round; count them against the context
+		// budget so large MCP schemas cannot silently overflow the window.
+		const toolSchemaContext =
+			mcpTools.length > 0 ? JSON.stringify(mcpTools.map(toOpenAiTool)) : undefined;
 
 		// Advanced parameters are only supported for OpenAI-compatible endpoints.
 		const advancedParams = providerMeta?.custom
@@ -376,6 +450,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			: {};
 
 		let fullContent = '';
+
 		// Tool definitions for OmniVoice speech segments.
 		// When the LLM supports function calling, speak_segment provides
 		// structured language tags instead of pseudo-calls in the text.
@@ -438,58 +513,174 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 				]
 			: undefined;
 
-		// Tool calls are delivered separately from text and can arrive after the
-		// state fence. Feed them directly so the text cutoff cannot silence them.
-		let nativeContent = '';
-		const onToolCall = ttsTools ? (name: string, args: Record<string, unknown>) => {
-			const pseudo = pseudoCallFromTool(name, args);
-			if (!pseudo) return;
-			nativeContent += pseudo + '\n';
-			displayCleaner.push(pseudo + '\n');
-			chatStore.updateLastMessage(displayCleaner.text);
-			if (streamingTTS) ttsStore.feedStreaming(pseudo);
-		} : undefined;
+		// Speech tools and MCP tools share one OpenAI-shaped tool list.
+		const chatTools = [...(ttsTools ?? []), ...mcpTools.map(toOpenAiTool)];
+		const sendTools = chatTools.length > 0 ? chatTools : undefined;
 
-		if (isTauri() || providerMeta?.isLocal) {
-			// Desktop and local providers call the provider API directly.
-			await new Promise<void>((resolve, reject) => {
-				streamChatDirect(
+		// Tool calls are delivered separately from text and can arrive after the
+		// state fence. Speech tools become pseudo-calls; MCP calls are executed
+		// after the round and fed back to the model.
+		let nativeContent = '';
+
+		const maxRounds = useMcpLoop ? MCP_MAX_ROUNDS : 1;
+
+		for (let round = 0; round < maxRounds; round++) {
+			roundText = '';
+			roundTextLen = 0;
+			ttsFedUntil = 0;
+			pendingRaw = '';
+			displayCapped = false;
+			const roundCalls: McpCollectedToolCall[] = [];
+
+			// Re-budget before every round: tool results from earlier rounds grow
+			// the history. Truncation runs per round (not once before the loop)
+			// and repairs assistant/tool pairs the cut may have separated.
+			if (contextSize && contextSize > 0 && messages.length > 0) {
+				messages = ensureToolPairs(
+					messages,
+					truncateChatHistory(messages, systemPrompt, contextSize, toolSchemaContext, currentQuestion)
+				);
+			}
+
+			const onToolCall = (name: string, args: Record<string, unknown>, id?: string) => {
+				roundCalls.push({ id: id ?? `call_${round}_${roundCalls.length}`, name, args });
+				// An MCP tool that happens to be named like a speech tool must not
+				// be treated as one.
+				const pseudo = mcpToolNames.has(name) ? null : pseudoCallFromTool(name, args);
+				if (!pseudo) return;
+				nativeContent += pseudo + '\n';
+				displayCleaner.push(pseudo + '\n');
+				chatStore.updateLastMessage(displayCleaner.text);
+				if (streamingTTS) ttsStore.feedStreaming(pseudo);
+			};
+
+			const isFinalRound = round === maxRounds - 1;
+			// The budget is spent: tell the model to answer with what it has.
+			// The tools stay defined — providers reject calls for tools that are
+			// not offered, so stripping them would turn a stray call into an error.
+			if (isFinalRound && useMcpLoop) {
+				messages.push({
+					role: 'user',
+					content:
+						'System note: tool budget reached — answer now with the information you already have, without further tool calls.'
+				});
+			}
+
+			if (isTauri() || providerMeta?.isLocal) {
+				// Desktop and local providers call the provider API directly.
+				await new Promise<void>((resolve, reject) => {
+					streamChatDirect(
+						{
+							messages,
+							provider: provider as LLMProvider,
+							model: selectedModel,
+							apiKey: apiKey || undefined,
+							baseURL,
+							systemPrompt,
+							tools: sendTools,
+							...advancedParams
+						},
+						(text) => {
+							roundText += text;
+							onDelta(roundText);
+						},
+						(error) => reject(new Error(error)),
+						() => resolve(),
+						onToolCall
+					);
+				});
+			} else {
+				// Cloud providers on web go through the SvelteKit server route.
+				roundText = await streamServerRoute(
 					{
-						messages,
-						provider: provider as LLMProvider,
+						messages: messages.map((m) => ({
+							role: m.role,
+							content: toOpenAIContent(m.content),
+							...(m.tool_calls?.length ? { tool_calls: m.tool_calls } : {}),
+							...(m.tool_call_id && { tool_call_id: m.tool_call_id })
+						})),
+						provider,
 						model: selectedModel,
-						apiKey: apiKey || undefined,
+						apiKey: apiKey || (providerMeta?.custom ? undefined : 'not-needed'),
 						baseURL,
 						systemPrompt,
-						tools: ttsTools,
+						tools: sendTools,
 						...advancedParams
 					},
-					(text) => {
-						fullContent += text;
-						onDelta(fullContent);
-					},
-					(error) => reject(new Error(error)),
-					() => resolve(),
+					onDelta,
 					onToolCall
 				);
-			});
-		} else {
-			// Cloud providers on web go through the SvelteKit server route.
-			fullContent = await streamServerRoute(
-				{
-					messages: messages.map((m) => ({ role: m.role, content: toOpenAIContent(m.content) })),
-					provider,
-					model: selectedModel,
-					apiKey: apiKey || (providerMeta?.custom ? undefined : 'not-needed'),
-					baseURL,
-					systemPrompt,
-					tools: ttsTools,
-					...advancedParams
-				},
-				onDelta,
-				onToolCall
+			}
+
+			const mcpCalls = mcpCallsOnly(roundCalls, mcpTools);
+			// Final round: no MCP calls left, or the round budget is spent.
+			if (mcpCalls.length === 0 || round === maxRounds - 1) {
+				assembledContent += roundText;
+				break;
+			}
+			// Intermediate round: drop a premature state fence so the final
+			// round's block stays the one that gets parsed.
+			assembledContent += stripFromStateFence(roundText);
+
+			// Feed the results back and let the model continue. Every call gets
+			// a result — the OpenAI protocol requires it — including speech
+			// tools, which get a small ack instead of an execution.
+			messages.push(buildAssistantToolMessage(stripFromStateFence(roundText), roundCalls));
+			// Bound the work one round may trigger: excess calls are answered
+			// with an error instead of spawning dozens of processes/requests.
+			const { run, skipped } = splitToolCalls(roundCalls);
+			// allSettled: one unexpected failure must not abort the whole turn —
+			// the model gets an error result and can still answer.
+			const settled = await Promise.allSettled(
+				run.map(async (call) => {
+					if (!mcpToolNames.has(call.name)) {
+						// Speech tools (speak/pause/gesture) are acknowledged; a
+						// name that is neither speech nor MCP is hallucinated.
+						return pseudoCallFromTool(call.name, call.args) !== null
+							? { call, content: speechToolAck(call.args) }
+							: { call, content: `Error: unknown tool "${call.name}"` };
+					}
+					if (confirmToolNames.has(call.name)) {
+						return {
+							call,
+							content: `Tool "${call.name}" requires manual user confirmation and was NOT executed. Ask the user how to proceed.`
+						};
+					}
+					const tool = findMcpTool(mcpTools, call.name);
+					const server = tool
+						? mcpStore.servers.find((s) => s.id === tool.serverId && s.enabled)
+						: undefined;
+					if (!server) {
+						return {
+							call,
+							content: `Error: no enabled MCP server configured for tool "${call.name}"`
+						};
+					}
+					const result = await callTool(server, call.name, call.args);
+					const content = result.isError ? `Error: ${result.content}` : result.content;
+					return { call, content: capToolResult(content), injectAsUser: server.injectResultsAsUser };
+				})
 			);
+			const results = [
+				...settled.map((entry, index) =>
+					entry.status === 'fulfilled'
+						? entry.value
+						: {
+								call: run[index],
+								content: `Error: ${
+									entry.reason instanceof Error ? entry.reason.message : String(entry.reason)
+								}`
+							}
+				),
+				...skipped.map((call) => ({
+					call,
+					content: `Error: too many tool calls in one round (limit ${MAX_TOOL_CALLS_PER_ROUND}) — this call was not executed.`
+				}))
+			];
+			messages.push(...buildToolResultMessages(results));
 		}
+
+		fullContent = assembledContent;
 
 		// Keep native dialogue before the state fence in the saved response.
 		// Only transport text goes through onDelta; replaying this assembled

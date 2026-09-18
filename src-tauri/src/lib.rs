@@ -31,6 +31,7 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init());
 
     // Updates ship as signed installers, so the updater is desktop-only.
