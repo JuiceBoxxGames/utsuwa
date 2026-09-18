@@ -52,7 +52,7 @@
 
 ## Features
 
-- **VRM Model Viewer**: Load and display VRM 3D avatar models with orbit controls, automatic camera framing per model, and live camera settings (zoom, height, field of view)
+- **VRM Model Viewer**: Load and display VRM 3D avatar models with orbit controls, automatic camera framing per model, and live camera settings (zoom, height, horizontal pan, field of view)
 - **Developer Tools**: Test VRM facial expressions and animations, or upload a temporary `.vrm` file for a non-persistent preview that reverts when you leave the page
 - **AR Mode**: On WebXR-capable devices (Android Chrome, headset browsers), place your companion on your real floor, drag her around, and pinch to resize
 - **Photo Mode**: Pose her from a pose library, set her expression, pick a background, add a color filter, vignette, or frame, drop draggable stickers on the shot, and capture in high resolution with a quick snap or self-timer. Head tracking keeps her eyes on your camera while she holds the pose
@@ -61,7 +61,8 @@
 - **Physics Intensity**: A Movement slider from Subtle to Lively scales how much her hair and outfit respond to motion, respecting each model's own rig tuning
 - **Model-Centric UI**: Full-screen 3D model with unobtrusive overlay controls
 - **3D Speech Bubbles**: Chat responses appear as bubbles that track the model's head in 3D space, revealed word by word at a configurable speed
-- **Chat Window**: Optional messenger-style floating window with the full conversation history and the input docked inside; drag it anywhere, resize from any edge, snap it left or right. Display modes (Immersive, Chat window, Both, Off) live in Settings > Display
+- **Chat Window**: A docked panel with conversation history, message copying, and an input. It stays open in Chat window mode, beside the avatar on wide screens and below it on mobile. The full scene continues behind the panel. Choose Immersive for the standalone input bar in Settings > Display.
+- **Keep Screen Awake**: Opt in under Settings > Display to keep the screen on while Utsuwa is visible. The indicator reports the actual lock state; unsupported webviews show a clear unavailable state.
 - **Thinking Status**: A shimmer label narrates what she is actually doing (Remembering, Looking at your photo, Thinking), with a configurable delay and an optional soft audio ping
 - **Chat Interface**: Floating input bar (left, center, or right aligned) with streaming responses
 - **Voice Input**: Speech-to-text via a local Whisper server (Speaches, faster-whisper-server, whisper.cpp), Groq (Whisper), or the browser's Web Speech API, with real-time audio visualization
@@ -77,6 +78,7 @@
 - **Avatar Tasks & Timers**: Your companion can schedule reminders for itself, e.g. to check back with you later. Fired and missed timers appear in the reminder dropdown (bell icon) so you can see what happened and dismiss them. Reminders persist across browser reloads and stay in sync between the main app and the desktop overlay
 - **Companion System**: Multi-axis relationship tracking with mood, events, and semantic memory
 - **Semantic Memory**: Local AI-powered memory search using Transformers.js - finds memories by meaning, not just keywords
+- **Memory Inspector**: View, search, add, and delete facts in Settings > Memory. Inspect saved turns, session summaries, character state, and sample response parsing without changing engine behavior.
 - **Memory Graph**: Interactive visualization showing how memories connect semantically
 - **Data Export/Import**: Download your data as a save file, restore anytime
 - **Theming**: Light and dark mode support with system preference detection
@@ -336,7 +338,7 @@ pnpm tauri build  # Build desktop app installer
 - [x] Show companion images (multimodal vision) with a keepsake photo board
 - [x] Custom OpenAI-compatible LLM endpoint (OpenRouter, Together, Mistral, vLLM, LiteLLM, ...)
 - [x] AR mode on WebXR-capable devices
-- [x] Live camera settings (zoom, height, field of view) with per-overlay profiles
+- [x] Live camera settings (zoom, height, horizontal pan, field of view) with per-overlay profiles
 - [x] Context window control with memory scaling and history truncation
 - [x] Reminders and timers with an alarm dropdown, multi-window aware
 - [x] Photo mode: poses, expressions, backgrounds, filters, frames, stickers, head tracking, high-res capture
@@ -346,12 +348,13 @@ pnpm tauri build  # Build desktop app installer
 - [x] OmniVoice Local TTS - Self-hosted OmniVoice proxy support for local text-to-speech
 - [x] MCP Tool Calling - Connect Model Context Protocol servers (HTTP + stdio) and let the companion call their tools during chat, with per-server toggles and an `MCP_ENABLED=server` gate for self-hosted web deployments
 
+- [x] **Chat layouts** - Choose an immersive composer or a docked conversation window, with character stats available from either composer
+
 ### In Progress / Planned
 
 - [ ] **File and Video Uploads** - Add support for attaching files and videos for multimodal LLM workflows and providers that can use richer context or web-aware tools (image support has shipped)
 - [ ] **Live2D Support** - Alternative to VRM for 2D animated avatars
 - [ ] **Hands-Free Voice Mode** - Full duplex conversation: speak naturally and she answers, no push-to-talk, with voice activity detection
-- [ ] **Flexible Chat Layout** - Choose between the floating chat bar, a full conversation sidebar, or both at once
 
 ## Contributing
 

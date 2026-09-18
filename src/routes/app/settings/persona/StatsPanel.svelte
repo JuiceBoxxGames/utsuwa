@@ -43,7 +43,7 @@
 		<!-- Relationship Stats (Dating Sim Mode only) - Sims-style vertical bars -->
 		<div class="stats-section">
 			<Tooltip content="Core relationship attributes that evolve based on your interactions.">
-				<span class="section-label">Relationship Stats</span>
+				<span class="settings-label">Relationship Stats</span>
 			</Tooltip>
 			<div class="sims-stat-bars">
 				<Tooltip content="How much she relies on and believes in you. Built through honesty and keeping promises.">
@@ -120,7 +120,7 @@
 
 		<!-- Energy bar (Companion Mode) - Sims-style -->
 		<div class="stats-section companion-energy">
-			<span class="section-label">Energy</span>
+			<span class="settings-label">Energy</span>
 			<div class="sims-stat-bars single">
 				<div class="sims-stat" style="--bar-color: var(--stat-energy); --bar-glow: rgba(251, 191, 36, 0.5)">
 					<div class="sims-bar-track tall">
@@ -139,7 +139,7 @@
 	<!-- Mood - Sims-style glossy card -->
 	<div class="mood-section">
 		<Tooltip content="Her emotional state right now, influenced by recent interactions and events.">
-			<span class="section-label">Current Mood</span>
+			<span class="settings-label">Current Mood</span>
 		</Tooltip>
 		<div class="mood-card" style="--mood-color: {page.moodInfo.color}">
 			<div class="mood-icon-badge">
@@ -159,7 +159,7 @@
 
 	<!-- Activity - Sims-style stat tiles -->
 	<div class="activity-section">
-		<span class="section-label">Activity</span>
+		<span class="settings-label">Activity</span>
 		<div class="activity-grid">
 			<div class="activity-tile" style="--tile-color: #ff8f3f; --tile-glow: rgba(255, 143, 63, 0.4)">
 				<div class="activity-tile-icon">
@@ -195,7 +195,7 @@
 	<!-- Events (Dating Sim Mode only, collapsible) - Sims-style achievements -->
 	{#if page.isDatingSimMode}
 		<div class="events-section">
-			<button class="events-toggle" onclick={() => page.eventsExpanded = !page.eventsExpanded}>
+			<button class="events-toggle" aria-expanded={page.eventsExpanded} onclick={() => page.eventsExpanded = !page.eventsExpanded}>
 				<div class="events-toggle-icon">
 					<Icon name="star" size={16} />
 				</div>
@@ -304,16 +304,6 @@
 		box-shadow: var(--shadow-sm);
 	}
 
-	/* Duplicated in AppModeSection.svelte (label style shared by both panels) */
-	.section-label {
-		display: block;
-		font-size: 0.7rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--text-tertiary);
-		margin-bottom: 0.75rem;
-	}
 
 	/* Bond Section */
 	.bond-section {

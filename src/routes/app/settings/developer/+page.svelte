@@ -288,10 +288,10 @@
 </script>
 
 <div class="developer-settings">
-	<div class="dev-header">
+	<div class="page-header">
 		<div>
 			<h2>Developer Tools</h2>
-			<p class="description">Test and debug VRM facial expressions and animations.</p>
+			<p >Test and debug VRM facial expressions and animations.</p>
 		</div>
 	</div>
 
@@ -302,7 +302,7 @@
 				<VrmScene centered />
 			</div>
 			<div class="viewport-controls">
-				<button class="viewport-btn" onclick={resetAll} title="Reset expressions">
+				<button class="btn btn-sm btn-secondary" onclick={resetAll} title="Reset expressions">
 					<Icon name="refresh-cw" size={16} />
 					Reset
 				</button>
@@ -323,7 +323,7 @@
 					<div class="temp-model-info">
 						<span class="temp-model-name">{tempModelName || 'Temporary model'}</span>
 						<button
-							class="action-btn"
+							class="btn btn-sm btn-secondary"
 							onclick={restoreOriginalModel}
 							disabled={vrmStore.tempModelLoading}
 						>
@@ -332,7 +332,7 @@
 						</button>
 					</div>
 				{:else}
-					<label class="upload-btn" class:disabled={vrmStore.tempModelLoading}>
+					<label class="btn btn-sm btn-primary" class:disabled={vrmStore.tempModelLoading}>
 						<Icon name="upload" size={14} />
 						{vrmStore.tempModelLoading ? 'Loading…' : 'Upload VRM'}
 						<input
@@ -351,7 +351,7 @@
 			<h3>Animation</h3>
 			<p class="hint">Select an animation to play on the model.</p>
 			<div class="animation-select">
-				<select
+				<select class="settings-field" aria-label="Animation"
 					value={vrmStore.currentAnimation || 'none'}
 					onchange={(e) => vrmStore.setCurrentAnimation(e.currentTarget.value === 'none' ? null : e.currentTarget.value)}
 				>
@@ -368,7 +368,7 @@
 			<h3>Material Debug</h3>
 			<p class="hint">Visualize different material properties (MToon).</p>
 			<div class="animation-select">
-				<select
+				<select class="settings-field" aria-label="Material debug"
 					value={currentDebugMode}
 					onchange={(e) => setMaterialDebugMode(e.currentTarget.value)}
 				>
@@ -383,12 +383,12 @@
 		<section class="section">
 			<h3>Quick Tests</h3>
 			<div class="quick-actions">
-				<button class="action-btn" onclick={testBlink}>Test Blink</button>
-				<button class="action-btn" onclick={testSmile}>Test Smile</button>
-				<button class="action-btn" onclick={testSurprised}>Test Surprised</button>
-				<button class="action-btn" onclick={testSad}>Test Sad</button>
-				<button class="action-btn" onclick={testMouthOpen}>Test Mouth Open</button>
-				<button class="action-btn reset" onclick={resetAll}>Reset All</button>
+				<button class="btn btn-sm btn-secondary" onclick={testBlink}>Test Blink</button>
+				<button class="btn btn-sm btn-secondary" onclick={testSmile}>Test Smile</button>
+				<button class="btn btn-sm btn-secondary" onclick={testSurprised}>Test Surprised</button>
+				<button class="btn btn-sm btn-secondary" onclick={testSad}>Test Sad</button>
+				<button class="btn btn-sm btn-secondary" onclick={testMouthOpen}>Test Mouth Open</button>
+				<button class="btn btn-sm btn-danger" onclick={resetAll}>Reset All</button>
 			</div>
 		</section>
 
@@ -398,7 +398,7 @@
 			<p class="hint">Trigger test events to preview the event modal styling.</p>
 			<div class="event-buttons">
 				{#each testEvents as event}
-					<button class="event-btn" onclick={() => triggerEvent(event)}>
+					<button class="btn btn-sm btn-secondary" onclick={() => triggerEvent(event)}>
 						<Icon name={event.type === 'milestone' ? 'sparkles' : event.type === 'anniversary' ? 'calendar' : event.type === 'conditional' ? 'heart' : 'shuffle'} size={14} />
 						{event.name}
 					</button>
@@ -411,10 +411,10 @@
 			<h3>Storage</h3>
 			<p class="hint">Clear cached data from browser storage.</p>
 			<div class="quick-actions">
-				<button class="action-btn reset" onclick={clearVrmStorage} disabled={clearingStorage}>
+				<button class="btn btn-sm btn-danger" onclick={clearVrmStorage} disabled={clearingStorage}>
 					{clearingStorage ? 'Clearing...' : 'Clear VRM Storage'}
 				</button>
-				<button class="action-btn reset" onclick={clearCharacterData}>
+				<button class="btn btn-sm btn-danger" onclick={clearCharacterData}>
 					Reset Character Data
 				</button>
 			</div>
@@ -442,7 +442,7 @@
 							<div class="slider-row">
 								<label for={expr}>{expr}</label>
 								<input
-									type="range"
+									type="range" class="settings-range"
 									id={expr}
 									min="0"
 									max="1"
@@ -470,28 +470,9 @@
 		overflow: hidden;
 	}
 
-	.dev-header {
-		margin-bottom: 1rem;
-	}
-
-	h2 {
-		margin: 0 0 0.25rem;
-		font-size: 1.5rem;
-		font-weight: 600;
-		letter-spacing: -0.02em;
-		color: var(--text-primary);
-	}
-
-
-	.description {
-		margin: 0;
-		color: var(--text-secondary);
-	}
-
-
 	.dev-layout {
 		display: grid;
-		grid-template-columns: 400px 1fr;
+		grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1fr);
 		gap: 1.5rem;
 		flex: 1;
 		min-height: 0;
@@ -499,6 +480,7 @@
 	}
 
 	.viewport-container {
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
@@ -518,31 +500,8 @@
 		gap: 0.5rem;
 	}
 
-	.viewport-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		font-size: 0.8125rem;
-		font-weight: 500;
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
-	}
-
-	.viewport-btn:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--text-primary);
-	}
-
-	.viewport-btn:active {
-		transform: scale(0.98);
-	}
-
-
 	.controls-panel {
+		min-width: 0;
 		overflow-y: auto;
 		min-height: 0;
 		padding-right: 0.5rem;
@@ -557,14 +516,12 @@
 		box-shadow: var(--shadow-sm);
 	}
 
-
 	.section h3 {
 		margin: 0 0 0.75rem;
-		font-size: 1rem;
+		font-size: 0.9375rem;
 		font-weight: 600;
 		color: var(--text-primary);
 	}
-
 
 	.hint {
 		margin: 0 0 0.75rem;
@@ -572,88 +529,10 @@
 		color: var(--text-tertiary);
 	}
 
-	.animation-select select {
-		width: 100%;
-		padding: 0.75rem 1rem;
-		background: var(--bg-secondary);
-		border-radius: var(--radius-lg);
-		font-size: 0.875rem;
-		color: var(--text-primary);
-		cursor: pointer;
-		transition: background 0.15s, box-shadow 0.15s;
-	}
-
-	.animation-select select:hover {
-		background: color-mix(in srgb, var(--bg-secondary), var(--text-primary) 4%);
-	}
-
-	.animation-select select:focus {
-		outline: none;
-		background: var(--bg-primary);
-		box-shadow: 0 0 0 3px var(--accent-muted);
-	}
-
 	.quick-actions {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;
-	}
-
-	.action-btn {
-		padding: 0.5rem 1rem;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
-	}
-
-	.action-btn:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--text-primary);
-	}
-
-	.action-btn:active {
-		transform: scale(0.98);
-	}
-
-
-	.action-btn.reset {
-		color: var(--color-error);
-	}
-
-	.action-btn.reset:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--color-error);
-	}
-
-	.upload-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: var(--accent);
-		border-radius: var(--radius-full);
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--accent-contrast, #fff);
-		cursor: pointer;
-		transition: background 0.15s, transform 0.1s;
-	}
-
-	.upload-btn:hover {
-		background: color-mix(in srgb, var(--accent), var(--text-primary) 15%);
-	}
-
-	.upload-btn:active {
-		transform: scale(0.98);
-	}
-
-	.upload-btn.disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
 	}
 
 	.temp-model-info {
@@ -678,28 +557,6 @@
 		gap: 0.5rem;
 	}
 
-	.event-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.625rem 1rem;
-		background: var(--accent-subtle);
-		border-radius: var(--radius-full);
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--accent);
-		cursor: pointer;
-		transition: background 0.15s, border-color 0.15s, transform 0.1s;
-	}
-
-	.event-btn:hover {
-		background: var(--accent-muted);
-	}
-
-	.event-btn:active {
-		transform: scale(0.98);
-	}
-
 	.expression-tags {
 		display: flex;
 		flex-wrap: wrap;
@@ -714,7 +571,6 @@
 		font-family: var(--font-mono);
 		color: var(--text-secondary);
 	}
-
 
 	.sliders {
 		display: flex;
@@ -735,32 +591,6 @@
 		color: var(--text-secondary);
 	}
 
-
-	.slider-row input[type='range'] {
-		width: 100%;
-		height: 8px;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		outline: none;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-
-	.slider-row input[type='range']::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		width: 18px;
-		height: 18px;
-		background: var(--accent);
-		border-radius: 50%;
-		cursor: pointer;
-		transition: transform 0.1s ease-out;
-	}
-
-	.slider-row input[type='range']::-webkit-slider-thumb:hover {
-		transform: scale(1.1);
-	}
-
 	.slider-row .value {
 		font-size: 0.75rem;
 		font-family: var(--font-mono);
@@ -770,8 +600,11 @@
 
 	@media (max-width: 900px) {
 		.dev-layout {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
+			overflow-y: auto;
 		}
+
+		.controls-panel { overflow-y: visible; }
 
 		.viewport {
 			min-height: 300px;
@@ -780,26 +613,10 @@
 	}
 
 	@media (max-width: 640px) {
-		.dev-header {
-			margin-bottom: 0.75rem;
-		}
-
-		h2 {
-			font-size: 1.25rem;
-		}
-
-		.description {
-			font-size: 0.875rem;
-		}
 
 		.viewport {
 			min-height: 240px;
 			max-height: 280px;
-		}
-
-		.viewport-btn {
-			padding: 0.375rem 0.75rem;
-			font-size: 0.75rem;
 		}
 
 		.section {
@@ -821,18 +638,8 @@
 			gap: 0.375rem;
 		}
 
-		.action-btn {
-			padding: 0.375rem 0.75rem;
-			font-size: 0.8125rem;
-		}
-
 		.event-buttons {
 			gap: 0.375rem;
-		}
-
-		.event-btn {
-			padding: 0.5rem 0.75rem;
-			font-size: 0.8125rem;
 		}
 
 		.expression-tags {
@@ -865,8 +672,5 @@
 			max-height: 240px;
 		}
 
-		.event-btn {
-			padding: 0.5rem;
-		}
 	}
 </style>

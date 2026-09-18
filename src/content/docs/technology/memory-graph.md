@@ -9,7 +9,9 @@ The Memory Graph is an interactive network visualization that shows how your com
 
 ## Accessing the Memory Graph
 
-Click the **brain icon** in the top-left corner of the main screen to open the Memory Graph in a full-screen modal.
+Open **Settings > Memory > Graph**, or click the brain icon on the main screen to go there directly. Choose **Expand graph** for more room. Escape or **Collapse graph** returns to the Memory page.
+
+The same page has **Facts** for adding and deleting memories, **Sessions** for current turns and saved summaries, and **Settings > Advanced** for character state and parser testing.
 
 ## Understanding the Visualization
 
@@ -28,24 +30,25 @@ Lines between nodes indicate **semantic similarity** — memories that are relat
 
 ### Statistics
 
-The bottom-left corner shows total memory count and number of connections in the current view.
+The count below the graph shows the memories and connections in the current view.
 
 ## Interactions
 
 ### Selecting a Memory
 
-Click any node to select it:
+Click a node or choose it from **Inspect a memory**:
 - The selected memory and its connections are highlighted
 - Unrelated memories fade
-- A detail panel appears on the right showing the full memory content, importance score, and reference count
+- Details appear beside the graph on wide screens and below it on smaller screens
+- **Open in Facts** opens that exact saved memory in the inspector, where deletion requires confirmation
 
 ### Filtering Categories
 
-Use the category toggles in the top-left control panel to show/hide specific memory types. This helps focus on particular aspects of what your companion knows.
+Use the category buttons above the graph to show or hide specific memory types. This helps focus on particular aspects of what your companion knows.
 
 ### Reset View
 
-Click "Reset View" to zoom out and see the full graph, clearing any selection.
+Click "Reset view" to zoom out and see the full graph, clearing any selection.
 
 ## Technical Details
 

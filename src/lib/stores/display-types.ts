@@ -5,15 +5,17 @@ export interface CameraSettings {
 	zoom: number;
 	/** Vertical offset in meters added to the auto-fitted look-at target */
 	height: number;
+	/** Horizontal offset in meters, shared by camera and orbit target. */
+	panX: number;
 }
 
 export type CameraProfile = 'main' | 'overlay';
-export type ChatDisplayMode = 'bubble' | 'sidebar' | 'both' | 'off';
+export type ChatDisplayMode = 'bubble' | 'sidebar';
 export type SidebarPosition = 'left' | 'right';
 export type TextRevealSpeed = 'off' | 'slow' | 'normal' | 'fast';
 export type ChatBarAlignment = 'left' | 'center' | 'right';
 
-export const CAMERA_DEFAULTS: CameraSettings = { fov: 35, zoom: 1, height: 0 };
+export const CAMERA_DEFAULTS: CameraSettings = { fov: 35, zoom: 1, height: 0, panX: 0 };
 export const DEFAULT_CHAT_DISPLAY_MODE: ChatDisplayMode = 'bubble';
 export const DEFAULT_SIDEBAR_POSITION: SidebarPosition = 'right';
 export const DEFAULT_WAIT_TONE_ENABLED = false;
@@ -32,5 +34,6 @@ export const REVEAL_SPEED_MS: Record<TextRevealSpeed, number> = {
 export const CAMERA_LIMITS = {
 	fov: { min: 20, max: 60 },
 	zoom: { min: 0.5, max: 2.5 },
-	height: { min: -0.5, max: 0.5 }
+	height: { min: -0.5, max: 0.5 },
+	panX: { min: -1.5, max: 1.5 }
 } as const;

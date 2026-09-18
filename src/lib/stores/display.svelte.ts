@@ -64,24 +64,30 @@ function createDisplayStore() {
 	let textRevealSpeed = $state<TextRevealSpeed>(DEFAULT_TEXT_REVEAL_SPEED);
 	// Where the floating bar sits along the bottom edge
 	let chatBarAlignment = $state<ChatBarAlignment>(DEFAULT_CHAT_BAR_ALIGNMENT);
-	// Session-only counter; the chat window clears its saved rect when it changes
-	let chatWindowResetToken = $state(0);
+	let keepScreenAwake = $state(false);
 
+	function applySavedSettings(saved: string | null) {
+		const parsed = parseDisplaySettings(saved);
+		camera = parsed.camera;
+		overlayCamera = parsed.overlayCamera;
+		physicsIntensity = parsed.physicsIntensity;
+		sceneBackground = parsed.sceneBackground;
+		chatDisplayMode = parsed.chatDisplayMode;
+		sidebarPosition = parsed.sidebarPosition;
+		typingIndicatorDelayMs = parsed.typingIndicatorDelayMs;
+		waitToneEnabled = parsed.waitToneEnabled;
+		textRevealSpeed = parsed.textRevealSpeed;
+		chatBarAlignment = parsed.chatBarAlignment;
+		keepScreenAwake = parsed.keepScreenAwake;
+	}
 	if (browser) {
-		const saved = localStorage.getItem(STORAGE_KEY);
-		if (saved) {
-			const parsed = parseDisplaySettings(saved);
-			camera = parsed.camera;
-			overlayCamera = parsed.overlayCamera;
-			physicsIntensity = parsed.physicsIntensity;
-			sceneBackground = parsed.sceneBackground;
-			chatDisplayMode = parsed.chatDisplayMode;
-			sidebarPosition = parsed.sidebarPosition;
-			typingIndicatorDelayMs = parsed.typingIndicatorDelayMs;
-			waitToneEnabled = parsed.waitToneEnabled;
-			textRevealSpeed = parsed.textRevealSpeed;
-			chatBarAlignment = parsed.chatBarAlignment;
-		}
+		applySavedSettings(localStorage.getItem(STORAGE_KEY));
+		// Keep open browser tabs and the desktop overlay from saving stale settings.
+		window.addEventListener('storage', (event) => {
+			if (event.storageArea === localStorage && (event.key === STORAGE_KEY || event.key === null)) {
+				applySavedSettings(event.key === null ? null : event.newValue);
+			}
+		});
 	}
 
 	function save() {
@@ -98,7 +104,8 @@ function createDisplayStore() {
 					typingIndicatorDelayMs,
 					waitToneEnabled,
 					textRevealSpeed,
-					chatBarAlignment
+					chatBarAlignment,
+					keepScreenAwake
 				})
 			);
 		}
@@ -169,10 +176,6 @@ function createDisplayStore() {
 		save();
 	}
 
-	function requestChatWindowReset() {
-		chatWindowResetToken += 1;
-	}
-
 	function setTypingIndicatorDelayMs(ms: number) {
 		if (Number.isNaN(ms)) return;
 		typingIndicatorDelayMs = Math.max(0, Math.min(10000, ms));
@@ -185,6 +188,8 @@ function createDisplayStore() {
 	}
 
 	return {
+		get keepScreenAwake() { return keepScreenAwake; },
+		setKeepScreenAwake(value: boolean) { keepScreenAwake = value; save(); },
 		get camera() {
 			return camera;
 		},
@@ -215,9 +220,6 @@ function createDisplayStore() {
 		get chatBarAlignment() {
 			return chatBarAlignment;
 		},
-		get chatWindowResetToken() {
-			return chatWindowResetToken;
-		},
 		setCamera,
 		resetCamera,
 		setPhysicsIntensity,
@@ -228,8 +230,7 @@ function createDisplayStore() {
 		setTypingIndicatorDelayMs,
 		setWaitToneEnabled,
 		setTextRevealSpeed,
-		setChatBarAlignment,
-		requestChatWindowReset
+		setChatBarAlignment
 	};
 }
 

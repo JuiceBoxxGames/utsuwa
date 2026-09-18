@@ -3,8 +3,8 @@
 	import { mcpStore } from '$lib/stores/mcp.svelte';
 	import type { McpAuth, McpServerConfig, McpTransport } from '$lib/types/mcp';
 	import { parseEnvLines, parseQuotedArgs } from '$lib/services/mcp/protocol';
-	import { Icon } from '$lib/components/ui';
-	import '../settings-page.css';
+	import { Button, Icon } from '$lib/components/ui';
+	import Switch from '$lib/components/ui/Switch.svelte';
 
 	// ── Form state (shared for add + edit) ──────────────────────────────────
 	let showForm = $state(false);
@@ -75,7 +75,7 @@
 			formError = 'Command is required';
 			return;
 		}
-		if (formAuthType === 'bearer' && !formAuthToken.trim()) {
+		if (formTransport === 'http' && formAuthType === 'bearer' && !formAuthToken.trim()) {
 			formError = 'Token is required for bearer authentication';
 			return;
 		}
@@ -139,10 +139,10 @@
 		<section class="section">
 			<div class="section-header">
 				<h3>Servers</h3>
-				<button class="ghost-btn" onclick={() => (showForm && !isEditing ? resetForm() : openAddForm())}>
+				<Button variant="secondary" onclick={() => (showForm && !isEditing ? resetForm() : openAddForm())}>
 					<Icon name={showForm && !isEditing ? 'xmark' : 'plus'} size={13} />
 					{showForm && !isEditing ? 'Cancel' : 'Add Server'}
-				</button>
+				</Button>
 			</div>
 
 			{#if showForm}
@@ -151,7 +151,7 @@
 
 					<div class="form-row">
 						<label class="form-label" for="mcp-name">Name</label>
-						<input id="mcp-name" class="form-input" bind:value={formName} placeholder="Home Assistant" />
+						<input id="mcp-name" class="settings-field" bind:value={formName} placeholder="Home Assistant" />
 					</div>
 
 					<div class="form-row">
@@ -192,7 +192,7 @@
 							<label class="form-label" for="mcp-url">URL</label>
 							<input
 								id="mcp-url"
-								class="form-input"
+								class="settings-field"
 								bind:value={formUrl}
 								placeholder="http://homeassistant.local:8123/api/mcp"
 								type="url"
@@ -228,7 +228,7 @@
 								<label class="form-label" for="mcp-token">Token</label>
 								<input
 									id="mcp-token"
-									class="form-input"
+									class="settings-field"
 									bind:value={formAuthToken}
 									placeholder="Long-lived access token"
 									type="password"
@@ -238,13 +238,13 @@
 					{:else}
 						<div class="form-row">
 							<label class="form-label" for="mcp-command">Command</label>
-							<input id="mcp-command" class="form-input" bind:value={formCommand} placeholder="npx" />
+							<input id="mcp-command" class="settings-field" bind:value={formCommand} placeholder="npx" />
 						</div>
 						<div class="form-row">
 							<label class="form-label" for="mcp-args">Arguments</label>
 							<input
 								id="mcp-args"
-								class="form-input"
+								class="settings-field"
 								bind:value={formArgs}
 								placeholder="-y mcp-searxng"
 							/>
@@ -256,7 +256,7 @@
 							</label>
 							<textarea
 								id="mcp-env"
-								class="form-input form-textarea"
+								class="settings-field form-textarea"
 								bind:value={formEnv}
 								placeholder="SEARXNG_URL=http://your-searxng-host:8080"
 								rows="3"
@@ -276,11 +276,11 @@
 
 					<div class="form-actions">
 						{#if isEditing}
-							<button class="ghost-btn" onclick={resetForm}>Cancel</button>
+							<Button variant="secondary" onclick={resetForm}>Cancel</Button>
 						{/if}
-						<button class="primary-btn" onclick={submitForm}>
+						<Button onclick={submitForm}>
 							{isEditing ? 'Save Changes' : 'Add Server'}
-						</button>
+						</Button>
 					</div>
 				</div>
 			{/if}
@@ -305,30 +305,27 @@
 								<span class="server-badge auth">auth</span>
 							{/if}
 							<span class="server-badge">{server.transport}</span>
-							<button
-								class="toggle-btn"
-								class:enabled={server.enabled}
-								onclick={() => mcpStore.toggleServer(server.id)}
-								title={server.enabled ? 'Disable' : 'Enable'}
-							>
-								{server.enabled ? 'On' : 'Off'}
-							</button>
-							<button
-								class="icon-btn"
+							<Switch
+								checked={server.enabled}
+								onchange={() => mcpStore.toggleServer(server.id)}
+								label={`Enable ${server.name}`}
+							/>
+							<Button
+								variant="ghost"
 								onclick={() => openEditForm(server)}
 								title="Edit server"
 								aria-label="Edit server"
 							>
 								<Icon name="pencil" size={13} />
-							</button>
-							<button
-								class="icon-btn danger"
+							</Button>
+							<Button
+								variant="danger"
 								onclick={() => mcpStore.removeServer(server.id)}
 								title="Remove server"
 								aria-label="Remove server"
 							>
 								<Icon name="trash" size={13} />
-							</button>
+							</Button>
 						</div>
 					</li>
 				{/each}
@@ -338,10 +335,10 @@
 		<section class="section">
 			<div class="section-header">
 				<h3>Available Tools</h3>
-				<button class="ghost-btn" onclick={() => mcpStore.refreshTools()} disabled={mcpStore.isLoadingTools}>
+				<Button variant="secondary" onclick={() => mcpStore.refreshTools()} disabled={mcpStore.isLoadingTools}>
 					<Icon name="refresh" size={13} />
 					{mcpStore.isLoadingTools ? 'Loading…' : 'Refresh'}
-				</button>
+				</Button>
 			</div>
 
 			{#if mcpStore.toolsError}
@@ -431,43 +428,6 @@
 		border-radius: var(--radius-sm);
 	}
 
-	.ghost-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.8rem;
-		padding: 0.3rem 0.7rem;
-		border-radius: var(--radius-md);
-		border: 1px solid var(--border-light);
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-		cursor: pointer;
-	}
-
-	.ghost-btn:hover:not(:disabled) {
-		background: var(--bg-tertiary);
-	}
-
-	.ghost-btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-
-	.primary-btn {
-		padding: 0.4rem 1rem;
-		border-radius: var(--radius-md);
-		border: none;
-		background: var(--accent);
-		color: #fff;
-		font-size: 0.85rem;
-		font-weight: 600;
-		cursor: pointer;
-	}
-
-	.primary-btn:hover {
-		opacity: 0.9;
-	}
-
 	.form-card {
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-light);
@@ -489,6 +449,7 @@
 
 	.form-row {
 		display: flex;
+		min-width: 0;
 		align-items: center;
 		gap: 0.75rem;
 	}
@@ -498,17 +459,6 @@
 		font-weight: 600;
 		color: var(--text-secondary);
 		min-width: 80px;
-	}
-
-	.form-input {
-		flex: 1;
-		min-width: 0;
-		padding: 0.35rem 0.6rem;
-		border: 1px solid var(--border-light);
-		border-radius: var(--radius-sm);
-		font-size: 0.85rem;
-		background: var(--bg-primary);
-		color: var(--text-primary);
 	}
 
 	.form-textarea {
@@ -529,6 +479,7 @@
 	}
 
 	.transport-opt {
+		min-height: 44px;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
@@ -553,7 +504,7 @@
 
 	.transport-opt.active {
 		background: var(--accent);
-		color: #fff;
+		color: var(--accent-contrast, #fff);
 		border-color: var(--accent);
 	}
 
@@ -589,6 +540,7 @@
 	}
 
 	.server-card {
+		flex-wrap: wrap;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -600,6 +552,7 @@
 	}
 
 	.server-info {
+		flex: 1 1 12rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.2rem;
@@ -621,6 +574,7 @@
 	}
 
 	.server-actions {
+		flex-wrap: wrap;
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
@@ -643,44 +597,6 @@
 		color: var(--accent);
 	}
 
-	.toggle-btn {
-		font-size: 0.75rem;
-		font-weight: 700;
-		padding: 0.25rem 0.6rem;
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--border-light);
-		cursor: pointer;
-		background: var(--bg-primary);
-		color: var(--text-secondary);
-	}
-
-	.toggle-btn.enabled {
-		background: var(--success, #22c55e);
-		border-color: var(--success, #22c55e);
-		color: #fff;
-	}
-
-	.icon-btn {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.3rem 0.45rem;
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--border-light);
-		background: var(--bg-primary);
-		color: var(--text-tertiary);
-		cursor: pointer;
-	}
-
-	.icon-btn:hover {
-		color: var(--accent);
-		border-color: var(--accent);
-	}
-
-	.icon-btn.danger:hover {
-		color: var(--danger, #e55);
-		border-color: var(--danger, #e55);
-	}
-
 	.tool-card {
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-light);
@@ -689,6 +605,7 @@
 	}
 
 	.tool-header {
+		flex-wrap: wrap;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -696,6 +613,7 @@
 	}
 
 	.tool-name {
+		overflow-wrap: anywhere;
 		font-weight: 600;
 		font-size: 0.88rem;
 		color: var(--text-primary);
@@ -708,6 +626,7 @@
 	}
 
 	.tool-desc {
+		overflow-wrap: anywhere;
 		margin: 0.3rem 0 0;
 		font-size: 0.78rem;
 		color: var(--text-secondary);
@@ -719,5 +638,16 @@
 		color: var(--text-tertiary);
 		text-align: center;
 		padding: 1.5rem 0;
+	}
+	@media (max-width: 640px) {
+		.form-row {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.5rem;
+		}
+		.section-header {
+			flex-wrap: wrap;
+			gap: 0.75rem;
+		}
 	}
 </style>

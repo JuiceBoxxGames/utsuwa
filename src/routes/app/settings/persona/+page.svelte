@@ -39,7 +39,7 @@
 			type="text"
 			class="name-input"
 			bind:value={page.formName}
-			placeholder="Character Name"
+			placeholder="Character Name" aria-label="Character name"
 			onblur={page.saveName}
 		/>
 	</header>
@@ -76,10 +76,10 @@
 					Switching modes frequently can lead to unexpected results and disrupt natural progression. Are you sure you want to continue?
 				</p>
 				<div class="confirm-actions">
-					<button class="confirm-btn confirm-btn--cancel" onclick={page.cancelModeChange}>
+					<button class="btn btn-secondary" onclick={page.cancelModeChange}>
 						Cancel
 					</button>
-					<button class="confirm-btn confirm-btn--confirm" onclick={page.confirmModeChange}>
+					<button class="btn btn-primary" onclick={page.confirmModeChange}>
 						Switch Mode
 					</button>
 				</div>
@@ -210,36 +210,10 @@
 		gap: 0.75rem;
 	}
 
-	.confirm-btn {
-		flex: 1;
-		padding: 0.75rem 1rem;
-		border-radius: var(--radius-full);
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		border: 1px solid transparent;
-		transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-	}
 
-	.confirm-btn--cancel {
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
-	}
 
-	.confirm-btn--cancel:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--text-primary);
-	}
 
-	.confirm-btn--confirm {
-		background: var(--accent);
-		color: #fff;
-	}
 
-	.confirm-btn--confirm:hover {
-		background: var(--accent-hover);
-		box-shadow: var(--shadow-glow);
-	}
 
 	/* Mobile */
 	@media (max-width: 900px) {

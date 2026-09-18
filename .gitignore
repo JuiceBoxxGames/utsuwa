@@ -36,3 +36,7 @@ src/routes/(shots)/
 
 # Internal working notes, never tracked
 docs/superpowers/
+
+# Browser test artifacts
+playwright-report/
+test-results/

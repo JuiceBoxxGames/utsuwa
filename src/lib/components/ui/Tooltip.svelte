@@ -21,7 +21,7 @@
 
 <TooltipPrimitive.Provider {delayDuration}>
 	<TooltipPrimitive.Root>
-		<TooltipPrimitive.Trigger class="outline-none inline-flex">
+		<TooltipPrimitive.Trigger class="ui-tooltip-trigger" aria-label={content}>
 			{@render children()}
 		</TooltipPrimitive.Trigger>
 
@@ -35,9 +35,11 @@
 </TooltipPrimitive.Provider>
 
 <style>
+	:global(.ui-tooltip-trigger) { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; border-radius: var(--radius-sm); }
+	:global(.ui-tooltip-trigger:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 	:global(.ui-tooltip-content) {
 		z-index: 50;
-		max-width: 20rem;
+		max-width: min(20rem, calc(100vw - 2rem));
 		padding: 0.4rem 0.7rem;
 		background: var(--text-primary);
 		color: var(--bg-primary);
@@ -70,4 +72,6 @@
 			transform: scale(0.96);
 		}
 	}
+
+	@media (prefers-reduced-motion: reduce) { :global(.ui-tooltip-content), :global(.ui-tooltip-content[data-state='closed']) { animation: none; } }
 </style>

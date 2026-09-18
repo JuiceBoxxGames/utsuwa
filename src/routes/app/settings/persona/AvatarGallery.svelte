@@ -11,8 +11,8 @@
 <!-- Model Gallery (inline) -->
 <div class="model-gallery">
 	<div class="gallery-header">
-		<span class="gallery-label">Avatar</span>
-		<button class="upload-btn" onclick={() => page.uploadModalOpen = true}>
+		<span class="settings-label">Avatar</span>
+		<button class="btn btn-secondary btn-sm" onclick={() => page.uploadModalOpen = true}>
 			<Icon name="upload" size={14} />
 			<span>Add Custom</span>
 		</button>
@@ -23,6 +23,7 @@
 			<button
 				class="model-card"
 				class:active={model.id === vrmStore.activeModelId}
+				aria-pressed={model.id === vrmStore.activeModelId}
 				onclick={() => vrmStore.setActiveModel(model.id)}
 			>
 				<div class="model-preview">
@@ -57,7 +58,7 @@
 		<div class="upload-content" transition:pop={{ duration: 220, y: 14 }} onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 			<div class="upload-header">
 				<h3>Upload Custom Model</h3>
-				<button class="close-btn" onclick={() => page.uploadModalOpen = false}>
+				<button class="btn btn-secondary btn-sm" aria-label="Close model upload" onclick={() => page.uploadModalOpen = false}>
 					<Icon name="x" size={20} />
 				</button>
 			</div>
@@ -80,32 +81,8 @@
 		justify-content: space-between;
 	}
 
-	.gallery-label {
-		font-size: 0.75rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--text-tertiary);
-	}
 
-	.upload-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.375rem 0.75rem;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
-	}
 
-	.upload-btn:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--text-primary);
-	}
 
 	.gallery-grid {
 		display: grid;
@@ -225,23 +202,7 @@
 		color: var(--text-primary);
 	}
 
-	.close-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 32px;
-		height: 32px;
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
-		cursor: pointer;
-		border-radius: var(--radius-md);
-		transition: background 0.15s ease, color 0.15s ease;
-	}
 
-	.close-btn:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--text-primary);
-	}
 
 	.upload-content :global(.uploader) {
 		margin: 1rem;

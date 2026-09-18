@@ -329,20 +329,20 @@
 
 <style>
 	.data-management {
-		padding: 1.5rem;
+		padding: 0;
 	}
 
 	.section-title {
 		font-size: 1.5rem;
 		font-weight: 700;
 		color: var(--text-primary);
-		margin-bottom: 0.5rem;
+		margin: 0 0 0.25rem;
 	}
 
 	.section-description {
 		font-size: 0.875rem;
 		color: var(--text-secondary);
-		margin-bottom: 1.5rem;
+		margin: 0 0 1.5rem;
 	}
 
 	.actions {
@@ -380,7 +380,7 @@
 	}
 
 	.action-header h3 {
-		font-size: 1rem;
+		font-size: 0.9375rem;
 		font-weight: 600;
 		margin: 0;
 		color: var(--text-primary);
@@ -529,6 +529,7 @@
 	}
 
 	.import-actions {
+		flex-wrap: wrap;
 		display: flex;
 		gap: 0.75rem;
 		justify-content: flex-end;
@@ -552,7 +553,10 @@
 	}
 
 	.confirm-actions {
+		flex-wrap: wrap;
 		display: flex;
 		gap: 0.75rem;
 	}
+
+	@media (max-width: 640px) { .action-card { padding: 1rem; } }
 </style>

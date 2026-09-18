@@ -1,6 +1,6 @@
 {
 	"name": "utsuwa",
-	"version": "0.14.0",
+	"version": "0.15.0",
 	"packageManager": "pnpm@10.28.2",
 	"description": "An open-source VRM avatar companion app with AI chat, voice, memory, and relationship mechanics",
 	"author": "Juice Boxx Games LLC",
@@ -26,9 +26,11 @@
 		"lint": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test": "node --test --experimental-strip-types \"src/**/*.test.ts\""
+		"test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
+		"test:browser": "playwright test"
 	},
 	"devDependencies": {
+		"@playwright/test": "1.62.1",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.49.1",
