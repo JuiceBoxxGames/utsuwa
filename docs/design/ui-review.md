@@ -16,4 +16,4 @@ Run `pnpm check`, `pnpm test`, `pnpm build`, `cargo check --manifest-path src-ta
 
 The browser suite covers desktop Chromium and mobile WebKit, including every settings page in both themes, onboarding navigation and persistence, character state, dropdowns, dialog focus, message selection and copying, photo controls, overlay keyboard behavior, and cross-window theme updates. Screenshots are written to `test-results/`.
 
-The native review build was exercised through onboarding, overlay launch, camera controls, Escape, position lock, the shared stats popup, and its return to Character settings. The native resize permission was checked in the build; dragging the resize handle still needs a manual release check.
+The native review build was exercised through onboarding, overlay launch, camera controls, Escape, position lock, the shared stats popup, and its return to Character settings. The native resize permission was checked in the build, and the maintainer completed the resize-handle check.

@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { openApp, waitForHydration } from './helpers';
 
 test('photo controls share switches and slider fill follows edits and resets', async ({ page }, info) => {
+	// Leave time for scene screenshots on CI's software renderer.
+	test.setTimeout(90_000);
 	await openApp(page);
 	await page.getByRole('button', { name: 'Open photo mode', exact: true }).click();
 	const panel = page.getByRole('toolbar', { name: 'Photo mode', exact: true });

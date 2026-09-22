@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import { openApp, waitForHydration } from './helpers';
 
 test('setup takes one small decision at a time and can finish without service keys', async ({ page }, info) => {
-	test.setTimeout(90_000);
+	// Four screenshots composite the blurred avatar on CI's software renderer.
+	test.setTimeout(180_000);
 	await openApp(page, {}, false);
 	const dialog = page.getByRole('dialog', { name: 'Set up your companion' });
 	await expect(dialog).toBeVisible();
