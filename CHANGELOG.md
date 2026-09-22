@@ -18,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Chat window messages have filled bubbles, and composite text inputs show one focus indicator around the whole control.
 - Onboarding completion saves before leaving setup, preventing setup from reopening after a reload.
 - Overlay controls support keyboard and touch access, synchronize appearance with the main window, and report failed navigation without hiding the companion.
-- Align the desktop HTTP plugin's JavaScript and Rust versions.
 
 ## [0.15.0] - 2026-09-18
 
