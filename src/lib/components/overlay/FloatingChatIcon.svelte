@@ -27,10 +27,11 @@
 
 <style>
 	.floating-chat-icon {
-		width: 48px;
-		height: 48px;
-		border-radius: var(--radius-full);
-		background: var(--bg-tertiary);
+		width: 36px;
+		height: 36px;
+		border-radius: var(--control-radius);
+		background: var(--control-bg);
+		border: 1px solid transparent;
 		color: var(--text-secondary);
 		cursor: pointer;
 		display: flex;
@@ -61,12 +62,12 @@
 
 	.floating-chat-icon.expanded {
 		background: var(--accent);
-		color: #fff;
+		color: var(--accent-contrast);
 	}
 
 	.floating-chat-icon.expanded:hover {
 		background: var(--accent-hover);
-		color: #fff;
+		color: var(--accent-contrast);
 	}
 
 	.icon-inner {
@@ -74,4 +75,6 @@
 		align-items: center;
 		justify-content: center;
 	}
+	@media (pointer: coarse) { button { min-width: 44px; min-height: 44px; } }
+	@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>

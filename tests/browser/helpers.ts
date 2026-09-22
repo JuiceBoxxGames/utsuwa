@@ -1,16 +1,16 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type Locator } from '@playwright/test';
 
 // These tests run against Vite in a fresh browser context, never a user's save.
-export async function openApp(page: Page, display: Record<string, unknown> = {}) {
+export async function openApp(page: Page, display: Record<string, unknown> = {}, completeOnboarding = true) {
 	await page.route(/huggingface\.co|cdn-lfs|cdn\.jsdelivr\.net/, (route) => route.abort());
 	await page.goto('/app/settings/display');
 	await expect(page.getByRole('heading', { name: 'Display', exact: true })).toBeVisible();
 	await waitForHydration(page);
-	await page.evaluate(async (settings) => {
+	await page.evaluate(async ({ settings, completeOnboarding }) => {
 		const storePath = '/src/lib/stores/character.svelte.ts';
 		const { characterStore } = await import(/* @vite-ignore */ storePath);
 		await characterStore.loadState();
-		characterStore.markOnboardingComplete();
+		if (completeOnboarding) await characterStore.markOnboardingComplete();
 		await characterStore.save(true);
 		localStorage.setItem('utsuwa-display', JSON.stringify({ textRevealSpeed: 'off', ...settings }));
 		// Exercise the normal cached-preview state. The active avatar still loads
@@ -26,10 +26,11 @@ export async function openApp(page: Page, display: Record<string, unknown> = {})
 				)
 			)
 		);
-	}, display);
+	}, { settings: display, completeOnboarding });
 	await page.goto('/app');
 	await waitForHydration(page);
-	await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
+	if (completeOnboarding) await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
+	else await expect(page.getByRole('dialog', { name: 'Set up your companion' })).toBeVisible();
 }
 
 export async function setLoading(page: Page, loading: boolean) {
@@ -67,4 +68,9 @@ export async function waitForHydration(page: Page) {
 			{ timeout: hasAvatar ? 20_000 : 15_000 }
 		)
 		.toBe(true);
+}
+
+export async function selectOption(page: Page, trigger: Locator, value: string) {
+	await trigger.click();
+	await page.locator(`[role="option"][data-value=${JSON.stringify(value)}]`).click();
 }

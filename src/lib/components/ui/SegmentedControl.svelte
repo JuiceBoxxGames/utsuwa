@@ -32,10 +32,12 @@
 	.segmented-control {
 		display: flex;
 		flex-wrap: wrap;
-		width: 100%;
+		width: fit-content;
+		max-width: 100%;
 		min-width: 0;
-		gap: 0.25rem;
-		padding: 0.25rem;
+		gap: 2px;
+		padding: 2px;
+		border: 1px solid var(--border-light);
 		border-radius: var(--radius-md);
 		background: var(--bg-secondary);
 	}
@@ -47,9 +49,10 @@
 		justify-content: center;
 		align-items: center;
 		gap: 0.375rem;
-		flex: 1;
-		min-height: 44px;
-		padding: 0.5rem 0.75rem;
+		flex: 1 0 auto;
+		white-space: nowrap;
+		min-height: 28px;
+		padding: 4px 10px;
 		border: none;
 		border-radius: calc(var(--radius-md) - 2px);
 		background: transparent;
@@ -67,13 +70,15 @@
 		background: var(--bg-tertiary);
 	}
 	button[aria-pressed='true'] {
-		color: var(--accent);
-		background: var(--accent-muted);
+		color: var(--text-primary);
+		background: var(--selection-bg);
+		box-shadow: var(--shadow-xs);
 	}
 	button:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 1px;
 	}
+	@media (pointer: coarse) { button { min-height: 44px; } }
 	@media (prefers-reduced-motion: reduce) {
 		button {
 			transition: none;

@@ -22,6 +22,7 @@
 		<button
 			type="button"
 			class="mode-option"
+			aria-pressed={mode === 'dating_sim'}
 			class:selected={mode === 'dating_sim'}
 			onclick={() => onModeChange('dating_sim')}
 		>
@@ -37,6 +38,7 @@
 		<button
 			type="button"
 			class="mode-option"
+			aria-pressed={mode === 'companion'}
 			class:selected={mode === 'companion'}
 			onclick={() => onModeChange('companion')}
 		>
@@ -56,7 +58,7 @@
 			Back
 		</button>
 		<button class="btn btn-primary" onclick={onNext}>
-			Finish setup
+			Next
 			<Icon name="chevron-right" size={16} />
 		</button>
 	</div>
@@ -107,7 +109,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: #fff;
+		color: var(--accent-contrast);
 		transition: background 0.15s, border-color 0.15s;
 	}
 

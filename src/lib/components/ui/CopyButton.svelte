@@ -59,7 +59,7 @@
 		width: 28px;
 		height: 28px;
 		padding: 0;
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius, var(--radius-md));
 	}
 	.sr-only {
 		position: absolute;

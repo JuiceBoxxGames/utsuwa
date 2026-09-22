@@ -22,12 +22,6 @@ export {
 } from './hotkeys';
 
 export {
-	initRaycast,
-	cleanupRaycast,
-	checkRaycast
-} from './raycast';
-
-export {
 	initializeHotkeys,
 	onHotkeyEvent
 } from './hotkey-handlers';

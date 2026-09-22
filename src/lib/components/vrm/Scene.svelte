@@ -18,7 +18,6 @@
 	import type { VRM } from '@pixiv/three-vrm';
 	import ArPlacement from './ArPlacement.svelte';
 	import VrmModel from './VrmModel.svelte';
-	import OverlayRaycastHandler from '$lib/components/overlay/OverlayRaycastHandler.svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { photomodeStore, type CaptureOptions } from '$lib/stores/photomode.svelte';
@@ -35,7 +34,7 @@
 
 	// Backdrop colors per theme
 	const SCENE_COLORS = {
-		light: { background: '#ffffff', floor: '#000000' },
+		light: { background: '#fcfcfc', floor: '#000000' },
 		dark: { background: '#0a0a0a', floor: '#ffffff' }
 	};
 
@@ -158,7 +157,7 @@
 		const pointerNdc = new Vector2();
 
 		function onPointerDown(e: PointerEvent) {
-			// The overlay window has its own pointer/click-through handling, and
+			// The overlay window handles dragging separately, and
 			// XR sessions own their input
 			if (overlay || renderer?.xr.isPresenting || !renderer || !camera.current) return;
 			const vrm = vrmStore.vrm;
@@ -416,11 +415,6 @@
 
 <!-- Camera - auto-fitted to the model once it loads -->
 <T.PerspectiveCamera manual makeDefault position={[0, 1.1, 2]} fov={camSettings.fov} near={0.1} far={1000} />
-
-<!-- Overlay mode: enable raycast for click-through detection -->
-{#if overlay}
-	<OverlayRaycastHandler />
-{/if}
 
 <!-- Backdrop + floor (hidden in overlay mode, AR passthrough, and photo
      backgrounds, which render through a transparent canvas + composite) -->

@@ -14,7 +14,7 @@
 
 {#if displayStore.keepScreenAwake}
 	<button
-		class="wake-indicator"
+		class="wake-indicator btn btn-secondary btn-sm"
 		class:active={wakeLockStore.status === 'active'}
 		aria-label={`${label}. Turn off keep screen awake`}
 		title={`${label}. Click to turn off.`}
@@ -26,27 +26,5 @@
 {/if}
 
 <style>
-	.wake-indicator {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		min-height: 32px;
-		padding: 0.375rem 0.625rem;
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-full);
-		background: var(--bg-primary);
-		color: var(--text-secondary);
-		font: inherit;
-		font-size: 0.75rem;
-		box-shadow: var(--shadow-sm);
-		cursor: pointer;
-	}
-	.wake-indicator.active {
-		color: var(--accent);
-		background: var(--accent-subtle);
-	}
-	.wake-indicator:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
+	.wake-indicator.active { color: var(--accent); }
 </style>

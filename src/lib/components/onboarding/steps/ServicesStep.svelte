@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Switch from '$lib/components/ui/Switch.svelte';
 	import { Icon, ProviderDropdown, ModelDropdown, ContextSizeSlider } from '$lib/components/ui';
 	import { modulesStore } from '$lib/stores/modules.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
@@ -26,9 +27,11 @@
 	interface Props {
 		onNext: () => void;
 		onBack: () => void;
+		stage: 'chat' | 'voice';
+		ttsEnabled?: boolean;
 	}
 
-	let { onNext, onBack }: Props = $props();
+	let { onNext, onBack, stage, ttsEnabled = $bindable(false) }: Props = $props();
 
 	function handleContextSizeChange(value: number | undefined) {
 		modulesStore.setModuleSetting('consciousness', 'contextSize', value);
@@ -57,12 +60,8 @@
 		return !!config.apiKey;
 	});
 
-	// TTS State
-	let ttsEnabled = $state(false);
+	// TTS state
 
-	// STT (voice input) is config-based, not a module. A configured local server
-	// wins, then Groq, then OpenAI, then the browser's Web Speech API.
-	let sttEnabled = $state(false);
 	const ttsSettings = $derived(modulesStore.getModuleSettings('speech'));
 	const ttsProvider = $derived(getTTSProvider(ttsSettings.activeProvider as string));
 	const staticTTSModels = $derived(ttsProvider?.models ?? []);
@@ -191,6 +190,7 @@
 	const debouncedFetchTTSModels = debounce(fetchTTSModels, 300);
 
 	$effect(() => {
+		if (stage !== 'chat') return;
 		if (!llmProvider?.isLocal) {
 			lastLocalLLMFetchKey = '';
 			return;
@@ -323,11 +323,9 @@
 		}
 	}
 
-	function handleNext() {
-		modulesStore.setModuleEnabled('consciousness', true);
-		if (ttsEnabled && ttsSettings.activeProvider) {
-			modulesStore.setModuleEnabled('speech', true);
-		}
+	async function handleNext() {
+		if (stage === 'chat') await modulesStore.setModuleEnabled('consciousness', true);
+		else await modulesStore.setModuleEnabled('speech', ttsEnabled && !!ttsSettings.activeProvider);
 		onNext();
 	}
 </script>
@@ -345,21 +343,16 @@
 
 <div class="ob-step services-step">
 	<div class="ob-head">
-		<h2 class="ob-title">Configure AI services</h2>
-		<p class="ob-subtitle">Set up chat (required), plus speech and voice input (optional).</p>
+		<h2 class="ob-title" tabindex="-1">{stage === 'chat' ? 'Connect a chat model' : 'Want to hear them?'}</h2>
+		<p class="ob-subtitle">{stage === 'chat' ? 'Choose the service that powers your conversations. You can connect it later in Settings.' : 'Add spoken replies, or keep things quiet for now.'}</p>
 	</div>
 
-	<div class="security-note">
-		<Icon name="lock" size={14} />
-		<span>Your API keys are stored locally in your browser. We never store them on our servers.</span>
-	</div>
-
+	{#if stage === 'chat'}
 	<!-- LLM Section -->
 	<div class="service-section">
 		<div class="service-header">
 			<Icon name="brain" size={16} />
-			<span class="service-title">Chat (LLM)</span>
-			<span class="required-badge">Required</span>
+			<span class="service-title">Chat provider</span>
 		</div>
 
 		<ProviderDropdown
@@ -374,6 +367,7 @@
 				type="password"
 				class="api-key-input"
 				class:error={llmFetchError}
+				aria-label="Chat API key"
 				placeholder={llmProvider?.custom ? 'API Key (optional)' : 'Enter API Key...'}
 				value={settingsStore.getProviderConfig(llmProvider.id).apiKey ?? ''}
 				oninput={(e) => handleLLMApiKeyChange(e.currentTarget.value)}
@@ -449,25 +443,23 @@
 			/>
 		{/if}
 
-		<!-- Context Window -->
+		<details class="ob-advanced"><summary>Advanced options</summary>
 		<ContextSizeSlider
 			contextSize={llmContextSize}
 			onChange={handleContextSizeChange}
 			id="ob-llm-context-size-toggle"
 		/>
+		</details>
 	</div>
 
+	{:else}
 	<!-- TTS Section -->
 	<div class="service-section">
 		<div class="service-header">
 			<Icon name="mic" size={16} />
-			<span class="service-title">Speech (TTS)</span>
-			<span class="optional-badge">Optional</span>
-			<button class="toggle-btn" class:enabled={ttsEnabled} onclick={() => ttsEnabled = !ttsEnabled} aria-label="Toggle TTS">
-				<span class="toggle-track">
-					<span class="toggle-thumb"></span>
-				</span>
-			</button>
+			<span class="service-title">Spoken replies</span>
+
+			<Switch label="Spoken replies" checked={ttsEnabled} onchange={(value) => ttsEnabled = value} />
 		</div>
 
 		{#if ttsEnabled}
@@ -483,7 +475,7 @@
 					type="password"
 					class="api-key-input"
 					class:error={ttsFetchError}
-					placeholder="Enter API Key..."
+					aria-label="Voice API key" placeholder="Enter API Key..."
 					value={settingsStore.getProviderConfig(ttsProvider.id).apiKey ?? ''}
 					oninput={(e) => handleTTSApiKeyChange(e.currentTarget.value)}
 					onblur={handleTTSApiKeyBlur}
@@ -547,103 +539,29 @@
 		{/if}
 	</div>
 
-	<!-- STT Section -->
-	<div class="service-section">
-		<div class="service-header">
-			<Icon name="mic" size={16} />
-			<span class="service-title">Voice Input (STT)</span>
-			<span class="optional-badge">Optional</span>
-			<button class="toggle-btn" class:enabled={sttEnabled} onclick={() => sttEnabled = !sttEnabled} aria-label="Toggle voice input (STT)">
-				<span class="toggle-track">
-					<span class="toggle-thumb"></span>
-				</span>
-			</button>
-		</div>
-
-		{#if sttEnabled}
-			<p class="skip-note">Transcribe your voice with Whisper. A local server is used if set, then Groq, then OpenAI, otherwise your browser's built-in recognition.</p>
-
-			<input
-				type="text"
-				class="api-key-input"
-				placeholder="Local server URL (http://localhost:8000/v1/)"
-				value={settingsStore.getProviderConfig('local-stt').baseUrl ?? ''}
-				oninput={(e) => {
-					const v = e.currentTarget.value.trim();
-					settingsStore.setProviderConfig('local-stt', { baseUrl: v });
-					if (v) settingsStore.markProviderAdded('local-stt');
-					else settingsStore.removeProvider('local-stt');
-				}}
-			/>
-
-			<input
-				type="text"
-				class="api-key-input"
-				placeholder="Local model (optional, e.g. Systran/faster-whisper-large-v3)"
-				value={settingsStore.getProviderConfig('local-stt').modelId ?? ''}
-				oninput={(e) => settingsStore.setProviderConfig('local-stt', { modelId: e.currentTarget.value.trim() })}
-			/>
-
-			<input
-				type="password"
-				class="api-key-input"
-				placeholder="Groq API Key (optional)"
-				value={settingsStore.getProviderConfig('groq-stt').apiKey ?? ''}
-				oninput={(e) => {
-					settingsStore.setProviderConfig('groq-stt', { apiKey: e.currentTarget.value });
-					settingsStore.markProviderAdded('groq-stt');
-				}}
-			/>
-
-			<input
-				type="password"
-				class="api-key-input"
-				placeholder="OpenAI API Key — Whisper (optional)"
-				value={settingsStore.getProviderConfig('openai-stt').apiKey ?? ''}
-				oninput={(e) => {
-					settingsStore.setProviderConfig('openai-stt', { apiKey: e.currentTarget.value });
-					settingsStore.markProviderAdded('openai-stt');
-				}}
-			/>
-		{:else}
-			<p class="skip-note">Enable to set up microphone voice input</p>
-		{/if}
-	</div>
+	<p class="skip-note">You can use the microphone button to speak instead of type. Transcription options live in Settings.</p>
+	{/if}
 
 	<div class="ob-actions ob-actions--split">
 		<button class="btn btn-secondary" onclick={onBack}>
 			<Icon name="chevron-left" size={16} />
 			Back
 		</button>
-		<button class="btn btn-primary" onclick={handleNext} disabled={!isLLMConfigured}>
+		<button class="btn btn-primary" onclick={handleNext} disabled={stage === 'chat' ? !isLLMConfigured : ttsEnabled && (!ttsSettings.activeProvider || !ttsHasApiKey)}>
 			Next
 			<Icon name="chevron-right" size={16} />
 		</button>
 	</div>
+	<button class="btn btn-ghost btn-block" onclick={onNext}>Set up later</button>
+	<p class="ob-hint">Provider keys save on this device. Requests go to the provider you choose.</p>
 </div>
 
 <style>
+	.service-header > :global(.ui-switch) { margin-left: auto; }
 	/* Scrollable variant of the shared ob-step layout */
 	.services-step {
 		max-height: 70vh;
 		overflow-y: auto;
-	}
-
-	.security-note {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		padding: 0.7rem 1rem;
-		background: var(--bg-secondary);
-		border-radius: var(--radius-lg);
-		font-size: 0.75rem;
-		color: var(--text-secondary);
-	}
-
-	.security-note :global(svg) {
-		color: var(--text-tertiary);
-		flex-shrink: 0;
 	}
 
 	.service-section {
@@ -669,77 +587,14 @@
 		color: var(--text-primary);
 	}
 
-	.required-badge {
-		font-size: 0.65rem;
-		font-weight: 600;
-		letter-spacing: 0.02em;
-		text-transform: uppercase;
-		color: var(--accent);
-		background: var(--accent-subtle);
-		padding: 0.2rem 0.55rem;
-		border-radius: var(--radius-full);
-		margin-left: auto;
-	}
-
-	.optional-badge {
-		font-size: 0.65rem;
-		font-weight: 600;
-		letter-spacing: 0.02em;
-		text-transform: uppercase;
-		color: var(--text-tertiary);
-		background: var(--bg-tertiary);
-		padding: 0.2rem 0.55rem;
-		border-radius: var(--radius-full);
-	}
-
-	.toggle-btn {
-		margin-left: auto;
-		position: relative;
-		width: 42px;
-		height: 24px;
-		background: transparent;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-	}
-
-	.toggle-track {
-		display: block;
-		width: 100%;
-		height: 100%;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		transition: background 0.2s;
-	}
-
-	.toggle-btn.enabled .toggle-track {
-		background: var(--accent);
-	}
-
-	.toggle-thumb {
-		position: absolute;
-		top: 3px;
-		left: 3px;
-		width: 18px;
-		height: 18px;
-		background: var(--bg-primary);
-		border-radius: 50%;
-		transition: transform 0.2s;
-		box-shadow: var(--shadow-xs);
-	}
-
-	.toggle-btn.enabled .toggle-thumb {
-		background: #fff;
-		transform: translateX(18px);
-	}
-
 	.api-key-input {
 		width: 100%;
-		padding: 0.85rem 1rem;
+		padding: 6px 11px;
+		min-height: 32px;
 		background: var(--bg-secondary);
 		border-radius: var(--radius-lg);
 		font-size: 0.9rem;
-		font-family: var(--font-mono);
+		font-family: inherit;
 		color: var(--text-primary);
 		transition: box-shadow 0.15s, background 0.15s;
 	}

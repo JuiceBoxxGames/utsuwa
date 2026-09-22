@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Select from '$lib/components/ui/Select.svelte';
 	import { onMount, untrack } from 'svelte';
 	import type ForceGraph from 'force-graph';
 	import type { LinkObject } from 'force-graph';
@@ -103,6 +104,7 @@
 		const isDark = dark;
 		const reduce = reducedMotion;
 		if (!current) return;
+		const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
 		const touches = (link: LinkObject<GraphNode>) =>
 			[link.source, link.target].some(
 				(node) => (typeof node === 'object' ? node.id : node) === active?.id
@@ -117,14 +119,14 @@
 			)
 			.linkColor((link) =>
 				active && touches(link)
-					? 'rgba(0, 178, 255, 0.8)'
+					? accent
 					: isDark
 						? `rgba(255,255,255,${active ? 0.05 : 0.2})`
 						: `rgba(0,0,0,${active ? 0.05 : 0.15})`
 			)
 			.linkWidth((link) => (active ? (touches(link) ? 2 : 0.5) : 1))
 			.linkDirectionalParticles(reduce ? 0 : 2)
-			.linkDirectionalParticleColor(() => (isDark ? '#00b2ff' : '#0099dd'))
+			.linkDirectionalParticleColor(() => accent)
 			.cooldownTicks(reduce ? 0 : 160);
 	});
 
@@ -228,18 +230,7 @@
 	</div>
 	<label class="memory-picker"
 		>Inspect a memory
-		<select
-			class="settings-field"
-			value={selected?.id ?? ''}
-			onchange={(event) =>
-				(selectedId = event.currentTarget.value ? Number(event.currentTarget.value) : null)}
-			disabled={!data.nodes.length}
-		>
-			<option value="">Select a memory</option>
-			{#each data.nodes as node}<option value={node.id}
-					>{node.content.length > 90 ? `${node.content.slice(0, 90)}…` : node.content}</option
-				>{/each}
-		</select>
+		<Select label="Inspect a memory" value={selected ? String(selected.id) : ''} onchange={(value) => selectedId = value ? Number(value) : null} disabled={!data.nodes.length} options={[{ value: '', label: 'Select a memory' }, ...data.nodes.map(node => ({ value: String(node.id), label: node.content.length > 90 ? `${node.content.slice(0, 90)}…` : node.content }))]} />
 	</label>
 	<div class="graph-layout" class:has-selection={!!selected}>
 		<div class="graph-container" bind:this={container}>

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openApp, waitForHydration } from './helpers';
+import { openApp, waitForHydration, selectOption } from './helpers';
 
 async function speechSettings(page: Page) {
 	return page.evaluate(async () => {
@@ -118,8 +118,8 @@ test('OmniVoice fields preserve primary and alternative voice settings through r
 	const steps = page.getByRole('slider', { name: 'Num Step', exact: true });
 	await steps.focus();
 	await steps.press('ArrowRight');
-	await page.locator('#omnivoice-language').selectOption('de');
-	await page.locator('#omnivoice-voice').selectOption('ash');
+	await selectOption(page, page.locator('#omnivoice-language'), 'de');
+	await selectOption(page, page.locator('#omnivoice-voice'), 'ash');
 	const changed = await speechSettings(page);
 	expect(changed.speed).toBe(1.1);
 	expect(changed.numStep).toBe(33);
@@ -136,11 +136,11 @@ test('OmniVoice fields preserve primary and alternative voice settings through r
 		expect(changed[key]).toEqual(before[key]);
 	await page.reload();
 	await expect(speed).toHaveValue('1.1');
-	await expect(page.locator('#omnivoice-alt-language')).toHaveValue('ja');
+	await expect(page.locator('#omnivoice-alt-language')).toHaveAttribute('data-value', 'ja');
 	await page.getByRole('checkbox', { name: 'Speak foreign words with a second voice' }).uncheck();
 	await expect(page.locator('#omnivoice-alt-language')).toHaveCount(0);
 	await page.getByRole('checkbox', { name: 'Speak foreign words with a second voice' }).check();
-	await expect(page.locator('#omnivoice-alt-language')).toHaveValue('ja');
+	await expect(page.locator('#omnivoice-alt-language')).toHaveAttribute('data-value', 'ja');
 	await page.screenshot({ path: info.outputPath('omnivoice-edited.png') });
 	await page.getByRole('radio', { name: 'Cloned', exact: true }).first().check();
 	await page.getByRole('button', { name: 'Clone New', exact: true }).click();
@@ -189,4 +189,90 @@ test('shared LLM and display controls keep their existing values and callbacks',
 	await expect(
 		page.getByRole('spinbutton', { name: 'Typing indicator delay in seconds' })
 	).toHaveValue('0.0');
+});
+
+test('settings search finds categories and Escape clears it without leaving settings', async ({ page }, info) => {
+	await page.goto('/app/settings/display');
+	await waitForHydration(page);
+	await page.keyboard.press('/');
+	const search = page.getByRole('textbox', { name: 'Search settings' });
+	await expect(search).toBeFocused();
+	await page.screenshot({ path: info.outputPath('settings-search-focused.png') });
+	await search.fill('voice');
+	await expect(page.locator('.nav-item')).toHaveCount(1);
+	await expect(page.getByRole('link', { name: 'TTS', exact: true })).toBeVisible();
+	await search.fill('no-such-setting');
+	await expect(page.locator('.search-empty')).toHaveText('No matching settings');
+	await search.press('Escape');
+	await expect(search).toHaveValue('');
+	await expect(page).toHaveURL(/\/settings\/display$/);
+	await expect(page.getByRole('link', { name: 'Display', exact: true })).toHaveAttribute('aria-current', 'page');
+});
+
+test('appearance persists and app tokens follow the selected theme', async ({ page }) => {
+	await page.goto('/app/settings/display');
+	await waitForHydration(page);
+	const themes = page.getByRole('group', { name: 'Color theme' });
+	for (const [label, canvas, accent] of [
+		['Light', '#fcfcfc', '#04b2fd'],
+		['Dark', '#0a0a0a', '#04b2fd']
+	]) {
+		await themes.getByRole('button', { name: label, exact: true }).click();
+		await page.reload();
+		await waitForHydration(page);
+		await expect(themes.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
+		const colors = await page.evaluate(() => {
+			const style = getComputedStyle(document.documentElement);
+			return ['--bg-page', '--accent'].map(name => style.getPropertyValue(name).trim());
+		});
+		expect(colors).toEqual([canvas, accent]);
+	}
+	await page.emulateMedia({ colorScheme: 'light' });
+	await themes.getByRole('button', { name: 'System', exact: true }).click();
+	await expect(page.locator('html')).not.toHaveClass(/dark/);
+	await page.emulateMedia({ colorScheme: 'dark' });
+	await expect(page.locator('html')).toHaveClass(/dark/);
+});
+
+
+test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', async ({ page }, info) => {
+	await prepareOmniVoice(page);
+	await page.goto('/app/settings/tts');
+	await waitForHydration(page);
+	const language = page.locator('#omnivoice-language');
+	for (const theme of ['light', 'dark']) {
+		await page.emulateMedia({ colorScheme: theme as 'light' | 'dark', reducedMotion: 'reduce' });
+		await language.focus();
+		await language.press('ArrowDown');
+		const popup = page.getByRole('listbox');
+		await expect(popup).toBeVisible();
+		const box = (await popup.boundingBox())!;
+		expect(box.x).toBeGreaterThanOrEqual(0);
+		expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+		expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+		const recipe = await popup.evaluate(el => {
+			const style = getComputedStyle(el);
+			return { radius: style.borderRadius, padding: style.padding, blur: style.backdropFilter };
+		});
+		expect(recipe.radius).toBe('8px');
+		expect(recipe.padding).toBe('4px');
+		expect(recipe.blur).toContain(theme === 'dark' ? '16px' : '12px');
+		await page.screenshot({ path: info.outputPath(`language-dropdown-${theme}.png`) });
+		await page.keyboard.press('Escape');
+		await expect(popup).toHaveCount(0);
+		await expect(language).toBeFocused();
+		await expect(page).toHaveURL(/settings\/tts$/);
+	}
+	await language.press('ArrowDown');
+	await page.keyboard.press('Home');
+	const firstValue = await page.getByRole('option').first().getAttribute('data-value');
+	await page.keyboard.press('Enter');
+	await expect(language).toHaveAttribute('data-value', firstValue!);
+	expect((await speechSettings(page)).activeLanguage).toBe(firstValue);
+	await page.locator('.dropdown-trigger').click();
+	await expect(page.getByRole('menu')).toBeVisible();
+	await page.screenshot({ path: info.outputPath('provider-dropdown-dark.png') });
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('menu')).toHaveCount(0);
+	await expect(page.locator('.dropdown-trigger')).toBeFocused();
 });

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { rangeProgress } from '$lib/utils/range-progress';
+	import Select from '$lib/components/ui/Select.svelte';
 	import { Tooltip, Icon } from '$lib/components/ui';
 	import SettingsSection from './SettingsSection.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
@@ -546,23 +548,11 @@
 		<label class="omnivoice-label" for={opts.selectId}>Voice</label>
 		{#if opts.isClone}
 			<div class="omnivoice-voice-row" style="flex-wrap:wrap;">
-				<select
-					id={opts.selectId}
-					class="api-key-input"
-					style="flex:1;min-width:0;"
-					value={opts.voiceId}
-					onchange={(e) => opts.onVoiceChange(e.currentTarget.value)}
-				>
-					{#if clonedVoices.length === 0}
-						<option value="" disabled>No cloned voices yet</option>
-					{/if}
-					{#each clonedVoices as v}
-						<option value={v.id}>{v.name}</option>
-					{/each}
-					{#if opts.voiceId && !clonedVoices.some((v) => v.id === opts.voiceId)}
-						<option value={opts.voiceId}>cloned {opts.voiceId.replace('clone:', '')} (loading)</option>
-					{/if}
-				</select>
+				<Select id={opts.selectId} label={opts.selectId.includes('alt') ? 'Alternative voice' : 'Primary voice'} style="flex:1;min-width:0;" value={opts.voiceId} onchange={opts.onVoiceChange} placeholder="No cloned voices yet"
+					options={[
+						...clonedVoices.map(v => ({ value: v.id, label: v.name })),
+						...(opts.voiceId && !clonedVoices.some(v => v.id === opts.voiceId) ? [{ value: opts.voiceId, label: `cloned ${opts.voiceId.replace('clone:', '')} (loading)` }] : [])
+					]} />
 				<button class="btn btn-sm btn-secondary" onclick={openCloneModal}>Clone New</button>
 				{#if opts.voiceId}
 					{@const cloneId = opts.voiceId.replace('clone:', '')}
@@ -576,16 +566,7 @@
 				{/if}
 			</div>
 		{:else}
-			<select
-				id={opts.selectId}
-				class="api-key-input"
-				value={opts.voiceId || DEFAULT_PRESET_VOICE}
-				onchange={(e) => opts.onVoiceChange(e.currentTarget.value)}
-			>
-				{#each provider.voices ?? [] as voice}
-					<option value={voice.id}>{voice.name}</option>
-				{/each}
-			</select>
+			<Select id={opts.selectId} label={opts.selectId.includes('alt') ? 'Alternative voice' : 'Primary voice'} value={opts.voiceId || DEFAULT_PRESET_VOICE} onchange={opts.onVoiceChange} options={(provider.voices ?? []).map(voice => ({ value: voice.id, label: voice.name }))} />
 		{/if}
 	</div>
 {/snippet}
@@ -627,7 +608,7 @@
 				profileError = '';
 				previewError = '';
 			}}
-			aria-label="Dismiss error">×</button
+			aria-label="Dismiss error"><Icon name="x" size={14} /></button
 		>
 	</div>
 {/if}
@@ -638,16 +619,7 @@
 	<div class="omnivoice-design-grid-2">
 		<div class="omnivoice-field">
 			<label class="omnivoice-label" for="omnivoice-language">Language</label>
-			<select
-				id="omnivoice-language"
-				class="api-key-input"
-				value={activeLanguage}
-				onchange={(e) => handleLanguageChange(e.currentTarget.value)}
-			>
-				{#each languages as lang}
-					<option value={lang.code}>{lang.name}</option>
-				{/each}
-			</select>
+			<Select id="omnivoice-language" label="Language" value={activeLanguage} onchange={handleLanguageChange} options={languages.map(lang => ({ value: lang.code, label: lang.name }))} />
 		</div>
 
 		{@render voiceSelect({
@@ -690,14 +662,14 @@
 			{#if regenerating}
 				<span class="omnivoice-spinner"></span> Regenerating...
 			{:else}
-				↻ Regenerate
+				<Icon name="refresh-cw" size={14} /> Regenerate
 			{/if}
 		</button>
 		<button class="btn btn-sm btn-primary" onclick={handlePreview} disabled={previewLoading}>
 			{#if previewLoading}
 				<span class="omnivoice-spinner"></span> Testing...
 			{:else}
-				▶ Test
+				<Icon name="play" size={14} /> Test
 			{/if}
 		</button>
 	</div>
@@ -706,7 +678,7 @@
 		<div class="omnivoice-design-row">
 			<label class="omnivoice-design-label" for="omnivoice-speed">Speed</label>
 			<input id="omnivoice-speed"
-				type="range"
+				type="range" use:rangeProgress={(settings.speechSettings.speed as number) ?? 1}
 				min="0.5"
 				max="2.0"
 				step="0.1"
@@ -719,7 +691,7 @@
 		<div class="omnivoice-design-row">
 			<label class="omnivoice-design-label" for="omnivoice-num-step">Num Step</label>
 			<input id="omnivoice-num-step"
-				type="range"
+				type="range" use:rangeProgress={(settings.speechSettings.numStep as number) ?? 32}
 				min="4"
 				max="64"
 				step="1"
@@ -736,7 +708,7 @@
 			<label class="omnivoice-advanced-label" for="omnivoice-position-temperature">Position Temperature</label>
 			<div class="omnivoice-advanced-row">
 				<input id="omnivoice-position-temperature"
-					type="range"
+					type="range" use:rangeProgress={(settings.speechSettings.positionTemperature as number) ?? 1}
 					min="0"
 					max="2"
 					step="0.1"
@@ -754,7 +726,7 @@
 			<label class="omnivoice-advanced-label" for="omnivoice-class-temperature">Class Temperature</label>
 			<div class="omnivoice-advanced-row">
 				<input id="omnivoice-class-temperature"
-					type="range"
+					type="range" use:rangeProgress={(settings.speechSettings.classTemperature as number) ?? 0.2}
 					min="0"
 					max="2"
 					step="0.1"
@@ -793,7 +765,7 @@
 				{#if previewLoading}
 					<span class="omnivoice-spinner"></span> Testing...
 				{:else}
-					▶ Test Alt Voice
+					<Icon name="play" size={14} /> Test Alt Voice
 				{/if}
 			</button>
 		{/if}
@@ -803,19 +775,7 @@
 		<div class="omnivoice-design-grid-2">
 			<div class="omnivoice-field">
 				<label class="omnivoice-label" for="omnivoice-alt-language">Language</label>
-				<select
-					id="omnivoice-alt-language"
-					class="api-key-input"
-					value={altLanguage}
-					onchange={(e) => handleAltLanguageChange(e.currentTarget.value)}
-				>
-					<option value="" disabled selected={!altLanguage}>Select a language...</option>
-					{#each languages as lang}
-						{#if lang.code !== activeLanguage}
-							<option value={lang.code}>{lang.name}</option>
-						{/if}
-					{/each}
-				</select>
+				<Select id="omnivoice-alt-language" label="Alternative language" value={altLanguage} onchange={handleAltLanguageChange} placeholder="Select a language..." options={languages.filter(lang => lang.code !== activeLanguage).map(lang => ({ value: lang.code, label: lang.name }))} />
 			</div>
 
 			{@render voiceSelect({
@@ -870,7 +830,7 @@
 			<div class="omnivoice-design-row">
 				<label class="omnivoice-design-label" for="omnivoice-alt-speed">Alt Speed</label>
 				<input id="omnivoice-alt-speed"
-					type="range"
+					type="range" use:rangeProgress={(settings.speechSettings.altSpeed as number) ?? 1}
 					min="0.5"
 					max="2.0"
 					step="0.1"
@@ -883,7 +843,7 @@
 			<div class="omnivoice-design-row">
 				<label class="omnivoice-design-label" for="omnivoice-alt-num-step">Alt Num Step</label>
 				<input id="omnivoice-alt-num-step"
-					type="range"
+					type="range" use:rangeProgress={(settings.speechSettings.altNumStep as number) ?? 32}
 					min="4"
 					max="64"
 					step="1"
@@ -900,7 +860,7 @@
 				<label class="omnivoice-advanced-label" for="omnivoice-alt-position-temperature">Alt Position Temperature</label>
 				<div class="omnivoice-advanced-row">
 					<input id="omnivoice-alt-position-temperature"
-						type="range"
+						type="range" use:rangeProgress={(settings.speechSettings.altPositionTemperature as number) ?? 1}
 						min="0"
 						max="2"
 						step="0.1"
@@ -918,7 +878,7 @@
 				<label class="omnivoice-advanced-label" for="omnivoice-alt-class-temperature">Alt Class Temperature</label>
 				<div class="omnivoice-advanced-row">
 					<input id="omnivoice-alt-class-temperature"
-						type="range"
+						type="range" use:rangeProgress={(settings.speechSettings.altClassTemperature as number) ?? 0.2}
 						min="0"
 						max="2"
 						step="0.1"

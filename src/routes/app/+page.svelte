@@ -2,7 +2,7 @@
 	import WakeLockIndicator from '$lib/components/display/WakeLockIndicator.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
-	import { TopRightButtons, TopLeftButtons, InfoModal } from '$lib/components/ui';
+	import { TopRightButtons, TopLeftButtons, InfoModal, Icon } from '$lib/components/ui';
 	import BottomChatBar from '$lib/components/chat/BottomChatBar.svelte';
 	import PhotoModeDock from '$lib/components/photomode/PhotoModeDock.svelte';
 	import PhotoStickerLayer from '$lib/components/photomode/PhotoStickerLayer.svelte';
@@ -315,7 +315,7 @@
 					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); vrmStore.setError(null); } }}
 				>
 					<span>{vrmStore.error}</span>
-					<button type="button" class="toast-dismiss" aria-label="Dismiss">✕</button>
+					<button type="button" class="toast-dismiss" aria-label="Dismiss"><Icon name="x" size={14} /></button>
 				</div>
 			{/if}
 
@@ -410,7 +410,7 @@
 				onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chatStore.setError(null); } }}
 			>
 				<span>{chatStore.error}</span>
-				<button type="button" class="toast-dismiss" aria-label="Dismiss">✕</button>
+				<button type="button" class="toast-dismiss" aria-label="Dismiss"><Icon name="x" size={14} /></button>
 			</div>
 		{/if}
 

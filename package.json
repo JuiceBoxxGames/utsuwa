@@ -1,6 +1,6 @@
 {
 	"name": "utsuwa",
-	"version": "0.15.0",
+	"version": "0.16.0",
 	"packageManager": "pnpm@10.28.2",
 	"description": "An open-source VRM avatar companion app with AI chat, voice, memory, and relationship mechanics",
 	"author": "Juice Boxx Games LLC",
@@ -53,6 +53,7 @@
 	},
 	"dependencies": {
 		"@fontsource-variable/inter": "^5.2.8",
+		"@lucide/svelte": "^1.47.0",
 		"@pixiv/three-vrm": "^3.4.5",
 		"@pixiv/three-vrm-animation": "^3.4.5",
 		"@tauri-apps/plugin-http": "^2.5.9",

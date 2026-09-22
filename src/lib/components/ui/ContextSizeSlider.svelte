@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { rangeProgress } from '$lib/utils/range-progress';
 	import Switch from './Switch.svelte';
 	import '../settings/settings-controls.css';
 	import {
@@ -48,7 +49,7 @@
 {#if enabled}
 	<div class="context-size-slider-row">
 		<input
-			type="range"
+			type="range" use:rangeProgress={CONTEXT_SIZE_STEPS.indexOf(snapContextSize(contextSize as number))}
 			class="settings-range" aria-label="Context window size"
 			min="0"
 			max={CONTEXT_SIZE_STEPS.length - 1}

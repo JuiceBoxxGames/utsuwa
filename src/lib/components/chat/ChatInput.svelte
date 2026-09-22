@@ -190,8 +190,7 @@
 </div>
 
 <style>
-	/* Fill the bar's flex row; without this the pill collapses to the
-	   textarea's intrinsic width */
+	/* Fill the composer row while allowing it to shrink beside the avatar. */
 	.chat-input {
 		flex: 1;
 		min-width: 0;
@@ -219,7 +218,7 @@
 	}
 
 	.pending-chip:hover {
-		transform: scale(1.12) translateY(-3px) rotate(-3deg);
+		transform: translateY(-2px);
 		z-index: 2;
 	}
 
@@ -247,7 +246,7 @@
 		width: 19px;
 		height: 19px;
 		border: 2px solid var(--bg-primary);
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius, var(--radius-md));
 		background: var(--color-error);
 		color: #fff;
 		display: flex;
@@ -278,15 +277,15 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		background: var(--bg-secondary);
+		background: var(--bg-primary);
 		border: 1px solid var(--border-subtle);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
-		border-radius: var(--radius-full);
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		border-radius: var(--radius-lg);
 		padding: 0.5rem;
 		/* 44px buttons + 0.5rem padding either side: the pill's original stature */
 		height: 60px;
-		box-shadow: var(--shadow-md);
+		box-shadow: var(--shadow-xs);
 		transition: box-shadow 0.2s;
 	}
 
@@ -407,7 +406,7 @@
 		width: 44px;
 		height: 44px;
 		border: none;
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius, var(--radius-md));
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -448,7 +447,7 @@
 
 	.mic-btn.recording {
 		background: var(--accent);
-		color: #fff;
+		color: var(--accent-contrast);
 		animation: recording-pulse 1.6s ease-in-out infinite;
 	}
 

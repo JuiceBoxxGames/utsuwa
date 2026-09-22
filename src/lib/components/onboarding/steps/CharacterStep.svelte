@@ -33,6 +33,7 @@
 		/>
 	</div>
 
+	<details class="ob-advanced"><summary>Personalize their personality</summary>
 	<div class="ob-field">
 		<label for="personality" class="ob-label">Core personality</label>
 		<textarea
@@ -45,6 +46,7 @@
 		></textarea>
 		<span class="ob-hint">This shapes how your companion talks and behaves.</span>
 	</div>
+	</details>
 
 	<div class="ob-actions ob-actions--split">
 		<button class="btn btn-secondary" onclick={onBack}>

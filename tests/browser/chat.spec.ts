@@ -2,10 +2,11 @@ import { test, expect } from '@playwright/test';
 import { openApp, setLoading } from './helpers';
 
 for (const mode of ['bubble', 'sidebar']) {
-	test(`${mode}: input keeps focus during a turn and does not steal it back`, async ({ page }) => {
+	test(`${mode}: input keeps focus during a turn and does not steal it back`, async ({ page }, info) => {
 		await openApp(page, { chatDisplayMode: mode });
 		const input = page.getByRole('textbox', { name: 'Message', exact: true });
 		await input.focus();
+		await page.screenshot({ path: info.outputPath(`${mode}-composer-focused.png`) });
 		await setLoading(page, true);
 		await expect(input).toHaveAttribute('readonly', '');
 		await expect(input).toBeFocused();
@@ -111,7 +112,7 @@ test('copy actions copy each message and show failure without changing the conve
 	page,
 	context,
 	browserName
-}) => {
+}, info) => {
 	await openApp(page, { chatDisplayMode: 'sidebar' });
 	await page.evaluate(async () => {
 		const path = '/src/lib/stores/chat.svelte.ts';
@@ -119,6 +120,13 @@ test('copy actions copy each message and show failure without changing the conve
 		chatStore.addMessage('user', 'Please keep **this text**.');
 		chatStore.addMessage('assistant', 'Here is your reply.');
 	});
+	await expect(page.locator('.message.assistant .bubble')).toHaveText('Here is your reply.');
+	for (const theme of ['light', 'dark'] as const) {
+		await page.emulateMedia({ colorScheme: theme });
+		if (theme === 'dark') await expect(page.locator('html')).toHaveClass(/dark/);
+		else await expect(page.locator('html')).not.toHaveClass(/dark/);
+		await page.screenshot({ path: info.outputPath(`chat-bubbles-${theme}.png`) });
+	}
 	if (browserName === 'chromium')
 		await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 	else

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { Dialog } from 'bits-ui';
+	import { tick } from 'svelte';
+	import { modulesStore } from '$lib/stores/modules.svelte';
 	import { characterStore } from '$lib/stores/character.svelte';
 	import { DEFAULT_SYSTEM_PROMPT, type AppMode } from '$lib/types/character';
 	import { pop, fadeFast } from '$lib/utils/motion';
@@ -17,17 +20,26 @@
 
 	let { onComplete }: Props = $props();
 
-	type Step = 'welcome' | 'character' | 'avatar' | 'services' | 'mode' | 'complete';
+	type Step = 'welcome' | 'avatar' | 'character' | 'mode' | 'chat' | 'voice' | 'complete';
 
-	const steps: Step[] = ['welcome', 'character', 'avatar', 'services', 'mode', 'complete'];
+	const steps: Step[] = ['welcome', 'avatar', 'character', 'mode', 'chat', 'voice', 'complete'];
 
 	let currentStep = $state<Step>('welcome');
 	let direction = $state<'forward' | 'back'>('forward');
 
 	// Form state
-	let characterName = $state('Utsuwa');
-	let systemPrompt = $state(DEFAULT_SYSTEM_PROMPT);
-	let appMode = $state<AppMode>('dating_sim');
+	let characterName = $state(characterStore.state.name || 'Utsuwa');
+	let voiceEnabled = $state(modulesStore.isModuleEnabled('speech'));
+	let panel = $state<HTMLDivElement | null>(null);
+	async function focusStep() {
+		await tick();
+		const title = panel?.querySelector<HTMLElement>('.ob-title');
+		title?.setAttribute('tabindex', '-1');
+		title?.focus({ preventScroll: true });
+		panel?.querySelector('.step-wrapper')?.scrollTo(0, 0);
+	}
+	let systemPrompt = $state(characterStore.state.systemPrompt || DEFAULT_SYSTEM_PROMPT);
+	let appMode = $state<AppMode>(characterStore.appMode);
 
 	const currentStepIndex = $derived(steps.indexOf(currentStep));
 
@@ -45,6 +57,7 @@
 			}
 
 			currentStep = steps[nextIndex];
+			void focusStep();
 		}
 	}
 
@@ -53,12 +66,13 @@
 		if (prevIndex >= 0) {
 			direction = 'back';
 			currentStep = steps[prevIndex];
+			void focusStep();
 		}
 	}
 
-	function handleComplete() {
+	async function handleComplete() {
 		// Mark onboarding complete (sets lastInteraction to prevent re-showing)
-		characterStore.markOnboardingComplete();
+		await characterStore.markOnboardingComplete();
 		onComplete();
 	}
 </script>
@@ -66,11 +80,16 @@
 <!-- First-run onboarding is not dismissible by backdrop click: an accidental
      click there used to permanently complete onboarding and skip the persona
      save. Completion happens only via the final step's button. -->
+<Dialog.Root open={true}><Dialog.Portal>
 <div class="modal-overlay" out:fadeFast={{ duration: 200 }}>
-	<div class="modal-container" out:pop={{ duration: 220, y: 12 }}>
+	<Dialog.Content bind:ref={panel} onEscapeKeydown={event => event.preventDefault()} onInteractOutside={event => event.preventDefault()}>
+	{#snippet child({ props })}
+	<div {...props} class="modal-container" out:pop={{ duration: 220, y: 12 }}>
+		<Dialog.Title class="sr-only">Set up your companion</Dialog.Title>
+		<Dialog.Description class="sr-only">A few short steps. Chat and voice can be set up later.</Dialog.Description>
 		<!-- Progress dots (hidden on complete step) -->
 		{#if currentStep !== 'complete'}
-			<div class="progress-dots">
+			<div class="progress-dots" aria-label={`Setup step ${currentStepIndex + 1} of ${steps.length}`}>
 				{#each steps as step, i}
 					<div
 						class="dot"
@@ -99,8 +118,8 @@
 				/>
 			{:else if currentStep === 'avatar'}
 				<AvatarStep onNext={goNext} onBack={goBack} />
-			{:else if currentStep === 'services'}
-				<ServicesStep onNext={goNext} onBack={goBack} />
+			{:else if currentStep === 'chat' || currentStep === 'voice'}
+				<ServicesStep stage={currentStep} bind:ttsEnabled={voiceEnabled} onNext={goNext} onBack={goBack} />
 			{:else if currentStep === 'mode'}
 				<ModeStep
 					mode={appMode}
@@ -109,13 +128,15 @@
 					onBack={goBack}
 				/>
 			{:else if currentStep === 'complete'}
-				<CompleteStep characterName={characterName} onComplete={handleComplete} />
+				<CompleteStep characterName={characterName.trim() || 'Utsuwa'} onComplete={handleComplete} onBack={goBack} />
 			{/if}
 			</div>
 			{/key}
 		</div>
 	</div>
+	{/snippet}</Dialog.Content>
 </div>
+</Dialog.Portal></Dialog.Root>
 
 <style>
 	.modal-overlay {

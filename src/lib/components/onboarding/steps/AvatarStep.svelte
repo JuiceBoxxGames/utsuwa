@@ -156,7 +156,7 @@
 		align-items: center;
 		justify-content: center;
 		background: var(--accent);
-		color: #fff;
+		color: var(--accent-contrast);
 		border-radius: var(--radius-full);
 		box-shadow: var(--shadow-sm);
 	}

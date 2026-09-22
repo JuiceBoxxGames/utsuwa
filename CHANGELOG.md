@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-09-21
+
+### Changed
+- A UI pass across the app introduces a shared design system for light and dark mode. Neutral fills define controls and panels, with `#04B2FD` primary actions and white text and icons on blue controls.
+- Settings, dropdowns, dialogs, photo controls, chat, and the desktop overlay share component styling. `DESIGN.md` documents the palette, spacing, focus behavior, and layout rules.
+- Character settings separates Profile from State & activity. The mood popup, settings page, and overlay use the same companion state summary.
+- Onboarding presents smaller steps for avatar, name, mode, chat, and voice while preserving its artwork and card styling. Optional services can be set up later.
+- Remove obsolete components and duplicate styles from the previous UI.
+
+### Fixed
+- Chat window messages have filled bubbles, and composite text inputs show one focus indicator around the whole control.
+- Onboarding completion saves before leaving setup, preventing setup from reopening after a reload.
+- Overlay controls support keyboard and touch access, synchronize appearance with the main window, and report failed navigation without hiding the companion.
+- Align the desktop HTTP plugin's JavaScript and Rust versions.
+
 ## [0.15.0] - 2026-09-18
 
 ### Added

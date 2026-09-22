@@ -109,7 +109,7 @@ export function getConnectedNodes(data: GraphData, nodeId: number): Set<number> 
 
 // Category colors
 export const categoryColors: Record<FactCategory, string> = {
-	user: '#00b2ff',
+	user: '#04b2fd',
 	relationship: '#ff477f',
 	shared_experience: '#34d399'
 };

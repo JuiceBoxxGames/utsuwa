@@ -368,13 +368,13 @@ function createCharacterStore() {
 	}
 
 	// Mark onboarding as complete (prevents re-showing on refresh)
-	function markOnboardingComplete(): void {
+	function markOnboardingComplete(): Promise<void> {
 		state = {
 			...state,
 			lastInteraction: new Date(),
 			updatedAt: new Date()
 		};
-		save();
+		return save(true);
 	}
 
 	// Reset state (delete and recreate)

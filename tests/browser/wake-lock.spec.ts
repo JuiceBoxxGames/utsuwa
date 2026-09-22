@@ -43,7 +43,7 @@ test('keep-awake persists, reports platform release and can retry or turn off', 
 	await page.reload();
 	await expect(toggle).toBeChecked();
 	await expect(page.getByRole('status')).toContainText('Active.');
-	await page.getByRole('link', { name: 'Back', exact: true }).click();
+	await page.getByRole('link', { name: 'Utsuwa home', exact: true }).click();
 	await page.getByRole('button', { name: 'Screen awake. Turn off keep screen awake' }).click();
 	await expect(page.getByRole('button', { name: /Turn off keep screen awake/ })).toHaveCount(0);
 	expect(

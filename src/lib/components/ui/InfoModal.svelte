@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Icon } from '$lib/components/ui';
 	import { onMount } from 'svelte';
-	import { pop, fadeFast } from '$lib/utils/motion';
+	import { Dialog } from 'bits-ui';
 	import { DOCS_URL } from '$lib/config/site';
 	import { isTauri } from '$lib/services/platform/platform';
 	import { updaterStore } from '$lib/stores/updater.svelte';
@@ -57,14 +57,6 @@
 		storageStatus = 'indexedDB' in window ? 'Available' : 'Unavailable';
 	});
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') onClose();
-	}
-
-	function handleOverlayClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) onClose();
-	}
-
 	// Always open the docs subdomain; on desktop route it to the system browser.
 	function handleDocsClick(e: MouseEvent) {
 		if (isTauri()) {
@@ -74,12 +66,15 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="modal-overlay" transition:fadeFast={{ duration: 180 }} onclick={handleOverlayClick} onkeydown={handleKeydown} role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
-	<div class="modal-container" transition:pop={{ duration: 220, y: 14 }}>
-		<button class="close-btn" onclick={onClose} aria-label="Close">
+<Dialog.Root open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+<Dialog.Portal>
+ <Dialog.Overlay class="ui-dialog-backdrop" />
+ <Dialog.Content>
+ {#snippet child({ props })}
+ <div {...props} class="modal-container ui-dialog">
+  <Dialog.Title class="sr-only">About Utsuwa</Dialog.Title>
+  <Dialog.Description class="sr-only">App information, documentation, and device support.</Dialog.Description>
+		<button class="close-btn btn btn-ghost btn-icon" onclick={onClose} aria-label="Close">
 			<Icon name="x" size={16} />
 		</button>
 
@@ -88,10 +83,10 @@
 			<span class="app-logo" role="img" aria-label="Utsuwa"></span>
 			<p id="modal-title" class="tagline">Open-source AI companion</p>
 			<div class="hero-meta">
-				<span class="version-chip">{version}</span>
+				<span class="ui-badge">{version}</span>
 				{#if isTauri()}
 					<button
-						class="update-link"
+						class="btn btn-ghost btn-sm"
 						onclick={() =>
 							updaterStore.status === 'available' ? updaterStore.install() : updaterStore.check()}
 						disabled={updateBusy}
@@ -158,53 +153,15 @@
 			</div>
 		</div>
 	</div>
-</div>
+ {/snippet}</Dialog.Content>
+</Dialog.Portal>
+</Dialog.Root>
 
 <style>
-	.modal-overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(28, 43, 51, 0.28);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		padding: 1.5rem;
-	}
 
-	.modal-container {
-		position: relative;
-		background: var(--bg-primary);
-		border-radius: var(--radius-xl);
-		max-width: 340px;
-		width: 100%;
-		padding: 1.5rem;
-		box-shadow: var(--shadow-xl);
-	}
+	.modal-container { --dialog-width: 340px; padding: 1.5rem; }
 
-	.close-btn {
-		position: absolute;
-		top: 0.85rem;
-		right: 0.85rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 30px;
-		height: 30px;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-full);
-		color: var(--text-tertiary);
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
-	}
-
-	.close-btn:hover {
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-	}
+	.close-btn { position: absolute; top: 12px; right: 12px; }
 
 	/* Hero */
 	.hero {
@@ -239,40 +196,8 @@
 		justify-content: center;
 	}
 
-	.version-chip {
-		padding: 0.25rem 0.6rem;
-		background: var(--bg-tertiary);
-		border-radius: var(--radius-full);
-		font-size: 0.72rem;
-		font-weight: 600;
-		color: var(--text-secondary);
-	}
 
-	.update-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		padding: 0.25rem 0.6rem;
-		border: none;
-		border-radius: var(--radius-full);
-		background: transparent;
-		font-size: 0.72rem;
-		font-weight: 500;
-		color: var(--accent);
-		cursor: pointer;
-		font-family: inherit;
-		transition: background 0.15s ease;
-	}
 
-	.update-link:hover:not(:disabled) {
-		background: var(--accent-muted);
-	}
-
-	.update-link:disabled {
-		opacity: 0.6;
-		cursor: default;
-		color: var(--text-tertiary);
-	}
 
 	.update-status {
 		font-size: 0.7rem;

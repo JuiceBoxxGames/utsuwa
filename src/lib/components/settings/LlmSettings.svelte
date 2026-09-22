@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { rangeProgress } from '$lib/utils/range-progress';
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { getLLMProvider } from '$lib/services/providers/registry';
@@ -131,7 +132,7 @@
 							</label>
 							<input
 								id="llm-temperature"
-								type="range"
+								type="range" use:rangeProgress={(state.consciousnessSettings.temperature as number) ?? 0.7}
 								class="settings-range"
 								min="0"
 								max="2"
@@ -149,7 +150,7 @@
 							</label>
 							<input
 								id="llm-top-p"
-								type="range"
+								type="range" use:rangeProgress={(state.consciousnessSettings.topP as number) ?? 1.0}
 								class="settings-range"
 								min="0"
 								max="1"
@@ -188,7 +189,7 @@
 							</label>
 							<input
 								id="llm-presence-penalty"
-								type="range"
+								type="range" use:rangeProgress={(state.consciousnessSettings.presencePenalty as number) ?? 0}
 								class="settings-range"
 								min="-2"
 								max="2"
@@ -206,7 +207,7 @@
 							</label>
 							<input
 								id="llm-frequency-penalty"
-								type="range"
+								type="range" use:rangeProgress={(state.consciousnessSettings.frequencyPenalty as number) ?? 0}
 								class="settings-range"
 								min="-2"
 								max="2"
@@ -288,7 +289,7 @@
 
 	.llm-advanced-params {
 		margin-top: 0.75rem;
-		border: 1px solid var(--bg-tertiary);
+		border: 1px solid transparent;
 		border-radius: var(--radius-lg);
 		padding: 0.75rem;
 		background: var(--bg-primary);

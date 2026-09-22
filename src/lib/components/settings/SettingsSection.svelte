@@ -23,44 +23,16 @@
 		</div>
 		{@render actions?.()}
 	</header>
-	{@render children()}
+	<div class="settings-group">{@render children()}</div>
 </section>
 
 <style>
-	.settings-section {
-		flex-shrink: 0;
-		background: var(--bg-primary);
-		border-radius: var(--radius-lg);
-		padding: 1.25rem;
-		box-shadow: var(--shadow-sm);
-		min-width: 0;
-	}
-	.outlined {
-		border: 1px solid var(--border-subtle);
-		box-shadow: none;
-	}
-	header {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: space-between;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-	}
-	h3 {
-		margin: 0;
-		color: var(--text-primary);
-		font-size: 0.9375rem;
-		font-weight: 600;
-	}
-	p {
-		margin: 0.25rem 0 0;
-		color: var(--text-secondary);
-		font-size: 0.8125rem;
-	}
-	@media (max-width: 640px) {
-		.settings-section {
-			flex-shrink: 0;
-			padding: 1rem;
-		}
-	}
+	.settings-section { flex-shrink: 0; min-width: 0; }
+	header { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin: 0 16px 12px; }
+	h3 { margin: 0; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+	p { margin: 4px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
+	.settings-group { min-width: 0; padding: 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-primary); box-shadow: none; }
+	.outlined header { margin-left: 0; }
+	.outlined .settings-group { background: var(--bg-secondary); }
+	@media (max-width: 640px) { header { margin-left: 12px; } .settings-group { padding: 12px; } }
 </style>

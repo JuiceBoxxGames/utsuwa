@@ -4,6 +4,7 @@
 	import type { McpAuth, McpServerConfig, McpTransport } from '$lib/types/mcp';
 	import { parseEnvLines, parseQuotedArgs } from '$lib/services/mcp/protocol';
 	import { Button, Icon } from '$lib/components/ui';
+	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
 	import Switch from '$lib/components/ui/Switch.svelte';
 
 	// ── Form state (shared for add + edit) ──────────────────────────────────
@@ -136,14 +137,13 @@
 	{/if}
 
 	{#if mcpStore.serverEnabled}
-		<section class="section">
-			<div class="section-header">
-				<h3>Servers</h3>
+		<SettingsSection title="Servers">
+			{#snippet actions()}
 				<Button variant="secondary" onclick={() => (showForm && !isEditing ? resetForm() : openAddForm())}>
 					<Icon name={showForm && !isEditing ? 'xmark' : 'plus'} size={13} />
 					{showForm && !isEditing ? 'Cancel' : 'Add Server'}
 				</Button>
-			</div>
+			{/snippet}
 
 			{#if showForm}
 				<div class="form-card">
@@ -157,7 +157,7 @@
 					<div class="form-row">
 						<span class="form-label">Transport</span>
 						<div class="transport-toggle">
-							<label class="transport-opt" class:active={formTransport === 'http'}>
+							<label class="transport-opt">
 								<input
 									type="radio"
 									name="mcp-transport"
@@ -167,7 +167,7 @@
 								/>
 								HTTP
 							</label>
-							<label class="transport-opt" class:active={formTransport === 'stdio'}>
+							<label class="transport-opt">
 								<input
 									type="radio"
 									name="mcp-transport"
@@ -201,7 +201,7 @@
 						<div class="form-row">
 							<span class="form-label">Auth</span>
 							<div class="transport-toggle">
-								<label class="transport-opt" class:active={formAuthType === 'none'}>
+								<label class="transport-opt">
 									<input
 										type="radio"
 										name="mcp-auth"
@@ -211,7 +211,7 @@
 									/>
 									None
 								</label>
-								<label class="transport-opt" class:active={formAuthType === 'bearer'}>
+								<label class="transport-opt">
 									<input
 										type="radio"
 										name="mcp-auth"
@@ -302,9 +302,9 @@
 						</div>
 						<div class="server-actions">
 							{#if server.transport === 'http' && server.auth?.type === 'bearer'}
-								<span class="server-badge auth">auth</span>
+								<span class="ui-badge">auth</span>
 							{/if}
-							<span class="server-badge">{server.transport}</span>
+							<span class="ui-badge">{server.transport}</span>
 							<Switch
 								checked={server.enabled}
 								onchange={() => mcpStore.toggleServer(server.id)}
@@ -330,16 +330,15 @@
 					</li>
 				{/each}
 			</ul>
-		</section>
+		</SettingsSection>
 
-		<section class="section">
-			<div class="section-header">
-				<h3>Available Tools</h3>
+		<SettingsSection title="Available Tools">
+			{#snippet actions()}
 				<Button variant="secondary" onclick={() => mcpStore.refreshTools()} disabled={mcpStore.isLoadingTools}>
 					<Icon name="refresh" size={13} />
 					{mcpStore.isLoadingTools ? 'Loading…' : 'Refresh'}
 				</Button>
-			</div>
+			{/snippet}
 
 			{#if mcpStore.toolsError}
 				<p class="form-error">{mcpStore.toolsError}</p>
@@ -379,29 +378,13 @@
 					{/each}
 				</ul>
 			{/if}
-		</section>
+		</SettingsSection>
 	{/if}
 </div>
 
 <style>
 	.section {
 		margin-bottom: 1rem;
-	}
-
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1rem;
-	}
-
-	.section h3 {
-		margin: 0;
-		font-size: 0.8rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--text-secondary);
 	}
 
 	.notice {
@@ -439,13 +422,7 @@
 		gap: 0.7rem;
 	}
 
-	.form-title {
-		font-size: 0.8rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--text-secondary);
-	}
+	.form-title { font-size: 14px; font-weight: 500; color: var(--text-primary); }
 
 	.form-row {
 		display: flex;
@@ -454,12 +431,7 @@
 		gap: 0.75rem;
 	}
 
-	.form-label {
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: var(--text-secondary);
-		min-width: 80px;
-	}
+	.form-label { font-size: 14px; font-weight: 500; color: var(--text-primary); min-width: 80px; }
 
 	.form-textarea {
 		resize: vertical;
@@ -467,46 +439,11 @@
 		line-height: 1.4;
 	}
 
-	.form-hint {
-		font-size: 0.72rem;
-		font-weight: 400;
-		color: var(--text-tertiary);
-	}
+	.form-hint { font-size: 13px; font-weight: 400; line-height: 1.45; color: var(--text-secondary); }
 
-	.transport-toggle {
-		display: flex;
-		gap: 0.4rem;
-	}
+	.transport-toggle { display: flex; flex-wrap: wrap; gap: 16px; }
 
-	.transport-opt {
-		min-height: 44px;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		padding: 0.25rem 0.65rem;
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--border-light);
-		font-size: 0.8rem;
-		cursor: pointer;
-		background: var(--bg-primary);
-		color: var(--text-secondary);
-	}
-
-	.transport-opt input {
-		margin: 0;
-		accent-color: var(--accent);
-	}
-
-	.transport-opt:focus-within {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
-	}
-
-	.transport-opt.active {
-		background: var(--accent);
-		color: var(--accent-contrast, #fff);
-		border-color: var(--accent);
-	}
+	.transport-opt { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; font-size: 14px; color: var(--text-primary); cursor: pointer; }
 
 	.checkbox-row {
 		display: flex;
@@ -519,7 +456,7 @@
 
 	.form-error {
 		font-size: 0.8rem;
-		color: var(--danger, #e55);
+		color: var(--color-error);
 		margin: 0;
 	}
 
@@ -581,22 +518,6 @@
 		flex-shrink: 0;
 	}
 
-	.server-badge {
-		font-size: 0.65rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		padding: 0.1rem 0.4rem;
-		border-radius: var(--radius-sm);
-		background: var(--bg-tertiary);
-		color: var(--text-tertiary);
-	}
-
-	.server-badge.auth {
-		background: var(--accent-muted);
-		color: var(--accent);
-	}
-
 	.tool-card {
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-light);
@@ -644,10 +565,6 @@
 			flex-direction: column;
 			align-items: stretch;
 			gap: 0.5rem;
-		}
-		.section-header {
-			flex-wrap: wrap;
-			gap: 0.75rem;
 		}
 	}
 </style>

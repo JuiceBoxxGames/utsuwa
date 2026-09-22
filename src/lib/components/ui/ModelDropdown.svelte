@@ -81,19 +81,23 @@
 		</DropdownMenu.Trigger>
 
 		<DropdownMenu.Portal>
-			<DropdownMenu.Content class="model-dropdown-content" align="start" sideOffset={4}>
+			<DropdownMenu.Content class="model-dropdown-content" align="start" sideOffset={4} collisionPadding={8}>
 				<div class="search-row">
 					<Icon name="search" size={14} />
 					<input
 						type="text"
 						class="search-input"
 						placeholder="Search models..."
+						aria-label="Search models"
 						bind:value={searchQuery}
 						onclick={(e) => e.stopPropagation()}
-						onkeydown={(e) => e.stopPropagation()}
+						onkeydown={(e) => {
+							// Keep text editing out of menu typeahead; let Escape and arrows reach the menu.
+							if (!['Escape', 'ArrowDown', 'ArrowUp', 'Tab'].includes(e.key)) e.stopPropagation();
+						}}
 					/>
 					{#if searchQuery}
-						<button class="search-clear" onclick={() => (searchQuery = '')}>
+						<button aria-label="Clear model search" class="btn btn-ghost btn-icon" onclick={() => (searchQuery = '')}>
 							<Icon name="x" size={12} />
 						</button>
 					{/if}
@@ -121,7 +125,7 @@
 	</DropdownMenu.Root>
 
 	{#if onRefresh && !isLoading}
-		<button class="refresh-btn" onclick={onRefresh} title="Refresh models">
+		<button class="btn btn-secondary btn-icon" onclick={onRefresh} title="Refresh models" aria-label="Refresh models">
 			<Icon name="refresh-cw" size={14} />
 		</button>
 	{/if}
@@ -134,43 +138,7 @@
 		align-items: stretch;
 	}
 
-	:global(.model-dropdown-trigger) {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex: 1;
-		padding: 0.75rem 1rem;
-		background: var(--bg-tertiary);
-		border: 1px solid transparent;
-		border-radius: var(--radius-md);
-		cursor: pointer;
-		transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
-		font-family: inherit;
-		font-size: 0.875rem;
-		color: var(--text-primary);
-		text-align: left;
-	}
-
-	:global(.model-dropdown-trigger:hover:not(:disabled)) {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-	}
-
-	:global(.model-dropdown-trigger:focus),
-	:global(.model-dropdown-trigger[data-state='open']) {
-		outline: none;
-		border-color: var(--accent);
-		box-shadow: 0 0 0 3px var(--accent-muted);
-	}
-
-	:global(.model-dropdown-trigger:disabled) {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.trigger-label {
-		flex: 1;
-		font-weight: 500;
-	}
+	.trigger-label { flex: 1; }
 
 	.trigger-placeholder {
 		flex: 1;
@@ -200,65 +168,7 @@
 		}
 	}
 
-	.refresh-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0 0.75rem;
-		background: var(--bg-tertiary);
-		border: 1px solid transparent;
-		border-radius: var(--radius-md);
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
-	}
-
-	.refresh-btn:hover {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-		color: var(--text-primary);
-	}
-
-	.refresh-btn:active {
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-	}
-
-	.refresh-btn:focus-visible {
-		outline: none;
-		border-color: var(--accent);
-		box-shadow: 0 0 0 3px var(--accent-muted);
-	}
-
-	:global(.model-dropdown-content) {
-		z-index: 1050;
-		min-width: 200px;
-		max-width: 300px;
-		background: var(--bg-primary);
-		border-radius: var(--radius-lg);
-		padding: 0.375rem;
-		box-shadow: var(--shadow-lg);
-		animation: modelSlideDown 0.16s var(--ease-brand);
-	}
-
-	@keyframes modelSlideDown {
-		from {
-			opacity: 0;
-			transform: translateY(-4px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	.search-row {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.375rem 0.5rem;
-		margin-bottom: 0.25rem;
-		background: var(--bg-secondary);
-		border-radius: var(--radius-md);
-	}
+	.search-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 
 	.search-row :global(svg) {
 		color: var(--text-tertiary);
@@ -271,7 +181,6 @@
 		border: none;
 		outline: none;
 		font-family: inherit;
-		font-size: 0.8125rem;
 		color: var(--text-primary);
 	}
 
@@ -279,71 +188,14 @@
 		color: var(--text-tertiary);
 	}
 
-	.search-clear {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.125rem;
-		background: transparent;
-		border: none;
-		color: var(--text-tertiary);
-		cursor: pointer;
-		border-radius: var(--radius-sm);
-	}
-
-	.search-clear:hover {
-		color: var(--text-primary);
-	}
-
-	:global(.model-dropdown-content[data-state='closed']) {
-		animation: modelSlideUp 0.13s var(--ease-brand) forwards;
-	}
-
-	@keyframes modelSlideUp {
-		to {
-			opacity: 0;
-			transform: translateY(-4px);
-		}
-	}
-
 	.model-dropdown-scroll {
 		max-height: 280px;
 		overflow-y: auto;
 	}
 
-	:global(.model-item) {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		width: 100%;
-		padding: 0.5rem 0.625rem;
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s;
-		outline: none;
-	}
+	.model-name { flex: 1; }
 
-	:global(.model-item:hover),
-	:global(.model-item[data-highlighted]) {
-		background: var(--bg-secondary);
-	}
-
-	:global(.model-item.selected) {
-		background: var(--accent-muted);
-	}
-
-	.model-name {
-		flex: 1;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		color: var(--text-primary);
-	}
-
-	.check-icon {
-		display: flex;
-		align-items: center;
-		color: var(--accent);
-	}
+	.check-icon { display: flex; align-items: center; }
 
 	.no-models {
 		padding: 0.75rem;
