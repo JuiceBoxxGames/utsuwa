@@ -5,7 +5,9 @@ export default defineConfig({
 	fullyParallel: false,
 	workers: 1,
 	reporter: 'list',
-	timeout: 45_000,
+	// Hosted software rendering can stall DOM reads while compositing a frame.
+	timeout: process.env.CI ? 90_000 : 45_000,
+	expect: { timeout: process.env.CI ? 20_000 : 5_000 },
 	use: {
 		baseURL: 'http://127.0.0.1:5188',
 		// Keep DOM/action traces without continuously recording the animated 3D canvas.
