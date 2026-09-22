@@ -28,7 +28,8 @@ export async function openApp(page: Page, display: Record<string, unknown> = {},
 		);
 	}, { settings: display, completeOnboarding });
 	await page.goto('/app');
-	await waitForHydration(page);
+	// Setup is usable while the background avatar is still rendering.
+	await waitForHydration(page, completeOnboarding);
 	if (completeOnboarding) await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
 	else await expect(page.getByRole('dialog', { name: 'Set up your companion' })).toBeVisible();
 }
@@ -41,9 +42,9 @@ export async function setLoading(page: Page, loading: boolean) {
 	}, loading);
 }
 
-export async function waitForHydration(page: Page) {
+export async function waitForHydration(page: Page, waitForAvatar = true) {
 	const pathname = new URL(page.url()).pathname;
-	const hasAvatar = pathname === '/app' || pathname === '/overlay';
+	const hasAvatar = waitForAvatar && (pathname === '/app' || pathname === '/overlay');
 	await expect
 		.poll(
 			() =>

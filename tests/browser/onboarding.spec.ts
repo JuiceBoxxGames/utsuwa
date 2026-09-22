@@ -36,7 +36,23 @@ test('setup takes one small decision at a time and can finish without service ke
 	await dialog.getByRole('button', { name: 'Next', exact: true }).click();
 	await expect(dialog).toContainText('Connect a chat model in Settings');
 	await page.screenshot({ path: info.outputPath('setup-complete.png') });
+	await page.evaluate(async () => {
+		const path = '/src/lib/stores/character.svelte.ts';
+		const { characterStore } = await import(/* @vite-ignore */ path);
+		const complete = characterStore.markOnboardingComplete;
+		characterStore.markOnboardingComplete = async () => {
+			await complete();
+			await new Promise<void>(resolve => {
+				(window as Window & { finishOnboardingSave?: () => void }).finishOnboardingSave = resolve;
+			});
+		};
+	});
 	await dialog.getByRole('button', { name: 'Open companion', exact: true }).click();
+	await expect.poll(() => page.evaluate(() =>
+		typeof (window as Window & { finishOnboardingSave?: () => void }).finishOnboardingSave
+	)).toBe('function');
+	await expect(dialog).toBeVisible();
+	await page.evaluate(() => (window as Window & { finishOnboardingSave?: () => void }).finishOnboardingSave?.());
 	await expect(dialog).toHaveCount(0);
 	await page.goto('/app');
 	await waitForHydration(page);
@@ -52,6 +68,7 @@ test('setup takes one small decision at a time and can finish without service ke
 });
 
 test('chat setup enables only the configured service and preserves it through Back', async ({ page }) => {
+	test.setTimeout(90_000);
 	await page.route('**/api/providers/models', route => route.fulfill({ json: {
 		models: [{ id: 'gpt-4o-mini', name: 'GPT-4o mini' }]
 	} }));

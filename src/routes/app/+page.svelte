@@ -173,7 +173,9 @@
 		if (characterStore.isReady && !onboardingDismissed) {
 			const forced = browser && new URLSearchParams(window.location.search).has('onboarding');
 			const { lastInteraction, totalInteractions } = characterStore.state;
-			showOnboarding = forced || (lastInteraction === null && totalInteractions === 0);
+			// Completion updates state before its save resolves. Let onComplete
+			// close setup only after that save has finished.
+			if (forced || (lastInteraction === null && totalInteractions === 0)) showOnboarding = true;
 		}
 	});
 
