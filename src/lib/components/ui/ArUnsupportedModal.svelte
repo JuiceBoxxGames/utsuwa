@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Icon } from '$lib/components/ui';
-	import { pop, fadeFast } from '$lib/utils/motion';
+	import { Dialog } from 'bits-ui';
 
 	interface Props {
 		onclose: () => void;
@@ -9,22 +9,20 @@
 	let { onclose }: Props = $props();
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="ar-modal-backdrop" transition:fadeFast={{ duration: 200 }} onclick={onclose}>
-	<div
-		class="ar-modal"
-		role="dialog"
-		aria-label="AR mode requirements"
-		tabindex="-1"
-		transition:pop={{ duration: 260, y: 14 }}
-		onclick={(e) => e.stopPropagation()}
-	>
-		<button class="ar-close" onclick={onclose} aria-label="Close">
+<Dialog.Root open={true} onOpenChange={(open) => { if (!open) onclose(); }}>
+<Dialog.Portal>
+ <Dialog.Overlay class="ui-dialog-backdrop" />
+ <Dialog.Content>
+ {#snippet child({ props })}
+ <div {...props} class="ar-modal ui-dialog">
+  <Dialog.Title class="sr-only">AR mode requirements</Dialog.Title>
+  <Dialog.Description class="sr-only">Devices and browsers that support augmented reality.</Dialog.Description>
+		<button class="ar-close btn btn-ghost btn-icon" onclick={onclose} aria-label="Close">
 			<Icon name="x" size={14} />
 		</button>
 
 		<div class="ar-icon-wrap">
-			<div class="ar-icon-glow"></div>
+
 			<div class="ar-icon">
 				<Icon name="headset" size={34} />
 			</div>
@@ -52,56 +50,21 @@
 			button lights up automatically.
 		</p>
 
-		<button class="ar-cta" onclick={onclose}>Got it</button>
+		<button class="btn btn-primary" onclick={onclose}>Got it</button>
 	</div>
-</div>
+ {/snippet}</Dialog.Content>
+</Dialog.Portal>
+</Dialog.Root>
 
 <style>
-	.ar-modal-backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: 90;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 1.5rem;
-		background: color-mix(in srgb, var(--bg-page, #000) 55%, transparent);
-		backdrop-filter: blur(14px);
-		-webkit-backdrop-filter: blur(14px);
-	}
 
 	.ar-modal {
-		position: relative;
-		width: min(380px, 100%);
+		--dialog-width: 380px;
 		padding: 2.25rem 1.75rem 1.75rem;
-		background: var(--bg-primary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-lg);
 		text-align: center;
 	}
 
-	.ar-close {
-		position: absolute;
-		top: 0.875rem;
-		right: 0.875rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
-		border: none;
-		border-radius: var(--radius-full);
-		background: transparent;
-		color: var(--text-tertiary);
-		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease;
-	}
-
-	.ar-close:hover {
-		color: var(--text-primary);
-		background: var(--bg-tertiary);
-	}
+	.ar-close { position: absolute; top: 12px; right: 12px; }
 
 	.ar-icon-wrap {
 		position: relative;
@@ -117,29 +80,10 @@
 		width: 72px;
 		height: 72px;
 		border-radius: var(--radius-full);
-		background: linear-gradient(135deg, var(--accent), #7dd3fc);
-		color: #fff;
+		background: var(--accent);
+		color: var(--accent-contrast);
 	}
 
-	.ar-icon-glow {
-		position: absolute;
-		inset: -10px;
-		border-radius: var(--radius-full);
-		background: radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%);
-		animation: arGlow 2.6s ease-in-out infinite;
-	}
-
-	@keyframes arGlow {
-		0%,
-		100% {
-			opacity: 0.55;
-			transform: scale(1);
-		}
-		50% {
-			opacity: 1;
-			transform: scale(1.12);
-		}
-	}
 
 	.ar-modal h2 {
 		margin: 0 0 0.625rem;
@@ -187,24 +131,4 @@
 		color: var(--text-tertiary) !important;
 	}
 
-	.ar-cta {
-		width: 100%;
-		padding: 0.75rem;
-		border: none;
-		border-radius: var(--radius-full);
-		background: var(--accent);
-		color: #fff;
-		font-size: 0.875rem;
-		font-weight: 600;
-		cursor: pointer;
-		transition: background 0.15s ease, transform 0.1s ease;
-	}
-
-	.ar-cta:hover {
-		background: var(--accent-hover);
-	}
-
-	.ar-cta:active {
-		transform: scale(0.98);
-	}
 </style>

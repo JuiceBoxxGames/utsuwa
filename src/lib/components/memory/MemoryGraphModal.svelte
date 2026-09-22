@@ -28,7 +28,7 @@
 						>Select a memory to inspect it, or drag and zoom to explore connections.</Dialog.Description
 					>
 				</div>
-				<Dialog.Close class="icon-btn" aria-label="Collapse graph"
+				<Dialog.Close class="btn btn-ghost btn-icon" aria-label="Collapse graph"
 					><Icon name="x" size={20} /></Dialog.Close
 				>
 			</header>
@@ -67,23 +67,6 @@
 		margin: 0.25rem 0 0;
 		font-size: 0.8125rem;
 		color: var(--text-secondary);
-	}
-	:global(.expanded-memory-graph .icon-btn) {
-		flex-shrink: 0;
-		width: 44px;
-		height: 44px;
-		border: 0;
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-		border-radius: var(--radius-md);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-	}
-	:global(.expanded-memory-graph .icon-btn:focus-visible) {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
 	}
 	.graph-content {
 		flex: 1;

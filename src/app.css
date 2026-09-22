@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './lib/styles/app-theme.css';
+@import './lib/styles/app-controls.css';
 
 /* Drive Tailwind's dark: variant from the .dark class the app toggles,
    not the OS media query (the theme toggle sets .dark on <html>). */

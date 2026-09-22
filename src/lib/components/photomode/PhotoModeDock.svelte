@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { rangeProgress } from '$lib/utils/range-progress';
+	import Switch from '$lib/components/ui/Switch.svelte';
 	import { Icon } from '$lib/components/ui';
 	import {
 		photomodeStore,
@@ -148,7 +150,7 @@
 {/if}
 
 {#if collapsed}
-	<button class="panel-pill" onclick={() => (collapsed = false)} aria-label="Open photo controls">
+	<button class="panel-pill btn btn-secondary btn-icon" onclick={() => (collapsed = false)} aria-label="Open photo controls">
 		<Icon name="camera" size={16} />
 	</button>
 {:else}
@@ -158,10 +160,10 @@
 			{#if savedTick}
 				<span class="saved-tick">Saved</span>
 			{/if}
-			<button class="header-btn" onclick={() => (collapsed = true)} aria-label="Collapse panel">
+			<button class="btn btn-ghost btn-icon" onclick={() => (collapsed = true)} aria-label="Collapse panel">
 				<Icon name="chevron-up" size={14} />
 			</button>
-			<button class="header-btn" onclick={() => photomodeStore.exit()} aria-label="Exit photo mode">
+			<button class="btn btn-ghost btn-icon" onclick={() => photomodeStore.exit()} aria-label="Exit photo mode">
 				<Icon name="x" size={14} />
 			</button>
 		</div>
@@ -184,16 +186,16 @@
 			{#if tab === 'pose'}
 				<div class="chip-wrap">
 					<button
-						class="chip"
-						class:selected={photomodeStore.selectedPoseId === null}
+						class="btn btn-secondary btn-sm"
+						aria-pressed={photomodeStore.selectedPoseId === null}
 						onclick={() => photomodeStore.setPose(null)}
 					>
 						Natural
 					</button>
 					{#each poses as pose (pose.id)}
 						<button
-							class="chip"
-							class:selected={photomodeStore.selectedPoseId === pose.id}
+							class="btn btn-secondary btn-sm"
+							aria-pressed={photomodeStore.selectedPoseId === pose.id}
 							onclick={() => photomodeStore.setPose(pose.id)}
 						>
 							{pose.name}
@@ -203,16 +205,16 @@
 			{:else if tab === 'face'}
 				<div class="chip-wrap">
 					<button
-						class="chip"
-						class:selected={photomodeStore.selectedExpression === null}
+						class="btn btn-secondary btn-sm"
+						aria-pressed={photomodeStore.selectedExpression === null}
 						onclick={() => photomodeStore.setExpression(null)}
 					>
 						Mood
 					</button>
 					{#each expressions as name (name)}
 						<button
-							class="chip chip-cap"
-							class:selected={photomodeStore.selectedExpression === name}
+							class="btn btn-secondary btn-sm chip-cap"
+							aria-pressed={photomodeStore.selectedExpression === name}
 							onclick={() => photomodeStore.setExpression(name)}
 						>
 							{name}
@@ -225,7 +227,7 @@
 					{#each BACKGROUNDS as bg (bg.id)}
 						<button
 							class="swatch"
-							class:selected={activeBackgroundId === bg.id}
+							aria-pressed={activeBackgroundId === bg.id}
 							style:background={bg.swatch}
 							title={bg.label}
 							aria-label={`Background: ${bg.label}`}
@@ -237,8 +239,8 @@
 				<div class="chip-wrap">
 					{#each FILTER_IDS as id (id)}
 						<button
-							class="chip"
-							class:selected={photomodeStore.filterId === id}
+							class="btn btn-secondary btn-sm"
+							aria-pressed={photomodeStore.filterId === id}
 							onclick={() => photomodeStore.setFilter(id)}
 						>
 							{PHOTO_FILTERS[id].label}
@@ -249,24 +251,15 @@
 				<div class="chip-wrap">
 					{#each FRAMES as frame (frame.id)}
 						<button
-							class="chip"
-							class:selected={photomodeStore.frameId === frame.id}
+							class="btn btn-secondary btn-sm"
+							aria-pressed={photomodeStore.frameId === frame.id}
 							onclick={() => photomodeStore.setFrame(frame.id)}
 						>
 							{frame.label}
 						</button>
 					{/each}
 				</div>
-				<label class="toggle-row">
-					<span>Vignette</span>
-					<input
-						class="switch-input"
-						type="checkbox"
-						checked={photomodeStore.vignette}
-						onchange={(e) => photomodeStore.setVignette(e.currentTarget.checked)}
-					/>
-					<span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
-				</label>
+				<div class="toggle-row"><span>Vignette</span><Switch label="Vignette" checked={photomodeStore.vignette} onchange={(value) => photomodeStore.setVignette(value)} /></div>
 			{:else if tab === 'camera'}
 				<span class="mini-label">
 					Lens
@@ -274,7 +267,7 @@
 				</span>
 				<input
 					class="slider"
-					type="range"
+					type="range" use:rangeProgress={photomodeStore.photoFov ?? displayStore.camera.fov}
 					min={CAMERA_LIMITS.fov.min}
 					max={CAMERA_LIMITS.fov.max}
 					step="1"
@@ -282,31 +275,13 @@
 					oninput={(e) => photomodeStore.setPhotoFov(parseFloat(e.currentTarget.value))}
 					aria-label="Field of view"
 				/>
-				<label class="toggle-row">
-					<span>Look at camera</span>
-					<input
-						class="switch-input"
-						type="checkbox"
-						checked={photomodeStore.headTracking}
-						onchange={(e) => photomodeStore.setHeadTracking(e.currentTarget.checked)}
-					/>
-					<span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
-				</label>
-				<label class="toggle-row">
-					<span>Thirds grid</span>
-					<input
-						class="switch-input"
-						type="checkbox"
-						checked={photomodeStore.showGrid}
-						onchange={(e) => photomodeStore.setGrid(e.currentTarget.checked)}
-					/>
-					<span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span>
-				</label>
-				<button class="panel-btn" onclick={resetFraming}>Reset framing</button>
+				<div class="toggle-row"><span>Look at camera</span><Switch label="Look at camera" checked={photomodeStore.headTracking} onchange={(value) => photomodeStore.setHeadTracking(value)} /></div>
+				<div class="toggle-row"><span>Thirds grid</span><Switch label="Thirds grid" checked={photomodeStore.showGrid} onchange={(value) => photomodeStore.setGrid(value)} /></div>
+				<button class="panel-btn btn btn-secondary" onclick={resetFraming}>Reset framing</button>
 			{:else if tab === 'sticker'}
 				<div class="chip-wrap">
 					{#each STICKERS as sticker (sticker.id)}
-						<button class="chip" onclick={() => photomodeStore.addSticker(sticker.src)}>
+						<button class="btn btn-secondary btn-sm" onclick={() => photomodeStore.addSticker(sticker.src)}>
 							{sticker.label}
 						</button>
 					{/each}
@@ -318,7 +293,7 @@
 							<img class="sticker-thumb" src={active.src} alt="" />
 							<span class="sticker-name">Sticker {i + 1}</span>
 							<button
-								class="header-btn"
+								class="btn btn-ghost btn-icon"
 								aria-label="Remove sticker"
 								onclick={() => photomodeStore.removeSticker(active.id)}
 							>
@@ -335,15 +310,15 @@
 
 		<div class="capture-row">
 			<button
-				class="panel-btn timer"
-				class:selected={timerOn}
+				class="panel-btn timer btn btn-secondary"
+				aria-pressed={timerOn}
 				onclick={() => (timerOn = !timerOn)}
 				title="3 second self-timer"
 			>
 				3s
 			</button>
-			<button class="panel-btn" onclick={() => takePhoto(1)} disabled={capturing}>Snap</button>
-			<button class="panel-btn primary" onclick={() => takePhoto(2)} disabled={capturing}>
+			<button class="panel-btn btn btn-secondary" onclick={() => takePhoto(1)} disabled={capturing}>Snap</button>
+			<button class="panel-btn primary btn btn-primary" onclick={() => takePhoto(2)} disabled={capturing}>
 				<Icon name="camera" size={14} />
 				{capturing ? (countdown > 0 ? String(countdown) : '...') : 'Capture'}
 			</button>
@@ -395,29 +370,8 @@
 		}
 	}
 
-	.panel-pill {
-		position: fixed;
-		top: 1rem;
-		left: 1rem;
-		z-index: 45;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 44px;
-		height: 44px;
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-full);
-		background: color-mix(in srgb, var(--bg-primary), transparent 8%);
-		backdrop-filter: blur(14px);
-		-webkit-backdrop-filter: blur(14px);
-		color: var(--text-secondary);
-		cursor: pointer;
-		box-shadow: var(--shadow-md);
-	}
+	.panel-pill { position: fixed; top: 1rem; left: 1rem; z-index: 45; }
 
-	.panel-pill:hover {
-		color: var(--text-primary);
-	}
 
 	.photo-panel {
 		position: fixed;
@@ -427,12 +381,6 @@
 		width: 272px;
 		max-height: calc(100vh - 2rem);
 		padding: 0.75rem;
-		background: color-mix(in srgb, var(--bg-primary), transparent 8%);
-		backdrop-filter: blur(14px);
-		-webkit-backdrop-filter: blur(14px);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-lg);
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
@@ -468,30 +416,13 @@
 		color: var(--color-success);
 	}
 
-	.header-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		border: none;
-		border-radius: var(--radius-full);
-		background: transparent;
-		color: var(--text-tertiary);
-		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease;
-	}
 
-	.header-btn:hover {
-		color: var(--text-primary);
-		background: var(--bg-tertiary);
-	}
 
 	.tab-strip {
 		display: flex;
 		gap: 0.125rem;
 		padding: 0.125rem;
-		background: var(--bg-tertiary);
+		background: var(--bg-secondary);
 		border-radius: var(--radius-md);
 	}
 
@@ -502,7 +433,7 @@
 		border-radius: calc(var(--radius-md) - 2px);
 		background: transparent;
 		color: var(--text-tertiary);
-		font-size: 0.66rem;
+		font-size: 12px;
 		font-weight: 600;
 		cursor: pointer;
 		transition: color 0.15s ease, background 0.15s ease;
@@ -513,7 +444,7 @@
 	}
 
 	.tab.active {
-		background: var(--bg-primary);
+		background: var(--selection-bg);
 		color: var(--text-primary);
 		box-shadow: var(--shadow-xs);
 	}
@@ -529,10 +460,10 @@
 	.mini-label {
 		display: flex;
 		justify-content: space-between;
-		font-size: 0.66rem;
+		font-size: 12px;
 		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
+		text-transform: none;
+		letter-spacing: normal;
 		color: var(--text-tertiary);
 	}
 
@@ -547,36 +478,17 @@
 		gap: 0.3rem;
 	}
 
-	.chip {
-		padding: 0.28rem 0.6rem;
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-full);
-		background: var(--bg-secondary);
-		color: var(--text-secondary);
-		font-size: 0.7rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-	}
 
 	.chip-cap {
 		text-transform: capitalize;
 	}
 
-	.chip:hover {
-		color: var(--text-primary);
-	}
 
-	.chip.selected {
-		background: var(--accent);
-		border-color: var(--accent);
-		color: white;
-	}
 
 	.swatch {
 		width: 26px;
 		height: 26px;
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius);
 		border: 2px solid var(--border-subtle);
 		cursor: pointer;
 		transition: transform 0.15s ease, border-color 0.15s ease;
@@ -586,42 +498,16 @@
 		transform: scale(1.08);
 	}
 
-	.swatch.selected {
+	.swatch[aria-pressed="true"] {
 		border-color: var(--accent);
 	}
 
-	.slider {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 100%;
-		height: 4px;
-		border-radius: 2px;
-		background: var(--bg-tertiary);
-		outline: none;
-		cursor: pointer;
-	}
+	.slider { width: 100%; }
 
-	.slider::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 15px;
-		height: 15px;
-		border-radius: 50%;
-		background: var(--accent);
-		border: none;
-		cursor: pointer;
-	}
 
-	.slider::-moz-range-thumb {
-		width: 15px;
-		height: 15px;
-		border-radius: 50%;
-		background: var(--accent);
-		border: none;
-		cursor: pointer;
-	}
 
 	.toggle-row {
+		padding: 13px 7px 13px 0;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -630,55 +516,10 @@
 		cursor: pointer;
 	}
 
-	/* Pill switch in the same style as the settings service toggles */
-	.switch-input {
-		position: absolute;
-		opacity: 0;
-		width: 0;
-		height: 0;
-		pointer-events: none;
-	}
 
-	.switch {
-		position: relative;
-		width: 34px;
-		height: 20px;
-		border-radius: var(--radius-full);
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-subtle);
-		transition: background 0.18s ease, border-color 0.18s ease;
-		flex-shrink: 0;
-	}
-
-	.switch-thumb {
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 14px;
-		height: 14px;
-		border-radius: var(--radius-full);
-		background: var(--text-tertiary);
-		box-shadow: var(--shadow-xs);
-		transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease;
-	}
-
-	.switch-input:checked + .switch {
-		background: var(--accent);
-		border-color: var(--accent);
-	}
-
-	.switch-input:checked + .switch .switch-thumb {
-		background: white;
-		transform: translateX(14px);
-	}
-
-	.switch-input:focus-visible + .switch {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
 
 	.hint {
-		font-size: 0.66rem;
+		font-size: 12px;
 		color: var(--text-tertiary);
 		line-height: 1.4;
 	}
@@ -701,7 +542,7 @@
 
 	.sticker-name {
 		flex: 1;
-		font-size: 0.7rem;
+		font-size: 13px;
 		color: var(--text-secondary);
 	}
 
@@ -710,48 +551,7 @@
 		gap: 0.375rem;
 	}
 
-	.panel-btn {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.3rem;
-		padding: 0.45rem 0.5rem;
-		border: none;
-		border-radius: var(--radius-md);
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
-		font-size: 0.72rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease;
-	}
-
-	.panel-btn:hover:not(:disabled) {
-		color: var(--text-primary);
-	}
-
-	.panel-btn.timer {
-		flex: 0 0 40px;
-	}
-
-	.panel-btn.selected {
-		background: var(--accent);
-		color: white;
-	}
-
-	.panel-btn.primary {
-		background: var(--accent);
-		color: white;
-		flex: 1.4;
-	}
-
-	.panel-btn.primary:hover:not(:disabled) {
-		filter: brightness(1.06);
-	}
-
-	.panel-btn:disabled {
-		opacity: 0.55;
-		cursor: default;
-	}
+	.panel-btn { flex: 1; }
+	.panel-btn.timer { flex: 0 0 44px; }
+	.panel-btn.primary { flex: 1.4; }
 </style>

@@ -201,7 +201,7 @@ test('only settings switch between the persistent window and immersive bar', asy
 	const modes = page.getByRole('group', { name: 'Chat display mode' });
 	await expect(modes.getByRole('button')).toHaveCount(2);
 	await modes.getByRole('button', { name: 'Immersive', exact: true }).click();
-	await page.getByRole('link', { name: 'Back', exact: true }).click();
+	await page.getByRole('link', { name: 'Utsuwa home', exact: true }).click();
 	await expect(panel).not.toBeVisible();
 	await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toHaveValue(
 		'Keep my draft'
@@ -210,7 +210,7 @@ test('only settings switch between the persistent window and immersive bar', asy
 	await page.getByRole('button', { name: 'Settings', exact: true }).click();
 	await page.getByRole('link', { name: 'Display', exact: true }).click();
 	await modes.getByRole('button', { name: 'Chat window', exact: true }).click();
-	await page.getByRole('link', { name: 'Back', exact: true }).click();
+	await page.getByRole('link', { name: 'Utsuwa home', exact: true }).click();
 	await expect(panel).toBeVisible();
 	const input = panel.getByRole('textbox', { name: 'Message', exact: true });
 	await expect(input).toHaveValue('Keep my draft');

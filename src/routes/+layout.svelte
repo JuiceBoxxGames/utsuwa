@@ -1,6 +1,9 @@
 <script lang="ts">
 	import '@fontsource-variable/inter';
 	import '../app.css';
+	import { onMount } from 'svelte';
+	import { applyColorMode, getColorMode } from '$lib/utils/color-mode';
+	import { isTauri } from '$lib/services/platform';
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -55,6 +58,20 @@
 			}
 		}, true);
 	}
+
+	onMount(() => {
+		const syncTheme = (event: StorageEvent) => { if (event.key === 'colorMode' || event.key === null) applyColorMode(getColorMode()); };
+		window.addEventListener('storage', syncTheme);
+		let disposed = false;
+		let unlisten: (() => void) | undefined;
+		if (isTauri()) void import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
+			const current = getCurrentWindow();
+			if (current.label !== 'main') return;
+			const stop = await current.listen('utsuwa-open-character-settings', () => { void goto('/app/settings/persona?view=state'); });
+			if (disposed) stop(); else unlisten = stop;
+		}).catch(error => console.error('Could not listen for overlay navigation', error));
+		return () => { disposed = true; unlisten?.(); window.removeEventListener('storage', syncTheme); };
+	});
 
 	// Bounce the desktop app off the landing route into the app itself.
 	$effect(() => {

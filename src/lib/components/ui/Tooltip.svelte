@@ -14,7 +14,7 @@
 		content,
 		children,
 		side = 'top',
-		sideOffset = 8,
+		sideOffset = 4,
 		delayDuration = 300
 	}: Props = $props();
 </script>
@@ -28,7 +28,6 @@
 		<TooltipPrimitive.Portal>
 			<TooltipPrimitive.Content class="ui-tooltip-content" {side} {sideOffset}>
 				{content}
-				<TooltipPrimitive.Arrow class="fill-foreground" />
 			</TooltipPrimitive.Content>
 		</TooltipPrimitive.Portal>
 	</TooltipPrimitive.Root>
@@ -38,16 +37,17 @@
 	:global(.ui-tooltip-trigger) { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; border-radius: var(--radius-sm); }
 	:global(.ui-tooltip-trigger:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 	:global(.ui-tooltip-content) {
-		z-index: 50;
+		z-index: 1400;
 		max-width: min(20rem, calc(100vw - 2rem));
-		padding: 0.4rem 0.7rem;
-		background: var(--text-primary);
-		color: var(--bg-primary);
+		padding: 4px 8px;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-light);
+		color: var(--text-primary);
 		font-size: 0.75rem;
-		font-weight: 500;
+		font-weight: 400;
 		line-height: 1.4;
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-lg);
+		border-radius: 6px;
+		box-shadow: var(--shadow-xs);
 		animation: tooltip-in 0.16s var(--ease-brand);
 	}
 
@@ -58,7 +58,7 @@
 	@keyframes tooltip-in {
 		from {
 			opacity: 0;
-			transform: scale(0.96);
+			transform: scale(0.98);
 		}
 		to {
 			opacity: 1;
@@ -69,7 +69,7 @@
 	@keyframes tooltip-out {
 		to {
 			opacity: 0;
-			transform: scale(0.96);
+			transform: scale(0.98);
 		}
 	}
 

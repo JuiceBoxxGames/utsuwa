@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { Icon } from '$lib/components/ui';
+	import { modulesStore } from '$lib/stores/modules.svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 
 	interface Props {
 		characterName: string;
 		onComplete: () => void;
+		onBack: () => void;
 	}
 
-	let { characterName, onComplete }: Props = $props();
+	let { characterName, onComplete, onBack }: Props = $props();
 
 	const activeModel = $derived(vrmStore.models.find((m) => m.id === vrmStore.activeModelId));
 </script>
@@ -25,13 +27,14 @@
 
 	<div class="ob-head">
 		<h2 class="ob-title">Meet {characterName}</h2>
-		<p class="ob-subtitle">Your companion is ready — say hello whenever you like.</p>
+		<p class="ob-subtitle">{modulesStore.isModuleEnabled('consciousness') ? 'Your companion is ready for a conversation.' : 'Your companion is set up. Connect a chat model in Settings when you are ready to talk.'}</p>
 	</div>
 
 	<button class="btn btn-primary btn-lg btn-block" onclick={onComplete}>
-		Start chatting
+		{modulesStore.isModuleEnabled('consciousness') ? 'Start chatting' : 'Open companion'}
 		<Icon name="arrow-right" size={16} />
 	</button>
+	<button class="btn btn-ghost" onclick={onBack}>Back</button>
 </div>
 
 <style>

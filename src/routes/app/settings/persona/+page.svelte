@@ -1,233 +1,80 @@
 <script lang="ts">
-	import { pop, fadeFast } from '$lib/utils/motion';
+	import { Dialog } from 'bits-ui';
+	import { goto } from '$app/navigation';
+	import { page as routePage } from '$app/state';
 	import { personaStore } from '$lib/stores/persona.svelte';
 	import { characterStore } from '$lib/stores/character.svelte';
-
-	import { Icon } from '$lib/components/ui';
 	import { getCompletedEvents } from '$lib/services/storage/events';
-
+	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
+	import Tabs from '$lib/components/ui/Tabs.svelte';
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import { createPersonaPageState } from './persona-page.svelte';
-	import AppModeSection from './AppModeSection.svelte';
 	import AvatarGallery from './AvatarGallery.svelte';
-	import CorePersonality from './CorePersonality.svelte';
 	import StatsPanel from './StatsPanel.svelte';
 
 	const page = createPersonaPageState();
-
-	// Load completed events from database
+	const view = $derived(routePage.url.searchParams.get('view') === 'state' ? 'state' : 'profile');
+	function navigate(next: string) {
+		const url = new URL(routePage.url);
+		url.searchParams.set('view', next);
+		void goto(url, { noScroll: true, keepFocus: true });
+	}
 	$effect(() => {
-		if (page.isDatingSimMode) {
-			getCompletedEvents().then(records => {
-				page.completedEventRecords = records;
-			});
-		}
+		if (page.isDatingSimMode) getCompletedEvents().then(records => { page.completedEventRecords = records; });
 	});
-
-	// Load form values from store when character is ready
 	$effect(() => {
-		if (characterStore.isReady) {
-			page.formName = personaStore.name;
-			page.formSystemPrompt = personaStore.systemPrompt;
-		}
+		if (characterStore.isReady) { page.formName = personaStore.name; page.formSystemPrompt = personaStore.systemPrompt; }
 	});
 </script>
 
-<div class="character-screen">
-	<!-- Header -->
-	<header class="screen-header">
-		<input
-			type="text"
-			class="name-input"
-			bind:value={page.formName}
-			placeholder="Character Name" aria-label="Character name"
-			onblur={page.saveName}
-		/>
-	</header>
-
-	<!-- Main Content -->
-	<div class="main-content">
-		<!-- Left Panel: Character Preview -->
-		<div class="character-panel">
-			<AppModeSection {page} />
-			<AvatarGallery {page} />
-			<CorePersonality {page} />
-		</div>
-
-		<StatsPanel {page} />
-	</div>
-
-	<!-- Mode Change Confirmation Modal -->
-	{#if page.modeConfirmOpen}
-		<div
-			class="confirm-modal"
-			transition:fadeFast={{ duration: 180 }}
-			role="button"
-			tabindex="0"
-			onclick={page.cancelModeChange}
-			onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); page.cancelModeChange(); } }}
-		>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="confirm-content" transition:pop={{ duration: 220, y: 14 }} onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-				<div class="confirm-icon">
-					<Icon name="alert" size={32} />
+<div class="page character-screen">
+	<header class="page-header"><h2>Character</h2><p>Shape your companion's identity, or see how they're doing.</p></header>
+	<Tabs bind:value={() => view, navigate} items={[{ value: 'profile', label: 'Profile' }, { value: 'state', label: 'State & activity' }]} label="Character views">
+		{#snippet children(tab)}
+			{#if tab === 'profile'}
+				<div class="profile-sections">
+					<SettingsSection title="Identity">
+						<div class="setting-row"><div class="setting-info"><label class="setting-label" for="character-name">Name</label><span class="setting-desc">What you'll call your companion.</span></div>
+							<input id="character-name" class="settings-field name-field" bind:value={page.formName} placeholder="Utsuwa" aria-label="Character name" onblur={page.saveName} />
+						</div>
+					</SettingsSection>
+					<SettingsSection title="Appearance"><AvatarGallery {page} /></SettingsSection>
+					<SettingsSection title="Personality" description="How your companion speaks, behaves, and sees the world. Changes save when you leave the field.">
+						<label class="sr-only" for="character-personality">Core personality</label>
+						<textarea id="character-personality" class="settings-field" bind:value={page.formSystemPrompt} rows="6" onblur={page.saveSystemPrompt} placeholder="Personality, speaking style, and background..."></textarea>
+					</SettingsSection>
+					<SettingsSection title="Experience">
+						<div class="setting-row"><div class="setting-info"><span class="setting-label">Companion mode</span><span class="setting-desc">Dating sim includes relationship progression and events. Companion focuses on everyday conversation.</span></div>
+							<SegmentedControl label="App mode" value={page.appMode} onchange={page.requestModeChange} options={[{ value: 'companion', label: 'Companion', icon: 'sparkles' }, { value: 'dating_sim', label: 'Dating sim', icon: 'heart' }]} compact />
+						</div>
+					</SettingsSection>
 				</div>
-				<h3 class="confirm-title">Switch Mode?</h3>
-				<p class="confirm-message">
-					Switching modes frequently can lead to unexpected results and disrupt natural progression. Are you sure you want to continue?
-				</p>
-				<div class="confirm-actions">
-					<button class="btn btn-secondary" onclick={page.cancelModeChange}>
-						Cancel
-					</button>
-					<button class="btn btn-primary" onclick={page.confirmModeChange}>
-						Switch Mode
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+			{:else}<StatsPanel {page} />{/if}
+		{/snippet}
+	</Tabs>
 </div>
 
+<Dialog.Root open={page.modeConfirmOpen} onOpenChange={(open) => { if (!open) page.cancelModeChange(); }}>
+	<Dialog.Portal>
+		<Dialog.Overlay class="confirm-modal" />
+		<Dialog.Content class="confirm-content">
+			<Dialog.Title class="confirm-title">Change companion mode?</Dialog.Title>
+			<Dialog.Description class="confirm-message">This changes whether relationship progression and events are active. Your companion's name and personality stay the same.</Dialog.Description>
+			<div class="confirm-actions"><Dialog.Close class="btn btn-secondary">Cancel</Dialog.Close><button class="btn btn-primary" onclick={page.confirmModeChange}>Change mode</button></div>
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
+
 <style>
-	.character-screen {
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-	}
-
-	/* Header */
-	.screen-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding-bottom: 1rem;
-		border-bottom: 1px solid var(--border-light);
-		margin-bottom: 1rem;
-		flex-shrink: 0;
-	}
-
-	.name-input {
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: var(--text-primary);
-		background: transparent;
-		border: none;
-		border-bottom: 2px solid transparent;
-		padding: 0.25rem 0;
-		width: auto;
-		min-width: 120px;
-		max-width: 280px;
-		transition: border-color 0.15s ease;
-	}
-
-	.name-input:hover {
-		border-bottom-color: var(--border-light);
-	}
-
-	.name-input:focus {
-		outline: none;
-		border-bottom-color: var(--accent);
-	}
-
-	/* Main Content */
-	.main-content {
-		flex: 1;
-		display: flex;
-		gap: 1.5rem;
-		min-height: 0;
-		overflow: hidden;
-	}
-
-	/* Character Panel (Left) */
-	.character-panel {
-		flex: 1 1 55%;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		min-width: 0;
-		min-height: 0;
-		overflow-y: auto;
-	}
-
-	.character-panel > :global(*) {
-		flex-shrink: 0;
-	}
-
-	/* Confirmation Modal */
-	.confirm-modal {
-		position: fixed;
-		inset: 0;
-		background: rgba(28, 43, 51, 0.28);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 100;
-		padding: 2rem;
-	}
-
-	.confirm-content {
-		background: var(--bg-primary);
-		border-radius: var(--radius-xl);
-		max-width: 360px;
-		width: 100%;
-		padding: 1.5rem;
-		text-align: center;
-		box-shadow: var(--shadow-xl);
-	}
-
-	.confirm-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 56px;
-		height: 56px;
-		background: var(--accent-subtle);
-		border-radius: var(--radius-full);
-		color: var(--accent);
-		margin-bottom: 1rem;
-	}
-
-	.confirm-title {
-		margin: 0 0 0.75rem;
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-
-	.confirm-message {
-		margin: 0 0 1.5rem;
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-		line-height: 1.5;
-	}
-
-	.confirm-actions {
-		display: flex;
-		gap: 0.75rem;
-	}
-
-
-
-
-
-
-	/* Mobile */
-	@media (max-width: 900px) {
-		.name-input {
-			font-size: 1.25rem;
-		}
-
-		.main-content {
-			flex-direction: column;
-			overflow-y: auto;
-		}
-
-		.character-panel {
-			flex: none;
-		}
-	}
+	.profile-sections { display: flex; flex-direction: column; gap: 24px; }
+	.setting-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+	.setting-info { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; }
+	.setting-desc { color: var(--text-secondary); }
+	.name-field { width: min(100%, 260px); }
+	textarea { line-height: 1.6; }
+	:global(.confirm-modal) { position: fixed; inset: 0; z-index: 1100; }
+	:global(.confirm-content) { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1101; width: min(420px, calc(100vw - 32px)); padding: 24px; }
+	:global(.confirm-title) { margin: 0; font-size: 18px; font-weight: 500; color: var(--text-primary); }
+	:global(.confirm-message) { margin: 12px 0 24px; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+	.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Icon } from '$lib/components/ui';
+	import SettingsSection from './SettingsSection.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { pop, slideOpen } from '$lib/utils/motion';
 	import {
@@ -159,24 +160,16 @@
 </script>
 
 <div class="data-management">
-	<h2 class="section-title">Data Management</h2>
-	<p class="section-description">
+	<header class="page-header"><h2>Data Management</h2>
+	<p>
 		Export your data as a save file or import a previous save. All data is stored locally in your
 		browser.
-	</p>
+	</p></header>
 
 	<div class="actions">
 		<!-- Export -->
-		<div class="action-card">
-			<div class="action-header">
-				<Icon name="download" size={20} />
-				<h3>Export Save</h3>
-			</div>
-			<p class="action-description">
-				Download all your data as a JSON file. Includes character states, memories, conversation
-				history, and milestones.
-			</p>
-			<Button onclick={handleExport} disabled={isExporting}>
+		<SettingsSection title="Export Save" description="Download all your data as a JSON file. Includes character states, memories, conversation history, and milestones.">
+			<Button variant="secondary" onclick={handleExport} disabled={isExporting}>
 				{#snippet children()}
 					{#if isExporting}
 						Exporting...
@@ -195,22 +188,17 @@
 					<span>{exportMessage.text}</span>
 				</div>
 			{/if}
-		</div>
+		</SettingsSection>
 
 		<!-- Import -->
-		<div class="action-card">
-			<div class="action-header">
-				<Icon name="upload" size={20} />
-				<h3>Import Save</h3>
-			</div>
-			<p class="action-description">Restore data from a previously exported save file.</p>
+		<SettingsSection title="Import Save" description="Restore data from a previously exported save file.">
 
 			<input
 				type="file"
 				accept=".json"
 				onchange={handleFileSelect}
 				bind:this={fileInput}
-				class="file-input"
+				class="settings-field settings-file" aria-label="Import save file"
 			/>
 
 			{#if importError}
@@ -284,17 +272,10 @@
 					</div>
 				</div>
 			{/if}
-		</div>
+		</SettingsSection>
 
 		<!-- Clear Data -->
-		<div class="action-card danger">
-			<div class="action-header">
-				<Icon name="trash" size={20} />
-				<h3>Clear All Data</h3>
-			</div>
-			<p class="action-description">
-				Permanently delete all saved data. This cannot be undone. Consider exporting first.
-			</p>
+		<SettingsSection title="Clear All Data" description="Permanently delete all saved data. This cannot be undone. Consider exporting first.">
 
 			{#if showClearConfirm}
 				<div class="confirm-message" transition:pop={{ duration: 200, y: 6 }}>
@@ -323,94 +304,14 @@
 					{/snippet}
 				</Button>
 			{/if}
-		</div>
+		</SettingsSection>
 	</div>
 </div>
 
 <style>
-	.data-management {
-		padding: 0;
-	}
+	.data-management { display: flex; flex-direction: column; gap: 28px; }
 
-	.section-title {
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: var(--text-primary);
-		margin: 0 0 0.25rem;
-	}
-
-	.section-description {
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-		margin: 0 0 1.5rem;
-	}
-
-	.actions {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.action-card {
-		background: var(--bg-primary);
-		border-radius: var(--radius-lg);
-		padding: 1.25rem;
-		box-shadow: var(--shadow-sm);
-		transition: box-shadow 0.15s ease, border-color 0.15s ease;
-	}
-
-	.action-card:hover {
-		box-shadow: var(--shadow-md);
-	}
-
-	.action-card.danger {
-		background: color-mix(in srgb, var(--color-error) 5%, var(--bg-primary));
-	}
-
-	.action-header {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
-		color: var(--accent);
-	}
-
-	.action-card.danger .action-header {
-		color: var(--color-error);
-	}
-
-	.action-header h3 {
-		font-size: 0.9375rem;
-		font-weight: 600;
-		margin: 0;
-		color: var(--text-primary);
-	}
-
-	.action-description {
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-		margin-bottom: 1rem;
-	}
-
-	.file-input {
-		display: block;
-		width: 100%;
-		padding: 0.875rem 1rem;
-		font-size: 0.875rem;
-		border: 1.5px dashed var(--border-light);
-		border-radius: var(--radius-md);
-		background: var(--bg-secondary);
-		color: var(--text-secondary);
-		cursor: pointer;
-		margin-bottom: 1rem;
-		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-	}
-
-	.file-input:hover {
-		border-color: var(--accent);
-		background: var(--accent-subtle);
-		color: var(--text-primary);
-	}
+	.actions { display: flex; flex-direction: column; gap: 24px; }
 
 	.error-message {
 		display: flex;
@@ -498,6 +399,7 @@
 		gap: 0.25rem 0.75rem;
 		cursor: pointer;
 		padding: 0.75rem;
+		border: 1px solid var(--border-light);
 		background: var(--bg-primary);
 		border-radius: var(--radius-md);
 		transition: background 0.15s ease, border-color 0.15s ease;
@@ -508,7 +410,8 @@
 	}
 
 	.mode-option:has(input:checked) {
-		background: var(--accent-muted);
+		background: var(--control-selected);
+		border-color: transparent;
 	}
 
 	.mode-option input {
@@ -558,5 +461,4 @@
 		gap: 0.75rem;
 	}
 
-	@media (max-width: 640px) { .action-card { padding: 1rem; } }
 </style>

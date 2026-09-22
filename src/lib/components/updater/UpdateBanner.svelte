@@ -97,6 +97,7 @@
 		padding: 0.875rem 1rem;
 		border-radius: var(--radius-lg);
 		background: var(--bg-primary);
+		border: 1px solid var(--border-light);
 		box-shadow: var(--shadow-lg);
 	}
 
@@ -121,8 +122,8 @@
 		width: 38px;
 		height: 38px;
 		border-radius: var(--radius-md);
-		color: var(--accent);
-		background: var(--accent-muted);
+		color: var(--text-secondary);
+		background: var(--bg-secondary);
 	}
 
 	.banner-body {

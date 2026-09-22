@@ -87,12 +87,12 @@
 					<Icon name={eventIcon} size={18} />
 					<span>{eventName}</span>
 				</div>
-				<button class="close-btn" onclick={onClose} aria-label="Close">
+				<button class="btn btn-ghost btn-icon close-btn" onclick={onClose} aria-label="Close">
 					<Icon name="x" size={16} />
 				</button>
 			</div>
 		{:else}
-			<button class="close-btn floating" onclick={onClose} aria-label="Close">
+			<button class="btn btn-ghost btn-icon close-btn floating" onclick={onClose} aria-label="Close">
 				<Icon name="x" size={16} />
 			</button>
 		{/if}
@@ -105,7 +105,7 @@
 			{#if phase === 'intro' && scene.intro}
 				<div class="scene-intro">
 					<p class="intro-text">{scene.intro}</p>
-					<button class="continue-btn" onclick={advance}>Continue</button>
+					<button class="btn btn-primary" onclick={advance}>Continue</button>
 				</div>
 			{/if}
 
@@ -115,7 +115,7 @@
 					<div class="speaker-name">{companionName}</div>
 					<p class="dialogue-text">"{scene.dialogue}"</p>
 					{#if !scene.choices || scene.choices.length === 0}
-						<button class="continue-btn" onclick={advance}>Continue</button>
+						<button class="btn btn-primary" onclick={advance}>Continue</button>
 					{/if}
 				</div>
 			{/if}
@@ -138,7 +138,7 @@
 					</div>
 					<div class="speaker-name">{companionName}</div>
 					<p class="dialogue-text">"{selectedChoice.response}"</p>
-					<button class="continue-btn" onclick={advance}>Continue</button>
+					<button class="btn btn-primary" onclick={advance}>Continue</button>
 				</div>
 			{/if}
 
@@ -146,7 +146,7 @@
 			{#if phase === 'outro' && scene.outro}
 				<div class="scene-outro">
 					<p class="outro-text">{scene.outro}</p>
-					<button class="continue-btn" onclick={advance}>Finish</button>
+					<button class="btn btn-primary" onclick={advance}>Finish</button>
 				</div>
 			{/if}
 
@@ -209,25 +209,6 @@
 		color: var(--accent);
 	}
 
-	.close-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-sm);
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s;
-	}
-
-	.close-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
 	.close-btn.floating {
 		position: absolute;
 		top: 0.75rem;
@@ -278,40 +259,11 @@
 		border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 	}
 
-	.choice-label {
-		font-size: 0.7rem;
-		color: var(--text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.025em;
-	}
+	.choice-label { font-size: 12px; color: var(--text-secondary); }
 
 	.choice-text {
 		color: var(--text-primary);
 		margin: 0.25rem 0 0;
-	}
-
-	.continue-btn {
-		display: block;
-		width: 100%;
-		padding: 0.75rem;
-		background: var(--accent);
-		border: none;
-		border-radius: var(--radius-full);
-		color: #fff;
-		font-weight: 500;
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
-	}
-
-	.continue-btn:hover {
-		background: var(--accent-hover);
-		transform: translateY(-1px);
-		box-shadow: var(--shadow-glow);
-	}
-
-	.continue-btn:active {
-		transform: translateY(0);
 	}
 
 	.hint {

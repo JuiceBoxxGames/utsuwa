@@ -217,7 +217,7 @@
 		padding: 0.7rem 1rem;
 		max-width: min(420px, 90vw);
 		background: var(--accent);
-		color: #fff;
+		color: var(--accent-contrast);
 		border-radius: var(--radius-lg);
 		font-size: 0.82rem;
 		font-weight: 600;
@@ -273,11 +273,11 @@
 	.privacy-ack {
 		flex-shrink: 0;
 		border: none;
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius);
 		padding: 0.35rem 0.85rem;
 		font-size: 0.78rem;
 		font-weight: 600;
-		color: #fff;
+		color: var(--accent-contrast);
 		background: var(--accent);
 		cursor: pointer;
 		transition: background 0.15s ease;
@@ -296,7 +296,7 @@
 		justify-content: center;
 		gap: 0.55rem;
 		min-height: 52px;
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius);
 		background: var(--accent-subtle);
 		border: 2px dashed var(--accent);
 		color: var(--accent);

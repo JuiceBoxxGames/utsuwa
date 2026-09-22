@@ -1,0 +1,40 @@
+import { test, expect } from '@playwright/test';
+import { openApp, waitForHydration } from './helpers';
+
+test('the popover and Character settings share live stats and Profile saves edits', async ({ page }, info) => {
+	await openApp(page);
+	await page.evaluate(async () => {
+		const path = '/src/lib/stores/character.svelte.ts';
+		const { characterStore } = await import(/* @vite-ignore */ path);
+		characterStore.setAppMode('dating_sim');
+		Object.assign(characterStore.state, { energy: 72, trust: 48, affection: 650 });
+	});
+	await page.getByRole('button', { name: 'Companion stats', exact: true }).click();
+	const popup = page.getByRole('dialog', { name: 'Companion stats' });
+	const before = await popup.locator('.companion-state-summary').innerText();
+	await popup.getByRole('link', { name: 'Character settings' }).click();
+	await expect(page).toHaveURL(/persona\?view=state$/);
+	await expect(page.getByRole('tab', { name: 'State & activity' })).toHaveAttribute('aria-selected', 'true');
+	expect(await page.locator('.companion-state-summary').innerText()).toBe(before);
+	await page.screenshot({ path: info.outputPath('character-state.png') });
+	await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+	await page.getByRole('textbox', { name: 'Character name', exact: true }).fill('Aki');
+	await page.getByRole('textbox', { name: 'Core personality', exact: true }).fill('Patient, curious, and direct.');
+	await page.getByRole('textbox', { name: 'Core personality', exact: true }).press('Tab');
+	await page.reload();
+	await waitForHydration(page);
+	await expect(page.getByRole('textbox', { name: 'Character name', exact: true })).toHaveValue('Aki');
+	await expect(page.getByRole('textbox', { name: 'Core personality', exact: true })).toHaveValue('Patient, curious, and direct.');
+	await page.screenshot({ path: info.outputPath('character-profile.png') });
+	const modes = page.getByRole('group', { name: 'App mode' });
+	await modes.getByRole('button', { name: 'Companion', exact: true }).click();
+	const confirm = page.getByRole('dialog', { name: 'Change companion mode?' });
+	await expect(confirm).toBeVisible();
+	await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(modes.getByRole('button', { name: 'Dating sim', exact: true })).toHaveAttribute('aria-pressed', 'true');
+	await modes.getByRole('button', { name: 'Companion', exact: true }).click();
+	await confirm.getByRole('button', { name: 'Change mode', exact: true }).click();
+	await page.getByRole('tab', { name: 'State & activity' }).click();
+	await expect(page.getByRole('region', { name: 'Relationship stats' })).toHaveCount(0);
+	await expect(page.getByRole('region', { name: 'Character stats' })).toBeVisible();
+});

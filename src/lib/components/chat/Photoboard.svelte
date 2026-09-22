@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { Icon } from '$lib/components/ui';
-	import { fadeFast } from '$lib/utils/motion';
+	import { Dialog } from 'bits-ui';
 	import {
 		listKeepsakes,
 		getKeepsakeImageUrl,
@@ -119,35 +119,21 @@
 		await forgetKeepsakeImage(id);
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key !== 'Escape') return;
-		if (selected) closeLightbox();
-		else onClose();
-	}
-	function handleOverlayClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) onClose();
-	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div
-	class="board-overlay"
-	out:fadeFast={{ duration: 160 }}
-	onclick={handleOverlayClick}
-	onkeydown={handleKeydown}
-	role="dialog"
-	aria-modal="true"
-	aria-label="Photoboard"
-	tabindex="-1"
->
-	<div class="board">
+<Dialog.Root open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+<Dialog.Portal>
+ <Dialog.Overlay class="ui-dialog-backdrop" />
+ <Dialog.Content>
+ {#snippet child({ props })}
+ <div {...props} class="board ui-dialog">
+  <Dialog.Title class="sr-only">Photoboard</Dialog.Title>
+  <Dialog.Description class="sr-only">Photos you've shared with your companion.</Dialog.Description>
 		<div class="board-header">
 			<h2>
-				Things you've shown her{#if items.length}<span class="count">{items.length}</span>{/if}
+				Things you've shown her{#if items.length}<span class="ui-badge">{items.length}</span>{/if}
 			</h2>
-			<button class="close-btn" onclick={onClose} aria-label="Close">
+			<button class="btn btn-ghost btn-icon" onclick={onClose} aria-label="Close">
 				<Icon name="x" size={16} />
 			</button>
 		</div>
@@ -167,7 +153,7 @@
 					<div class="section-photos">
 						{#each section.items as item, i (item.id)}
 							<div class="photo-card" style="--rot: {ROTATIONS[i % ROTATIONS.length]}deg">
-								<button class="photo-btn" onclick={() => openLightbox(item)} aria-label="View photo">
+								<button class="photo-btn" onclick={(event) => { event.currentTarget.focus(); void openLightbox(item); }} aria-label="View photo">
 									<img src={item.url} alt="" loading="lazy" />
 								</button>
 								<div class="caption">{shortDate(item.createdAt)}</div>
@@ -184,21 +170,17 @@
 			</div>
 		{/if}
 	</div>
-</div>
+ {/snippet}</Dialog.Content>
+</Dialog.Portal>
 
 {#if selected}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<div
-		class="lightbox"
-		onclick={(e) => {
-			if (e.target === e.currentTarget) closeLightbox();
-		}}
-		onkeydown={handleKeydown}
-		role="dialog"
-		aria-modal="true"
-		aria-label="Photo"
-		tabindex="-1"
-	>
+ {@const photo = selected}
+ <Dialog.Root open={true} onOpenChange={(open) => { if (!open) closeLightbox(); }}>
+ <Dialog.Portal><Dialog.Content>
+ {#snippet child({ props })}
+ <div {...props} class="lightbox">
+  <Dialog.Title class="sr-only">Photo</Dialog.Title>
+  <Dialog.Description class="sr-only">Flip the photo to see its note.</Dialog.Description>
 		<button class="lb-close" onclick={closeLightbox} aria-label="Close">
 			<Icon name="x" size={18} />
 		</button>
@@ -209,9 +191,9 @@
 				</div>
 				<div class="flip-back">
 					<div class="back-content">
-						<div class="back-date">{fullDate(selected.createdAt)}</div>
-						{#if selected.note}
-							<p class="back-note">“{selected.note}”</p>
+						<div class="back-date">{fullDate(photo.createdAt)}</div>
+						{#if photo.note}
+							<p class="back-note">“{photo.note}”</p>
 						{:else}
 							<p class="back-empty">She hasn't said much about this one… yet.</p>
 						{/if}
@@ -221,55 +203,21 @@
 		</button>
 		<div class="lb-hint">Click the photo to flip it over</div>
 	</div>
+ {/snippet}</Dialog.Content></Dialog.Portal>
+ </Dialog.Root>
 {/if}
+</Dialog.Root>
 
 <style>
-	.board-overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		padding: 1.5rem;
-		animation: fadeIn 0.2s ease-out;
-	}
 
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
-	}
 
 	.board {
-		position: relative;
-		width: min(820px, 100%);
-		max-height: 86vh;
+		--dialog-width: 820px;
 		display: flex;
 		flex-direction: column;
-		border-radius: var(--radius-xl);
-		background: var(--bg-primary);
-		box-shadow: var(--shadow-xl);
 		overflow: hidden;
-		animation: pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
-	@keyframes pop {
-		from {
-			transform: scale(0.94);
-			opacity: 0;
-		}
-		to {
-			transform: scale(1);
-			opacity: 1;
-		}
-	}
 
 	.board-header {
 		display: flex;
@@ -289,33 +237,8 @@
 		gap: 0.5rem;
 	}
 
-	.count {
-		font-size: 0.7rem;
-		font-weight: 600;
-		padding: 0.1rem 0.45rem;
-		border-radius: var(--radius-full);
-		background: var(--accent-subtle);
-		color: var(--accent);
-	}
 
-	.close-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 30px;
-		height: 30px;
-		border: none;
-		border-radius: var(--radius-full);
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: color 0.15s, background 0.15s;
-	}
 
-	.close-btn:hover {
-		color: var(--text-primary);
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-	}
 
 	.board-wall {
 		display: flex;
@@ -325,15 +248,7 @@
 		overflow-y: auto;
 	}
 
-	.section-label {
-		font-size: 0.72rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--text-tertiary);
-		margin: 0.75rem 0 0.25rem;
-		padding-left: 0.25rem;
-	}
+	.section-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin: 12px 0 8px; }
 
 	.section-photos {
 		display: grid;
@@ -392,7 +307,7 @@
 		width: 20px;
 		height: 20px;
 		border: 2px solid var(--bg-primary);
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius, var(--radius-md));
 		background: var(--color-error);
 		color: #fff;
 		display: flex;
@@ -468,7 +383,7 @@
 		width: 38px;
 		height: 38px;
 		border: none;
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius);
 		background: rgba(255, 255, 255, 0.15);
 		color: #fff;
 		display: flex;

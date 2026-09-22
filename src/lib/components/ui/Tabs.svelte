@@ -39,7 +39,7 @@
 	}
 	:global(.ui-tab) {
 		flex: 1 0 auto;
-		min-height: 44px;
+		min-height: 32px;
 		padding: 0.5rem 0.875rem;
 		border: 0;
 		border-radius: var(--radius-md);
@@ -53,9 +53,10 @@
 			color 200ms ease-out;
 	}
 	:global(.ui-tab[data-state='active']) {
-		background: var(--accent-muted);
-		color: var(--accent);
-		font-weight: 600;
+		background: var(--selection-bg);
+		box-shadow: var(--shadow-xs);
+		color: var(--text-primary);
+		font-weight: 500;
 	}
 	:global(.ui-tab:focus-visible) {
 		outline: 2px solid var(--accent);
@@ -70,4 +71,5 @@
 			transition: none;
 		}
 	}
+	@media (pointer: coarse) { :global(.ui-tab) { min-height: 44px; } }
 </style>

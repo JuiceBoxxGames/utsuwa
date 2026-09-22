@@ -1,35 +1,23 @@
-.settings-layout .page {
-	min-height: 0;
-	max-width: 840px;
-	height: 100%;
-	overflow-y: auto;
+/* T3 settings pages use one readable column, grouped rows, and restrained headings. */
+.settings-layout .settings-content > :is(.page, .display-page, .character-screen, .dev-layout) {
+	width: 100%; max-width: 960px; margin: 0 auto; min-height: 0; height: 100%; overflow-y: auto;
 }
-
-.settings-layout .page-header {
-	margin-bottom: 1.5rem;
-}
-
-.settings-layout .page-header h2 {
-	margin: 0 0 0.25rem;
-	font-size: 1.5rem;
-	font-weight: 700;
-	color: var(--text-primary);
-}
-
-.settings-layout .page-header p {
-	margin: 0;
-	font-size: 0.875rem;
-	color: var(--text-secondary);
-}
-
-.settings-layout .section {
-	min-width: 0;
-	background: var(--bg-primary);
-	border-radius: var(--radius-lg);
-	padding: 1.25rem;
-	box-shadow: var(--shadow-sm);
-}
-
+.settings-layout :is(.page, .display-page) { display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
+.settings-layout .page-header { flex-shrink: 0; margin-bottom: 0; padding: 0 16px; }
+.settings-layout .page-header h2 { margin: 0 0 6px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
+.settings-layout .page-header p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
+.settings-layout .section { min-width: 0; flex-shrink: 0; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 16px; box-shadow: none; }
+.settings-layout .settings-stack { gap: 0; }
+.settings-layout .setting-row { padding: 12px 0; gap: 24px; }
+.settings-layout .setting-row:first-child { padding-top: 0; }
+.settings-layout .setting-row:last-child { padding-bottom: 0; }
+.settings-layout .setting-row + .setting-row { border-top: 1px solid var(--border-subtle); }
+.settings-layout .setting-label { font-size: 14px; font-weight: 500; letter-spacing: -0.005em; }
+.settings-layout .setting-desc { font-size: 13px; line-height: 1.45; }
+.settings-layout .hint { font-size: 13px; line-height: 1.45; }
 @media (max-width: 640px) {
-	.settings-layout .section { padding: 1rem; }
+	.settings-layout :is(.page, .display-page) { gap: 24px; }
+	.settings-layout .page-header { padding: 0; }
+	.settings-layout .section { padding: 12px; }
+	.settings-layout .setting-row { gap: 12px; }
 }

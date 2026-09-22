@@ -105,3 +105,8 @@
 .ob-actions--split {
 	justify-content: space-between;
 }
+
+/* Reveal optional setup without changing the existing onboarding layout. */
+.ob-advanced summary { cursor: pointer; color: var(--text-secondary); font-size: 0.8rem; }
+.ob-advanced[open] summary { margin-bottom: 1rem; }
+.ob-title:focus { outline: none; }

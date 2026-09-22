@@ -16,10 +16,6 @@ export interface Achievement {
 // passed to the section components via props. Effects stay in the page.
 export function createPersonaPageState() {
 	// Character state - single companion system
-	const charState = $derived.by(() => characterStore.state);
-	const moodInfo = $derived.by(() => characterStore.moodInfo);
-	const stageInfo = $derived.by(() => characterStore.stageInfo);
-	const affectionPercent = $derived.by(() => characterStore.affectionPercent);
 	const isCharacterLoading = $derived.by(() => characterStore.isLoading);
 	const appMode = $derived.by(() => characterStore.appMode);
 	const isDatingSimMode = $derived.by(() => characterStore.appMode === 'dating_sim');
@@ -43,13 +39,13 @@ export function createPersonaPageState() {
 			.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
 	});
 
-	// Color and icon config for achievement types
-	const achievementConfig: Record<EventType, { color: string; bgColor: string; icon: string; label: string }> = {
-		milestone: { color: 'var(--ctp-yellow)', bgColor: 'var(--ctp-yellow)', icon: 'trophy', label: 'Milestone' },
-		anniversary: { color: 'var(--ctp-pink)', bgColor: 'var(--ctp-pink)', icon: 'heart', label: 'Anniversary' },
-		conditional: { color: 'var(--ctp-mauve)', bgColor: 'var(--ctp-mauve)', icon: 'award', label: 'Unlocked' },
-		random: { color: 'var(--ctp-teal)', bgColor: 'var(--ctp-teal)', icon: 'sparkles', label: 'Surprise' },
-		scheduled: { color: 'var(--ctp-blue)', bgColor: 'var(--ctp-blue)', icon: 'calendar', label: 'Event' }
+	// Labels and icons for achievement types
+	const achievementConfig: Record<EventType, { icon: string; label: string }> = {
+		milestone: { icon: 'trophy', label: 'Milestone' },
+		anniversary: { icon: 'heart', label: 'Anniversary' },
+		conditional: { icon: 'award', label: 'Unlocked' },
+		random: { icon: 'sparkles', label: 'Surprise' },
+		scheduled: { icon: 'calendar', label: 'Event' }
 	};
 
 	function formatAchievementDate(date: Date): string {
@@ -59,8 +55,6 @@ export function createPersonaPageState() {
 	// Persona form state
 	let formName = $state('');
 	let formSystemPrompt = $state('');
-	let personalityExpanded = $state(false);
-	let eventsExpanded = $state(false);
 	let uploadModalOpen = $state(false);
 	let modeConfirmOpen = $state(false);
 	let pendingMode = $state<'companion' | 'dating_sim' | null>(null);
@@ -99,18 +93,6 @@ export function createPersonaPageState() {
 
 	return {
 		// Getters
-		get charState() {
-			return charState;
-		},
-		get moodInfo() {
-			return moodInfo;
-		},
-		get stageInfo() {
-			return stageInfo;
-		},
-		get affectionPercent() {
-			return affectionPercent;
-		},
 		get isCharacterLoading() {
 			return isCharacterLoading;
 		},
@@ -140,18 +122,6 @@ export function createPersonaPageState() {
 		},
 		set formSystemPrompt(value: string) {
 			formSystemPrompt = value;
-		},
-		get personalityExpanded() {
-			return personalityExpanded;
-		},
-		set personalityExpanded(value: boolean) {
-			personalityExpanded = value;
-		},
-		get eventsExpanded() {
-			return eventsExpanded;
-		},
-		set eventsExpanded(value: boolean) {
-			eventsExpanded = value;
 		},
 		get uploadModalOpen() {
 			return uploadModalOpen;

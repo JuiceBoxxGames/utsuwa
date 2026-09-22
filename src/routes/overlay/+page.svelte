@@ -8,7 +8,9 @@
 	import FloatingChatIcon from '$lib/components/overlay/FloatingChatIcon.svelte';
 	import FloatingMicButton from '$lib/components/overlay/FloatingMicButton.svelte';
 	import HotkeyHandler from '$lib/components/overlay/HotkeyHandler.svelte';
-	import CompanionStatus from '$lib/components/ui/CompanionStatus.svelte';
+	import CompanionStats from '$lib/components/ui/CompanionStats.svelte';
+	import { goto } from '$app/navigation';
+	import { tick } from 'svelte';
 	import CameraSettingsPanel from '$lib/components/ui/CameraSettingsPanel.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
 	import { EventScene } from '$lib/components/events';
@@ -46,6 +48,7 @@
 	let thinkingPhase = $state<ThinkingPhase>('thinking');
 	let activeEvent = $state<EventDefinition | null>(null);
 	let showCamera = $state(false);
+	let windowError = $state('');
 	let positionLocked = $state(false);
 
 	const chatExpanded = $derived(overlayStore.chatExpanded);
@@ -198,8 +201,9 @@
 	}
 
 	// Exit overlay and return to main window
-	async function exitToMain() {
-		if (!isTauri()) return;
+	async function exitToMain(openSettings = false) {
+		windowError = '';
+		if (!isTauri()) { await goto(openSettings ? '/app/settings/persona?view=state' : '/app'); return; }
 		try {
 			const { getCurrentWindow, getAllWindows } = await import('@tauri-apps/api/window');
 
@@ -208,16 +212,18 @@
 
 			if (!mainWindow) {
 				// Main window was closed — don't hide overlay or user loses the app
-				console.error('Main window not found, cannot exit overlay');
+				windowError = 'The main window is unavailable. Your companion is still here.';
 				return;
 			}
 
 			await mainWindow.show();
 			await mainWindow.setFocus();
+			if (openSettings) await mainWindow.emitTo('main', 'utsuwa-open-character-settings');
 
 			const overlay = getCurrentWindow();
 			await overlay.hide();
 		} catch (e) {
+			windowError = 'Could not open the main window. Try again.';
 			console.error('Failed to exit overlay:', e);
 		}
 	}
@@ -282,6 +288,12 @@
 	}
 </script>
 
+<svelte:window onkeydown={async event => {
+	if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+	if ((event.target as HTMLElement).closest('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+	if (showCamera) { event.preventDefault(); showCamera = false; await tick(); document.querySelector<HTMLButtonElement>('[aria-label="Camera settings"]')?.focus(); }
+	else if (chatExpanded) { event.preventDefault(); overlayStore.setChatExpanded(false); await tick(); document.querySelector<HTMLButtonElement>('[aria-label="Open chat"]')?.focus(); }
+}} />
 <ScreenWakeLock />
 <div class="overlay-wake-status"><WakeLockIndicator /></div>
 <div class="overlay-container">
@@ -308,14 +320,14 @@
 
 	<!-- Control rail (revealed on hover) -->
 	<div class="overlay-rail">
-		<button class="rail-btn" onclick={exitToMain} aria-label="Exit to main app" title="Back to app">
-			<Icon name="x" size={15} />
+		<button class="rail-btn" onclick={() => exitToMain()} aria-label="Exit to main app" title="Back to app">
+			<Icon name="chevron-left" size={15} />
 		</button>
 		<button
 			class="rail-btn"
 			class:rail-btn-active={showCamera}
 			onclick={() => (showCamera = !showCamera)}
-			aria-label="Camera settings"
+			aria-label="Camera settings" aria-expanded={showCamera}
 			title="Camera"
 		>
 			<Icon name="video" size={15} />
@@ -324,6 +336,7 @@
 			class="rail-btn"
 			class:rail-btn-active={positionLocked}
 			onclick={toggleLock}
+			aria-pressed={positionLocked}
 			aria-label={positionLocked ? 'Unlock position' : 'Lock position'}
 			title={positionLocked ? 'Position locked' : 'Lock position'}
 		>
@@ -352,7 +365,7 @@
 
 	<!-- Bottom controls (status + mic + chat icon) -->
 	<div class="chat-controls">
-		<CompanionStatus overlay={true} />
+		<CompanionStats onOpenSettings={() => exitToMain(true)} />
 		{#if !chatExpanded}
 			<FloatingMicButton onTranscript={handleSend} />
 		{/if}
@@ -366,6 +379,7 @@
 		</div>
 	{/if}
 
+	{#if windowError}<div class="window-error" role="alert"><span>{windowError}</span><button class="btn btn-ghost btn-sm" aria-label="Dismiss window error" onclick={() => windowError = ''}><Icon name="x" size={14} /></button></div>{/if}
 	<!-- Error toasts -->
 	{#if chatStore.error}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -417,17 +431,15 @@
 		cursor: grabbing;
 	}
 
-	/* Soft boundary stroke so the invisible window edges are discoverable.
-	   Double stroke (light outer, dark inner) stays visible on any desktop. */
+	/* A faint fill reveals the draggable window on hover. */
 	.overlay-frame {
 		position: fixed;
 		inset: 5px;
 		border-radius: 22px;
 		pointer-events: none;
 		z-index: 45;
-		box-shadow:
-			0 0 0 1.5px rgba(255, 255, 255, 0.3),
-			inset 0 0 0 1.5px rgba(0, 0, 0, 0.18);
+		background: color-mix(in srgb, var(--bg-primary) 8%, transparent);
+		box-shadow: var(--shadow-md);
 		opacity: 0;
 		transition: opacity 0.2s ease;
 	}
@@ -448,7 +460,7 @@
 		touch-action: none;
 		border-radius: 16px 4px 8px 4px;
 		background: color-mix(in srgb, var(--bg-tertiary) 65%, transparent);
-		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+		box-shadow: var(--shadow-sm);
 		opacity: 0;
 		transition: opacity 0.2s ease, background 0.15s ease;
 	}
@@ -488,9 +500,9 @@
 	.rail-btn {
 		width: 32px;
 		height: 32px;
-		border: none;
-		border-radius: var(--radius-full);
-		background: var(--bg-tertiary);
+		border: 1px solid transparent;
+		border-radius: 8px;
+		background: var(--control-bg);
 		color: var(--text-secondary);
 		cursor: pointer;
 		display: flex;
@@ -503,8 +515,10 @@
 			box-shadow 0.15s ease, transform 0.15s ease;
 	}
 
-	.overlay-container:hover .rail-btn {
-		opacity: 0.6;
+	.overlay-container:hover .rail-btn,
+	.overlay-rail:focus-within .rail-btn,
+	.rail-btn:focus-visible {
+		opacity: 1;
 		pointer-events: auto;
 	}
 
@@ -513,7 +527,7 @@
 		color: var(--text-primary);
 		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
 		box-shadow: var(--shadow-md);
-		transform: scale(1.1);
+		transform: none;
 	}
 
 	/* Active states (camera panel open, position locked) stay visible */
@@ -532,14 +546,20 @@
 	}
 
 	.chat-controls {
-		position: fixed;
+		position: absolute;
 		bottom: 1.5rem;
 		left: 50%;
 		transform: translateX(-50%);
 		z-index: 40;
 		display: flex;
-		gap: 0.75rem;
-		align-items: flex-end;
+		gap: 8px;
+		align-items: center;
+		max-width: calc(100% - 24px);
+		padding: 6px;
+		border: 1px solid var(--border-light);
+		border-radius: 12px;
+		background: var(--control-bg);
+		box-shadow: var(--shadow-md);
 	}
 
 	.chat-bar-container {
@@ -616,4 +636,7 @@
 	}
 
 	.overlay-wake-status { position: fixed; top: 48px; right: 12px; z-index: 70; }
+	.window-error { position: fixed; top: 12px; left: 12px; right: 64px; padding: 10px; display: flex; align-items: center; gap: 8px; background: var(--control-bg); border: 1px solid var(--color-error); color: var(--text-primary); border-radius: 8px; font-size: 13px; z-index: 100; }
+	@media (hover: none), (pointer: coarse) { .rail-btn { opacity: 1; pointer-events: auto; width: 44px; height: 44px; } .overlay-camera-anchor { right: 68px; } }
+	@media (prefers-reduced-motion: reduce) { .rail-btn, .overlay-frame, .resize-tab { transition: none; } .chat-bar-container, .error-toast { animation: none; } }
 </style>

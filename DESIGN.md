@@ -1,58 +1,100 @@
-# Design System
+# Utsuwa app UI
 
-The single reference for how Utsuwa looks. The app and the site (landing, blog, docs) share one token set and one button vocabulary. Read this before adding UI so new work stays consistent.
+The app uses layered neutral fills, compact controls, and a single blue accent. Shape and hierarchy come from background color, spacing, and rounded corners. Resting controls and panels do not need visible strokes.
 
-Source of truth: `src/app.css` (`:root` + `.dark`). Everything else consumes those tokens.
+These rules cover the main app, settings, desktop overlay, and their portaled menus and dialogs. The website and documentation pages retain their existing stylesheet and layout.
 
-## Design language
+## Shared styles
 
-Clean, flat, minimal. Neutral gray "layers" are FILLS, not strokes. Soft ambient shadows for depth. Accent blue `#00b2ff`. Inter for everything.
+- `src/lib/styles/app-theme.css` owns the app palette, typography, button variants, and focus defaults.
+- `src/lib/styles/app-controls.css` owns fields, selects, dropdowns, sliders, native checkboxes and radios, badges, and floating panels.
+- The `html:has(.app, .overlay-app)` scope includes content portaled to the document body and stops applying outside the app.
+- Components consume tokens. Do not add per-component hex colors or duplicate shared control styling. Keep semantic status colors, graph categories, and authored media separate from interface colors.
 
-## Tokens
+## Palette
 
-All tokens live in `src/app.css` under `:root` and are flipped wholesale in the `.dark` block. Reference them with `var(--token)`, never hardcode hex.
+| Purpose | Light | Dark |
+| --- | --- | --- |
+| Canvas, `--bg-page` | `#FCFCFC` | `#0A0A0A` |
+| Panel, `--bg-primary` | `#F3F3F5` | `#171717` |
+| Nested panel, `--bg-secondary` | `#EAEAEC` | `#222222` |
+| Strong neutral, `--bg-tertiary` | `#D4D4DA` | `#363636` |
+| Control, `--control-bg` | `#E7E7EB` | `#292929` |
+| Hover, `--control-hover` | `#DCDCE2` | `#343434` |
+| Pressed control, `--control-selected` | `#CDCDD5` | `#424242` |
+| Selected tab, `--selection-bg` | `#FFFFFF` | `#3A3A3A` |
+| Elevated menu or dialog | `#FFFFFF` | `#232323` |
+| Primary text, `--text-primary` | `#27272A` | `#F5F5F5` |
+| Secondary text, `--text-secondary` | `#71717B` | `#818181` |
+| Primary blue, `--accent` | `#04B2FD` | `#04B2FD` |
+| Text and icons on blue, `--accent-contrast` | `#FFFFFF` | `#FFFFFF` |
 
-- Surfaces: `--bg-page` (the base canvas), `--bg-primary` / `--bg-secondary` / `--bg-tertiary` (the surface ladder, lightest to most tinted, used as fills for cards and controls).
-- Text ramp: `--text-primary` (ink), `--text-secondary` (muted), `--text-tertiary` (faint). One ink color, varied strength.
-- Accent set: `--accent`, `--accent-hover`, `--accent-muted` (~10% wash for focus rings and glows), `--accent-subtle` (~5% wash for tints).
-- Borders: `--border-light` (visible dividers), `--border-subtle` (barely-there separators). Use sparingly, see Principles.
-- Data colors: `--stat-*` (trust, intimacy, comfort, energy, respect, affection) and `--tier-*` (stranger through eternal-bond) for relationship/character UI. Semantic set: `--color-success` / `-error` / `-warning` / `-info`.
-- Shadows: `--shadow-xs` through `--shadow-xl` (soft, mostly ambient/blur) plus `--shadow-glow` (accent-blue lift on primary buttons).
-- Radii: `--radius-xs` (4) through `--radius-xl` (24) and `--radius-full` (pills).
-- Scene: `--scene-bg` for the 3D canvas backdrop (tracks the page canvas per theme).
+Use the same blue in both themes. Derive hover colors and muted focus washes from the accent. Filled primary buttons always use white text and icons. Activated blue switches, radio dots, and checkbox marks also use white foregrounds.
 
-## Dark mode
+Support light, dark, and system preferences. Theme changes must apply to open menus and synchronize between the main and overlay windows.
 
-`--bg-page` is the single base canvas: white in light, pure black `#000` in dark. Cards and surfaces use `--bg-primary` / `-secondary` / `-tertiary`, which are near-black slates that lift off the black canvas so hierarchy reads without borders. Text, accent, shadows, borders, and data colors all have `.dark` values, so components written against tokens flip automatically. Site and app follow the same rule, so there is one consistent look everywhere.
+## Shape, spacing, and typography
 
-## Buttons
+Use the system sans serif font. Control labels are normally 14px with a 20px line height. Descriptions are 13px; group headings are 14px and muted; page headings are 20px. Use normal case and avoid decorative letter spacing.
 
-There is ONE canonical button system, defined near the end of `src/app.css`. Compose a base `.btn` with a variant and an optional size. Do not write new button CSS.
+Control corners are 8px, grouped panels 12px, and dialogs 18px. Small badges use 4px corners. Reserve circular shapes for switch tracks, radio controls, status dots, and artwork that requires them.
 
-- Base: `.btn` (pill, `--radius-full`, flat, accent-muted focus ring, subtle active scale).
-- Variants: `.btn-primary` (solid accent), `.btn-secondary` (gray fill, no stroke), `.btn-ghost` (transparent, fills gray on hover), `.btn-danger` (solid error), `.btn-on-card` (neutral pill for use on a filled gray card), `.btn-on-media` (translucent, sits over hero video/imagery).
-- Sizes: `.btn-sm`, `.btn-lg`, and `.btn-block` (full width). Default size is medium (no size class).
+Desktop controls are 32px high, with 28px compact and 36px large variants. Touch controls have at least 44px targets. Settings groups use 16px padding, reduced to 12px on narrow screens. Separate groups by 24 to 28px.
 
-Plain markup (links, site, static):
+Panels use neutral fills. Resting border tokens are transparent. Use shadows to separate floating menus and dialogs from the content beneath them. Avoid glossy gradients, inset highlights, and decorative glows on ordinary controls.
 
-```html
-<a class="btn btn-primary" href="/app">Open app</a>
-<button class="btn btn-secondary btn-sm">Cancel</button>
-```
+## Buttons and selection
 
-In Svelte, use the wrapper `src/lib/components/ui/Button.svelte`, which maps props to the same classes:
+Use `Button.svelte` or the shared `.btn` classes:
 
-```svelte
-<Button variant="primary" size="lg">Save</Button>
-<!-- variant: primary | secondary | ghost | danger ; size: sm | md | lg -->
-```
+- Primary actions use the blue fill with white text and icons.
+- Secondary actions use a neutral fill, with distinct hover and pressed fills.
+- Ghost actions start transparent and gain a neutral fill on hover.
+- Destructive actions use the error color and require the existing confirmation behavior.
+- Icon actions use the shared icon-button size and an accessible name.
 
-Rule: never define a new button style. If a button looks wrong, adjust the tokens or add a variant to the canonical system, then reuse it everywhere.
+Use `Switch.svelte` for booleans, `SegmentedControl.svelte` for short exclusive choices, and `Tabs.svelte` to switch panels. Selected tabs use a distinct fill. Expose selection with `aria-pressed`, `aria-selected`, or the component's native semantics. Expandable controls expose `aria-expanded`.
 
-Note: an older `.btn` block still exists earlier in `app.css` for legacy non-bits-ui buttons. The canonical block at the end wins by cascade order. New work targets the canonical vocabulary above.
+## Inputs and focus
 
-## Principles
+Text fields and secondary controls use the control fill. Use `settings-field` for settings inputs and textareas, and the shared `Select.svelte` for single-choice dropdowns. Provider and model menus use the same popup and item states.
 
-- Fills over strokes. Establish hierarchy with the surface ladder and soft shadows, not outlines. Keep borders (`--border-light` / `-subtle`) for genuine dividers only.
-- No skeuomorphism. No glossy gradients, inset highlights, or glows on standard UI. The accent glow on primary buttons is the one deliberate exception. (The `--skeu-*` and decorative `--gradient-*` tokens exist for specific hero/marketing moments; do not reach for them in app chrome.)
-- One source of truth. The docs/blog surfaces still use `--docs-*` names, but every one now aliases an app token in `src/lib/config/docs-theme.ts` (for example `--docs-bg: var(--bg-page)`). Change a value in `src/app.css` and it propagates to the site. Do not give `--docs-*` its own hardcoded values.
+Every keyboard-operable control needs a visible focus indicator. A composite input shows one indicator around its full container. The chat textarea and settings-search input must not draw an additional square outline inside that container. Ordinary fields retain their rounded focus treatment. Keep error indicators visible.
+
+Keep native range-input keyboard behavior. Use `rangeProgress` so the filled track follows typing, arrow keys, and resets. Do not replace existing persistence or validation handlers when changing presentation.
+
+## Settings
+
+Use one readable column with a maximum width of 960px. The desktop sidebar provides category navigation and search; narrow layouts use a horizontal category row. Keep page titles, descriptions, and section headings consistent.
+
+`SettingsSection.svelte` places a heading and optional actions above a filled group. Put labels and descriptions on the left and controls on the right. Separate related rows with spacing. Nested sections use a distinct neutral fill. Let controls wrap beneath their labels on narrow screens.
+
+Character settings has Profile and State & activity views. Reuse `CompanionStateSummary.svelte` in the character page, mood popup, and overlay so labels, values, and mode-specific visibility stay consistent.
+
+## Chat and overlay
+
+Chat window messages have rounded, filled neutral bubbles. Assistant replies use the control fill; user messages use the stronger selected fill. Keep message text selectable, long content wrapped, and copy actions accessible. The typing indicator uses the assistant bubble treatment.
+
+The composer uses a neutral fill and one outer focus treatment. Preserve drafts and text-input focus during replies, layout changes, and overlay collapse. Support keyboard composition without sending prematurely.
+
+Overlay controls share the main app's palette and components. Keep controls discoverable for touch and keyboard users. Escape closes the current control panel before its parent. Return focus to the opening control. Main-window navigation must preserve the overlay when a handoff fails and show an actionable error.
+
+## Onboarding
+
+Preserve the welcome artwork, modal layout, spacing, avatar cards, and mode cards. Improve the sequence without replacing that visual treatment.
+
+Present one small decision per step: welcome, avatar, name, mode, chat, voice, and completion. Keep advanced fields behind disclosures. Chat and voice are optional. Back preserves edits, and the final action persists completion before leaving setup.
+
+## Menus, dialogs, and accessibility
+
+Use the existing Bits UI components for modal dialogs, dropdowns, tabs, and popovers. Floating layers use nearly opaque neutral fills with restrained blur and shadows. Keep them within the viewport and allow long content to scroll.
+
+Dialogs need accessible titles, contained keyboard focus, Escape dismissal, and focus restoration. Closing a nested photo returns to its photoboard. Dropdowns support keyboard selection and return focus to their trigger.
+
+Honor reduced motion. Preserve status announcements, disabled states, touch targets, and error feedback. Use Lucide through `Icon.svelte` for interface icons; retain brand marks and authored art where appropriate.
+
+## Review
+
+Check both themes at desktop and mobile widths. Include focused fields, disabled controls, active switches, selected tabs, dropdown search, long messages, empty states, dialogs, and overlay controls. Inspect screenshots as well as interaction tests.
+
+Implementation notes and review coverage are in [docs/design/ui-review.md](docs/design/ui-review.md). Third-party license notices are maintained separately in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

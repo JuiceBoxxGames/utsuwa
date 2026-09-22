@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { rangeProgress } from '$lib/utils/range-progress';
 	import { Icon } from '$lib/components/ui';
 	import {
 		displayStore,
@@ -35,7 +36,7 @@
 <div class="camera-panel" role="dialog" aria-label="Camera settings">
 	<div class="panel-header">
 		<span class="panel-title">Camera</span>
-		<button class="panel-close" onclick={onclose} aria-label="Close camera settings">
+		<button class="btn btn-ghost btn-icon" onclick={onclose} aria-label="Close camera settings">
 			<Icon name="x" size={14} />
 		</button>
 	</div>
@@ -46,7 +47,7 @@
 			<span class="control-value">{cam.zoom.toFixed(2)}×</span>
 		</span>
 		<input
-			type="range"
+			type="range" use:rangeProgress={cam.zoom}
 			min={CAMERA_LIMITS.zoom.min}
 			max={CAMERA_LIMITS.zoom.max}
 			step="0.05"
@@ -61,7 +62,7 @@
 			<span class="control-value">{cam.height > 0 ? '+' : ''}{(cam.height * 100).toFixed(0)} cm</span>
 		</span>
 		<input
-			type="range"
+			type="range" use:rangeProgress={cam.height}
 			min={CAMERA_LIMITS.height.min}
 			max={CAMERA_LIMITS.height.max}
 			step="0.01"
@@ -76,7 +77,7 @@
 			<span class="control-value">{cam.panX > 0 ? '+' : ''}{(cam.panX * 100).toFixed(0)} cm</span>
 		</span>
 		<input
-			type="range"
+			type="range" use:rangeProgress={cam.panX}
 			min={CAMERA_LIMITS.panX.min}
 			max={CAMERA_LIMITS.panX.max}
 			step="0.05"
@@ -91,7 +92,7 @@
 			<span class="control-value">{cam.fov.toFixed(0)}°</span>
 		</span>
 		<input
-			type="range"
+			type="range" use:rangeProgress={cam.fov}
 			min={CAMERA_LIMITS.fov.min}
 			max={CAMERA_LIMITS.fov.max}
 			step="1"
@@ -100,7 +101,7 @@
 		/>
 	</label>
 
-	<button class="reset-btn" onclick={() => displayStore.resetCamera(profile)} disabled={isDefault}>
+	<button class="btn btn-secondary" onclick={() => displayStore.resetCamera(profile)} disabled={isDefault}>
 		Reset camera
 	</button>
 
@@ -113,7 +114,7 @@
 			{#each SCENE_PRESETS as preset (preset.id)}
 				<button
 					class="swatch"
-					class:selected={displayStore.sceneBackground.type === preset.bg.type &&
+					aria-pressed={displayStore.sceneBackground.type === preset.bg.type &&
 						displayStore.sceneBackground.value === preset.bg.value}
 					style:background={presetSwatch(preset)}
 					title={preset.label}
@@ -138,7 +139,7 @@
 			</span>
 		</span>
 		<input
-			type="range"
+			type="range" use:rangeProgress={displayStore.physicsIntensity}
 			min={PHYSICS_INTENSITY_MIN}
 			max={PHYSICS_INTENSITY_MAX}
 			step="0.05"
@@ -191,107 +192,20 @@
 		color: var(--text-primary);
 	}
 
-	.panel-close {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		border: none;
-		border-radius: var(--radius-full);
-		background: transparent;
-		color: var(--text-tertiary);
-		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease;
-	}
-
-	.panel-close:hover {
-		color: var(--text-primary);
-		background: var(--bg-tertiary);
-	}
-
 	.control {
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;
 	}
 
-	.control-label {
-		display: flex;
-		justify-content: space-between;
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: var(--text-secondary);
-	}
+	.control-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
 
 	.control-value {
 		color: var(--text-tertiary);
 		font-variant-numeric: tabular-nums;
 	}
 
-	.control input[type='range'] {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 100%;
-		height: 4px;
-		border-radius: 2px;
-		background: var(--bg-tertiary);
-		outline: none;
-		cursor: pointer;
-	}
-
-	.control input[type='range']:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 5px;
-	}
-
-	.control input[type='range']::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 16px;
-		height: 16px;
-		border-radius: 50%;
-		background: var(--accent);
-		border: none;
-		cursor: pointer;
-		transition: transform 0.15s ease;
-	}
-
-	.control input[type='range']::-webkit-slider-thumb:hover {
-		transform: scale(1.15);
-	}
-
-	.control input[type='range']::-moz-range-thumb {
-		width: 16px;
-		height: 16px;
-		border-radius: 50%;
-		background: var(--accent);
-		border: none;
-		cursor: pointer;
-	}
-
-	.reset-btn {
-		margin-top: 0.125rem;
-		padding: 0.5rem;
-		border: none;
-		border-radius: var(--radius-md);
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
-		font-size: 0.75rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease;
-	}
-
-	.reset-btn:hover:not(:disabled) {
-		color: var(--text-primary);
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
-	}
-
-	.reset-btn:disabled {
-		opacity: 0.45;
-		cursor: default;
-	}
+	.control input[type='range'] { width: 100%; }
 
 	.section-divider {
 		display: flex;
@@ -307,13 +221,7 @@
 		background: var(--border-subtle);
 	}
 
-	.section-label {
-		font-size: 0.6875rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		color: var(--text-tertiary);
-	}
+	.section-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
 
 	.range-ends {
 		display: flex;
@@ -331,7 +239,7 @@
 	.swatch {
 		width: 24px;
 		height: 24px;
-		border-radius: var(--radius-full);
+		border-radius: var(--control-radius);
 		border: 2px solid var(--border-subtle);
 		cursor: pointer;
 		transition: transform 0.15s ease, border-color 0.15s ease;
@@ -341,7 +249,7 @@
 		transform: scale(1.1);
 	}
 
-	.swatch.selected {
+	.swatch[aria-pressed="true"] {
 		border-color: var(--accent);
 	}
 </style>

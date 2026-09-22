@@ -15,6 +15,6 @@ export default defineConfig({
 		__IS_DESKTOP__: JSON.stringify(!!process.env.TAURI_ENV_PLATFORM)
 	},
 	ssr: {
-		noExternal: ['bits-ui']
+		noExternal: ['bits-ui', '@lucide/svelte']
 	}
 });

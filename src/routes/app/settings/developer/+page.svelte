@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { rangeProgress } from '$lib/utils/range-progress';
+	import Select from '$lib/components/ui/Select.svelte';
 	import { onDestroy } from 'svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
@@ -351,15 +353,7 @@
 			<h3>Animation</h3>
 			<p class="hint">Select an animation to play on the model.</p>
 			<div class="animation-select">
-				<select class="settings-field" aria-label="Animation"
-					value={vrmStore.currentAnimation || 'none'}
-					onchange={(e) => vrmStore.setCurrentAnimation(e.currentTarget.value === 'none' ? null : e.currentTarget.value)}
-				>
-					<option value="none">None (idle)</option>
-					{#each vrmStore.availableAnimations as anim}
-						<option value={anim.url}>{anim.name}</option>
-					{/each}
-				</select>
+				<Select label="Animation" value={vrmStore.currentAnimation || 'none'} onchange={(value) => vrmStore.setCurrentAnimation(value === 'none' ? null : value)} options={[{ value: 'none', label: 'None (idle)' }, ...vrmStore.availableAnimations.map(anim => ({ value: anim.url, label: anim.name }))]} />
 			</div>
 		</section>
 
@@ -368,14 +362,7 @@
 			<h3>Material Debug</h3>
 			<p class="hint">Visualize different material properties (MToon).</p>
 			<div class="animation-select">
-				<select class="settings-field" aria-label="Material debug"
-					value={currentDebugMode}
-					onchange={(e) => setMaterialDebugMode(e.currentTarget.value)}
-				>
-					{#each materialDebugModes as mode}
-						<option value={mode.id}>{mode.name}</option>
-					{/each}
-				</select>
+				<Select label="Material debug" value={currentDebugMode} onchange={setMaterialDebugMode} options={materialDebugModes.map(mode => ({ value: mode.id, label: mode.name }))} />
 			</div>
 		</section>
 
@@ -442,7 +429,7 @@
 							<div class="slider-row">
 								<label for={expr}>{expr}</label>
 								<input
-									type="range" class="settings-range"
+									type="range" use:rangeProgress={expressionValues[expr] || 0} class="settings-range"
 									id={expr}
 									min="0"
 									max="1"

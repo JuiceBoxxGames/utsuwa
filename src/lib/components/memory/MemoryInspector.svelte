@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { rangeProgress } from '$lib/utils/range-progress';
+	import Select from '$lib/components/ui/Select.svelte';
 	import { liveQuery } from 'dexie';
 	import { db } from '$lib/db';
 	import { memoryApi, getWorkingMemory } from '$lib/engine/memory';
@@ -189,11 +191,7 @@
 					/></label
 				>
 				<label
-					>Category<select class="settings-field" bind:value={category}
-						><option value="all">All categories</option>{#each categories as c}<option
-								value={c.value}>{c.label}</option
-							>{/each}</select
-					></label
+					>Category<Select label="Category" bind:value={category} options={[{ value: 'all', label: 'All categories' }, ...categories]} /></label
 				>
 			</div>
 			{#if !loading && !loadError && facts.length === 0}<p class="empty">
@@ -351,13 +349,11 @@
 				>
 				<div class="filters">
 					<label
-						>Memory category<select class="settings-field" bind:value={newCategory} disabled={busy}
-							>{#each categories as c}<option value={c.value}>{c.label}</option>{/each}</select
-						></label
+						>Memory category<Select label="Memory category" bind:value={newCategory} disabled={busy} options={categories} /></label
 					><label
 						>Importance <span>{importance}</span><input
 							class="settings-range"
-							type="range"
+							type="range" use:rangeProgress={importance}
 							min={0}
 							max={100}
 							step={5}
