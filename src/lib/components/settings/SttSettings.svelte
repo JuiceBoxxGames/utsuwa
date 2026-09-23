@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { Icon } from '$lib/components/ui';
+	import { DEFAULT_STT_TIMEOUT_MS, resolveSttTimeoutMs } from '$lib/services/stt/openai-stt';
 	import './ai-services-settings.css';
 </script>
 
@@ -69,6 +70,25 @@
 			}}
 		/>
 	</div>
+	<label class="stt-sublabel" for="stt-local-timeout">Transcription timeout (seconds)</label>
+	<div class="api-key-row">
+		<input
+			id="stt-local-timeout"
+			type="number"
+			class="api-key-input"
+			min="5"
+			max="600"
+			step="5"
+			value={Math.round((settingsStore.getProviderConfig('local-stt').timeoutMs ?? DEFAULT_STT_TIMEOUT_MS) / 1000)}
+			onchange={(e) => {
+				// change, not input: clamping per keystroke would fight the user mid-typing
+				const timeoutMs = resolveSttTimeoutMs(e.currentTarget.valueAsNumber);
+				settingsStore.setProviderConfig('local-stt', { timeoutMs });
+				e.currentTarget.value = String(timeoutMs / 1000);
+			}}
+		/>
+	</div>
+	<p class="stt-hint">How long to wait for the server to transcribe. Raise this for slow or CPU-only machines.</p>
 </div>
 
 <style>

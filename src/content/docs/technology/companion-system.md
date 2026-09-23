@@ -95,6 +95,8 @@ type Emotion =
   | 'flustered' | 'neutral';
 ```
 
+The avatar's resting face follows this state. `moodExpressionTarget()` in `src/lib/engine/mood-expression.ts` maps each emotion to a VRM expression (VRM 1.0 presets first, VRM 0.x names like `joy` and `sorrow` as fallbacks) with a per-emotion ceiling, so `excited` smiles wider than `content` and `neutral` leaves the face alone. Intensity scales that ceiling linearly, and `VrmModel.svelte` fades toward the target each frame, fully fading out the old expression before a new one comes in. Photo mode, emotes, and tap reactions all take priority over the mood face, and it can be switched off under Settings > Display.
+
 ### Relationship Stages
 
 Nine stages total — one special Companion Mode stage (not part of progression) plus eight Dating Sim progression stages (Stranger through Soulmate).

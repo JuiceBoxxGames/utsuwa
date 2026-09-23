@@ -27,7 +27,7 @@ Utsuwa stores API keys for LLM and TTS providers locally on your device. This me
 
 ### Client-Side Application
 
-Utsuwa stores all your data locally on your device. When self-hosting, chat and model-fetching requests are proxied through SvelteKit server-side API routes before reaching the provider. No data is stored server-side — the server acts only as a pass-through. When using the hosted version at utsuwa.ai, these requests pass through the deployment server in the same way.
+Utsuwa stores all your data locally on your device. When self-hosting, chat, model-fetching, and Fish Audio speech requests are proxied through SvelteKit server-side API routes before reaching the provider. No data is stored server-side. The server acts only as a pass-through. When using the hosted version at utsuwa.ai, these requests pass through the deployment server in the same way.
 
 ### Third-Party Services
 

@@ -116,6 +116,13 @@
 			<Switch label="Keep screen awake" checked={displayStore.keepScreenAwake} onchange={displayStore.setKeepScreenAwake} disabled={wakeLockStore.status === 'unsupported' && !displayStore.keepScreenAwake} />
 		</div>
 		{#if displayStore.keepScreenAwake && wakeLockStore.status === 'inactive'}<Button variant="secondary" size="sm" onclick={() => wakeLockStore.retry()}>Try again</Button>{/if}
+		<div class="setting-row">
+			<div class="setting-info">
+				<span class="setting-label">Mood expressions</span>
+				<span class="setting-desc">Her face reflects her current mood. Turn this off if your model's expressions read too strong.</span>
+			</div>
+			<Switch label="Mood expressions" checked={displayStore.moodExpressions} onchange={displayStore.setMoodExpressions} />
+		</div>
 	</SettingsSection>
 </div>
 

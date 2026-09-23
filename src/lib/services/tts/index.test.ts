@@ -57,6 +57,7 @@ globalThis.AudioContext = MockAudioContext;
 import { getTTSProvider, getSharedAudioContext, unlockAudioContext } from './index.ts';
 import { OpenAITTS } from './openai-tts.ts';
 import { ElevenLabsTTS } from './elevenlabs.ts';
+import { FishAudioTTS } from './fish-audio.ts';
 
 function mockFetchResponse() {
 	return Promise.resolve({
@@ -86,6 +87,10 @@ test('factory returns OpenAITTS for openai-tts and local-tts providers', () => {
 
 test('factory returns ElevenLabsTTS for elevenlabs provider', () => {
 	assert.ok(getTTSProvider({ provider: 'elevenlabs' }) instanceof ElevenLabsTTS);
+});
+
+test('factory returns FishAudioTTS for fish-audio provider', () => {
+	assert.ok(getTTSProvider({ provider: 'fish-audio' }) instanceof FishAudioTTS);
 });
 
 test('factory reuses OmniVoice provider when only unrelated fields differ', () => {

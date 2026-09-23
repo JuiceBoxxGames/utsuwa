@@ -16,7 +16,7 @@ export type LLMProvider =
 	| 'openai-compatible';
 
 // TTS Provider IDs
-export type TTSProvider = 'elevenlabs' | 'openai-tts' | 'local-tts' | 'omnivoice';
+export type TTSProvider = 'elevenlabs' | 'openai-tts' | 'fish-audio' | 'local-tts' | 'omnivoice';
 
 // Provider configuration (stored in settings)
 export interface ProviderConfig {
@@ -29,4 +29,6 @@ export interface ProviderConfig {
 	volume?: number;
 	cachedModels?: Array<{ id: string; name: string }>;
 	modelsFetchedAt?: number;
+	// Request timeout in ms; used by STT
+	timeoutMs?: number;
 }

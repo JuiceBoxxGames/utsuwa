@@ -65,6 +65,7 @@ function createDisplayStore() {
 	// Where the floating bar sits along the bottom edge
 	let chatBarAlignment = $state<ChatBarAlignment>(DEFAULT_CHAT_BAR_ALIGNMENT);
 	let keepScreenAwake = $state(false);
+	let moodExpressions = $state(true);
 
 	function applySavedSettings(saved: string | null) {
 		const parsed = parseDisplaySettings(saved);
@@ -79,6 +80,7 @@ function createDisplayStore() {
 		textRevealSpeed = parsed.textRevealSpeed;
 		chatBarAlignment = parsed.chatBarAlignment;
 		keepScreenAwake = parsed.keepScreenAwake;
+		moodExpressions = parsed.moodExpressions;
 	}
 	if (browser) {
 		applySavedSettings(localStorage.getItem(STORAGE_KEY));
@@ -105,7 +107,8 @@ function createDisplayStore() {
 					waitToneEnabled,
 					textRevealSpeed,
 					chatBarAlignment,
-					keepScreenAwake
+					keepScreenAwake,
+					moodExpressions
 				})
 			);
 		}
@@ -190,6 +193,8 @@ function createDisplayStore() {
 	return {
 		get keepScreenAwake() { return keepScreenAwake; },
 		setKeepScreenAwake(value: boolean) { keepScreenAwake = value; save(); },
+		get moodExpressions() { return moodExpressions; },
+		setMoodExpressions(value: boolean) { moodExpressions = value; save(); },
 		get camera() {
 			return camera;
 		},

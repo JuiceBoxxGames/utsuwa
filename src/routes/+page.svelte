@@ -32,7 +32,8 @@
 		{ name: 'Ollama', glyph: 'ollama' },
 		{ name: 'LM Studio', glyph: 'lmstudio' },
 		{ name: 'Groq', wordmark: `${WM}/groq-wordmark-dark.svg`, h: 22 },
-		{ name: 'ElevenLabs', glyph: 'elevenlabs' }
+		{ name: 'ElevenLabs', glyph: 'elevenlabs' },
+		{ name: 'Fish Audio', glyph: 'fish-audio' }
 	];
 </script>
 

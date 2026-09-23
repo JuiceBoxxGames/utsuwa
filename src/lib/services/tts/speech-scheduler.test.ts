@@ -87,7 +87,7 @@ test('beginPlan handles gesture and pause segments', async () => {
 });
 
 test('queued speech forwards the audio analyser for lip sync with every provider', async () => {
-	for (const provider of ['openai-tts', 'elevenlabs', 'local-tts', 'omnivoice'] as const) {
+	for (const provider of ['openai-tts', 'elevenlabs', 'fish-audio', 'local-tts', 'omnivoice'] as const) {
 		const analyser = {} as AnalyserNode;
 		let received: AnalyserNode | null = null;
 		let callbacks: OrchestratorCallbacks | undefined;

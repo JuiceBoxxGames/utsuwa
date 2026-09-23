@@ -10,6 +10,7 @@
 	import { photomodeStore } from '$lib/stores/photomode.svelte';
 	import { loadPoseAnimation, loadPoseManifest } from '$lib/services/poses';
 	import { pickReaction, stageTier, type TouchZone } from '$lib/engine/photo-reactions';
+	import { moodExpressionTarget } from '$lib/engine/mood-expression';
 	import { characterStore } from '$lib/stores/character.svelte';
 	import {
 		computeSpringJointParams,
@@ -120,6 +121,12 @@
 	const currentAnimation = $derived(vrmStore.currentAnimation);
 	// Talking animation plays when TTS is speaking OR when text-based talking is triggered
 	const shouldTalk = $derived(ttsStore.isSpeaking || vrmStore.isTalking);
+	// Resting face from her tracked mood; photo mode hands the face to the user
+	const moodTarget = $derived(
+		displayStore.moodExpressions && !photomodeStore.active
+			? moodExpressionTarget(characterStore.state.mood, vrmStore.availableExpressions)
+			: null
+	);
 
 	// === Blinking State ===
 	let blinkTimer = $state(0);
@@ -493,6 +500,10 @@
 	let activePulses: ReactionPulse[] = [];
 	let appliedNudges: Array<{ bone: THREE.Object3D; z: number; x: number }> = [];
 	let reactionFace: { name: string; weight: number; t: number; duration: number } | null = null;
+	// Mood face is the bottom layer: reactions, emotes, and held photo
+	// expressions all win over it for the expression they touch
+	let moodFace: { name: string; weight: number } | null = null;
+	let emoteFace: string | null = null;
 	const recentTaps = { zone: null as TouchZone | null, at: 0, count: 0 };
 	const REACTION_REPEAT_WINDOW_MS = 4000;
 
@@ -654,6 +665,7 @@
 					const happyExpr = findHappyExpression(vrm);
 					if (happyExpr) {
 						vrm.expressionManager?.setValue(happyExpr, 0.7);
+						emoteFace = happyExpr;
 					}
 
 					// When emote finishes, return to idle
@@ -670,6 +682,7 @@
 							if (happyExpr) {
 								capturedVrm.expressionManager?.setValue(happyExpr, 0);
 							}
+							emoteFace = null;
 
 							// Resume idle animation
 							if (capturedIdleAction) {
@@ -847,6 +860,8 @@
 				appliedNudges = [];
 				reactionFace = null;
 				heldExpression = null;
+				moodFace = null;
+				emoteFace = null;
 			}
 		};
 	});
@@ -1057,6 +1072,29 @@
 				// Expression doesn't exist on this model
 			}
 		};
+
+		// === Mood face ===
+		// Swapping expressions fades the old one fully out before the new one
+		// starts, so two moods never blend into a muddled face
+		const moodGoal = isEmotePlaying ? null : moodTarget;
+		const moodStep = Math.min(1, delta * 1.5);
+		if (moodFace && moodFace.name !== moodGoal?.name) {
+			moodFace.weight -= moodFace.weight * moodStep;
+			if (moodFace.weight < 0.01) moodFace.weight = 0;
+		} else if (moodGoal) {
+			moodFace ??= { name: moodGoal.name, weight: 0 };
+			moodFace.weight += (moodGoal.weight - moodFace.weight) * moodStep;
+		}
+		if (moodFace) {
+			const name = moodFace.name;
+			if (heldExpression !== name && emoteFace !== name) {
+				// A tap reaction on the same expression rides on top of the mood
+				// instead of dipping it to zero and popping back afterwards
+				const floor = reactionFace?.name === name ? (expressionManager.getValue(name) ?? 0) : 0;
+				setExpression(name, Math.max(floor, moodFace.weight));
+			}
+			if (moodFace.weight === 0) moodFace = null;
+		}
 
 		// === Blinking Animation (runs during idle, disabled during emotes) ===
 		if (!isEmotePlaying) {

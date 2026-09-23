@@ -44,7 +44,8 @@ function createSttStore() {
 			label: isLocal ? 'the local STT server' : (meta?.name ?? 'the STT server'),
 			connectionHint: isLocal
 				? getLocalSTTConnectionHint(baseUrl, browser ? window.location.origin : undefined)
-				: undefined
+				: undefined,
+			timeoutMs: config.timeoutMs
 		});
 	}
 
