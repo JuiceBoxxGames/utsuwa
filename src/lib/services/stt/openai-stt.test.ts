@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildTranscriptionRequest, type OpenAiSttConfig } from './openai-stt.ts';
+import {
+	buildTranscriptionRequest,
+	resolveSttTimeoutMs,
+	sttTimeoutMessage,
+	DEFAULT_STT_TIMEOUT_MS,
+	type OpenAiSttConfig
+} from './openai-stt.ts';
 
 function formToObject(form: FormData): Record<string, unknown> {
 	const out: Record<string, unknown> = {};
@@ -44,4 +50,26 @@ test('no Authorization header is sent when there is no API key (local servers)',
 	assert.equal(req.headers.Authorization, undefined);
 	assert.equal(Object.keys(req.headers).length, 0);
 	assert.equal(formToObject(req.body).model, 'Systran/faster-whisper-large-v3');
+});
+
+test('resolveSttTimeoutMs falls back to the default for missing or junk values', () => {
+	assert.equal(DEFAULT_STT_TIMEOUT_MS, 30_000);
+	assert.equal(resolveSttTimeoutMs(undefined), 30_000);
+	assert.equal(resolveSttTimeoutMs(Number.NaN), 30_000);
+	assert.equal(resolveSttTimeoutMs(Number.POSITIVE_INFINITY), 30_000);
+	assert.equal(resolveSttTimeoutMs(0), 30_000);
+	assert.equal(resolveSttTimeoutMs(-10), 30_000);
+});
+
+test('resolveSttTimeoutMs converts seconds to ms and clamps to 5..600 s', () => {
+	assert.equal(resolveSttTimeoutMs(120), 120_000);
+	assert.equal(resolveSttTimeoutMs(1), 5_000);
+	assert.equal(resolveSttTimeoutMs(5000), 600_000);
+});
+
+test('sttTimeoutMessage names the provider and the timeout in seconds', () => {
+	const msg = sttTimeoutMessage('the local STT server', 90_000);
+	assert.match(msg, /^The local STT server/);
+	assert.match(msg, /90 seconds/);
+	assert.match(msg, /Settings > Voice Input/);
 });

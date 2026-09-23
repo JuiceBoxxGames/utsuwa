@@ -10,6 +10,25 @@ export interface OpenAiSttConfig {
 	label: string;
 	// Optional richer message for a network failure (CORS/unreachable hints).
 	connectionHint?: string;
+	// Transcription request timeout in ms. Defaults to 30 s.
+	timeoutMs?: number;
+}
+
+export const DEFAULT_STT_TIMEOUT_MS = 30_000;
+
+// Settings store seconds; the service wants ms. Clamps so a stray value cannot disable the timeout.
+export function resolveSttTimeoutMs(seconds: number | undefined): number {
+	if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) {
+		return DEFAULT_STT_TIMEOUT_MS;
+	}
+	return Math.min(600, Math.max(5, seconds)) * 1000;
+}
+
+export function sttTimeoutMessage(label: string, timeoutMs: number): string {
+	const seconds = Math.round(timeoutMs / 1000);
+	const msg = `${label} did not respond within ${seconds} seconds. Raise the transcription timeout in Settings > Voice Input if your server is slow.`;
+	// Labels like "the local STT server" start lowercase; the toast should not
+	return msg.charAt(0).toUpperCase() + msg.slice(1);
 }
 
 // The transcription request shape, split out so it can be unit tested without a
@@ -203,7 +222,12 @@ class OpenAiSttService {
 		const ext = actualMime.includes('webm') ? 'webm' : actualMime.includes('ogg') ? 'ogg' : 'm4a';
 
 		this.abortController = new AbortController();
-		const timeoutId = setTimeout(() => this.abortController?.abort(), 30000);
+		const timeoutMs = this.config.timeoutMs ?? DEFAULT_STT_TIMEOUT_MS;
+		let timedOut = false;
+		const timeoutId = setTimeout(() => {
+			timedOut = true;
+			this.abortController?.abort();
+		}, timeoutMs);
 
 		try {
 			const { url, headers, body } = buildTranscriptionRequest(
@@ -243,7 +267,11 @@ class OpenAiSttService {
 			clearTimeout(timeoutId);
 			this.transcribing = false;
 			if (err instanceof DOMException && err.name === 'AbortError') {
-				// Aborted by user or timeout — don't surface as error
+				if (timedOut) {
+					this.callbacks?.onError(sttTimeoutMessage(this.config.label, timeoutMs));
+					return;
+				}
+				// User cancelled, stay quiet
 				this.callbacks?.onEnd();
 				return;
 			}

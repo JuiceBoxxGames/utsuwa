@@ -29,4 +29,6 @@ export interface ProviderConfig {
 	volume?: number;
 	cachedModels?: Array<{ id: string; name: string }>;
 	modelsFetchedAt?: number;
+	// Request timeout in ms; used by STT
+	timeoutMs?: number;
 }
