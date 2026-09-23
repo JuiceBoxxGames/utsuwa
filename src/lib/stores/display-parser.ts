@@ -63,6 +63,7 @@ export interface ParsedDisplaySettings {
 	textRevealSpeed: TextRevealSpeed;
 	chatBarAlignment: ChatBarAlignment;
 	keepScreenAwake: boolean;
+	moodExpressions: boolean;
 }
 
 /**
@@ -95,7 +96,8 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 			typingIndicatorDelayMs: DEFAULT_TYPING_INDICATOR_DELAY_MS,
 			textRevealSpeed: DEFAULT_TEXT_REVEAL_SPEED,
 			chatBarAlignment: DEFAULT_CHAT_BAR_ALIGNMENT,
-			keepScreenAwake: false
+			keepScreenAwake: false,
+			moodExpressions: true
 		};
 	}
 
@@ -153,5 +155,5 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 		? parsed.chatBarAlignment
 		: DEFAULT_CHAT_BAR_ALIGNMENT;
 
-	return { keepScreenAwake: parsed.keepScreenAwake === true, camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
+	return { keepScreenAwake: parsed.keepScreenAwake === true, moodExpressions: parsed.moodExpressions !== false, camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
 }
