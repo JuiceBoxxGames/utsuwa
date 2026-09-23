@@ -230,9 +230,11 @@ test('replies are spoken with Fish Audio through the web proxy', async ({ page }
 	await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Hi');
 	await page.getByRole('button', { name: 'Send message', exact: true }).click();
 
-	await expect
-		.poll(() => page.evaluate(() => (window as Window & { playedAudio?: number[] }).playedAudio))
-		.toEqual([0.5]);
+	const played = () =>
+		page.evaluate(() => (window as Window & { playedAudio?: number[] }).playedAudio ?? []);
+	await expect.poll(async () => (await played()).length).toBe(1);
+	// Decoding resamples to the device rate (44.1 kHz on Linux CI), which can shift the length by a sample.
+	expect((await played())[0]).toBeCloseTo(0.5, 3);
 	expect(requests).toHaveLength(1);
 	expect(requests[0].headers.authorization).toBe('Bearer browser-test-only');
 	expect(requests[0].headers.model).toBe('s2.1-pro-free');
