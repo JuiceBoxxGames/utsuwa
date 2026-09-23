@@ -1,19 +1,16 @@
 <script lang="ts">
-	import { setupThemeWatcher } from '$lib/config/docs-theme';
-	import { browser } from '$app/environment';
+	import { lightVars } from '$lib/config/docs-theme';
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
-	let blogEl = $state<HTMLDivElement | null>(null);
 
-	// Sync with the shared colorMode/.dark toggle (same as the docs). Still needed
-	// here so the blog surface gets its --docs-* variables applied.
-	$effect(() => setupThemeWatcher(() => blogEl, browser));
+	// Marketing pages are light only, so the docs aliases are fixed here.
+	const docsVars = Object.entries(lightVars).map(([k, v]) => `${k}: ${v}`).join('; ');
 </script>
 
-<div class="docs blog-site grain" bind:this={blogEl}>
+<div class="docs blog-site grain" style={docsVars}>
 	<SiteNav />
 
 	<main class="blog-main" data-pagefind-body>
@@ -31,16 +28,16 @@
 		font-family: var(--font-sans);
 	}
 
-	/* The wider editorial canvas matches the shared nav/footer shell. */
+	/* Pages own their vertical rhythm; the shell only sets the side gutters. */
 	.blog-main {
 		max-width: 80rem;
 		margin: 0 auto;
-		padding: clamp(4rem, 8vw, 6.5rem) var(--marketing-gutter) clamp(4rem, 7vw, 6rem);
+		padding: 0 35px;
 	}
 
 	@media (max-width: 768px) {
 		.blog-main {
-			padding: 3rem var(--marketing-gutter) 4rem;
+			padding: 0 18px;
 		}
 	}
 </style>

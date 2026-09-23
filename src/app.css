@@ -54,8 +54,6 @@
 	--font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
 
-	--marketing-gutter: clamp(1.25rem, 3vw, 2rem);
-
 	/* Glass surfaces */
 	--glass-bg: rgba(255, 255, 255, 0.72);
 	--glass-bg-subtle: rgba(255, 255, 255, 0.55);
@@ -558,7 +556,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Buttons: the one canonical button vocabulary, used across the app and the site.
    Compose a base .btn with a variant (.btn-primary / -secondary / -ghost / -danger /
-   -on-card / -on-media) and optional size (.btn-sm / -lg / -block). */
+   -hero) and optional size (.btn-sm / -lg / -block). */
 .btn {
 	display: inline-flex;
 	align-items: center;
@@ -653,24 +651,71 @@ h1, h2, h3, h4, h5, h6 {
 	filter: brightness(0.94);
 }
 
-/* On-card: neutral surface pill on a filled gray card (e.g. blog cards) */
-.btn-on-card {
-	background: var(--bg-primary);
-	color: var(--text-primary);
+/* Japanese pages: system Japanese fonts behind Inter, none of the tight
+   Latin tracking, phrase-aware line breaks, and room for full-height glyphs */
+html[lang='ja'] {
+	--font-sans: 'Inter Variable', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', Meiryo, sans-serif;
+	word-break: auto-phrase;
 }
 
-.btn-on-card:hover:not(:disabled) {
-	background: color-mix(in srgb, var(--bg-primary), var(--text-primary) 6%);
+html[lang='ja'] body * {
+	letter-spacing: normal !important;
 }
 
-/* On-media: translucent, sits over hero video / imagery */
-.btn-on-media {
-	background: rgba(255, 255, 255, 0.14);
+/* A phrase wider than a small phone may break inside itself rather than overflow */
+html[lang='ja'] :is(h1, h2, h3, p) {
+	overflow-wrap: anywhere;
+}
+
+html[lang='ja'] .hero-title {
+	line-height: 1.12;
+}
+
+html[lang='ja'] :is(.letter-big, .cta-title, .own-title) {
+	line-height: 1.2;
+}
+
+html[lang='ja'] :is(.slide-title, .features-title, .stories-title) {
+	line-height: 1.3;
+}
+
+/* Japanese phrases don't break inside words, so give the long ones room */
+html[lang='ja'] .slide-title {
+	max-width: 600px;
+}
+
+html[lang='ja'] .own-title {
+	font-size: 56px;
+}
+
+@media (max-width: 768px) {
+	html[lang='ja'] .own-title {
+		font-size: clamp(28px, 8.4vw, 40px);
+	}
+
+	html[lang='ja'] .features-title {
+		font-size: 32px;
+	}
+}
+
+/* Marketing page transitions: the hero card glides between pages */
+::view-transition-group(hero-card) {
+	animation-duration: 0.55s;
+	animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hero: the marketing CTA. A warm pill so it pops against the window light. */
+.btn-hero {
+	gap: 0.625rem;
+	padding: 1.5rem 2.25rem;
+	border-color: rgba(255, 255, 255, 0.05);
+	background: var(--stat-affection);
 	color: #fff;
-	-webkit-backdrop-filter: blur(8px);
-	backdrop-filter: blur(8px);
+	font-size: 1rem;
+	letter-spacing: -0.03em;
 }
 
-.btn-on-media:hover:not(:disabled) {
-	background: rgba(255, 255, 255, 0.24);
+.btn-hero:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--stat-affection), #000 8%);
 }
+

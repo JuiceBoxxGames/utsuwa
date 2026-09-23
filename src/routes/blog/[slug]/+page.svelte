@@ -6,6 +6,7 @@
 	import { addCodeCopyButtons } from '$lib/utils/add-code-copy-buttons';
 	import { browser } from '$app/environment';
 	import type { PageData } from './$types';
+	import PostCard from '$lib/components/marketing/PostCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -68,7 +69,7 @@
 	{#if data.metadata?.description}
 		<meta property="og:description" content={data.metadata.description} />
 	{/if}
-	<meta property="og:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.png`} />
+	<meta property="og:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`} />
 	<meta property="og:url" content={`${SITE_URL}/blog/${data.slug}`} />
 	<meta property="og:site_name" content="Utsuwa" />
 	<meta name="twitter:card" content="summary_large_image" />
@@ -76,14 +77,14 @@
 	{#if data.metadata?.description}
 		<meta name="twitter:description" content={data.metadata.description} />
 	{/if}
-	<meta name="twitter:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.png`} />
+	<meta name="twitter:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`} />
 	<link rel="canonical" href={`${SITE_URL}/blog/${data.slug}`} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'BlogPosting',
 		headline: data.metadata?.title,
 		description: data.metadata?.description,
-		image: data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.png`,
+		image: data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`,
 		datePublished: data.metadata?.date,
 		url: `${SITE_URL}/blog/${data.slug}`,
 		author: {
@@ -100,42 +101,41 @@
 	{@html '<style>html { scroll-padding-top: 6rem; }</style>'}
 </svelte:head>
 
-<div class="blog-post-layout">
-	<a href="/blog" class="btn btn-secondary back-link">
-		<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-		<span>Back to Blog</span>
-	</a>
-
-	<header class="blog-post-header">
-		<div class="post-meta">
+<div class="post-page">
+	<header class="post-head">
+		<p class="post-meta">
 			{#if data.metadata?.date}
-				<time class="post-date" datetime={String(data.metadata.date)}>{formatDate(data.metadata.date)}</time>
+				<time datetime={String(data.metadata.date)}>{formatDate(data.metadata.date)}</time>
 			{/if}
 			{#if data.metadata?.tag}
-				<span class="post-tag">{data.metadata.tag}</span>
+				<span>{data.metadata.tag}</span>
 			{/if}
-			<span class="post-author">Charles J. (CJ) Dyas</span>
-		</div>
+			<span>Charles J. (CJ) Dyas</span>
+		</p>
 
 		{#if data.metadata?.title}
 			<h1 class="post-title">{data.metadata.title}</h1>
 		{/if}
 
 		{#if data.metadata?.description}
-			<p class="post-subhead">{data.metadata.description}</p>
+			<p class="post-lead">{data.metadata.description}</p>
 		{/if}
 	</header>
 
 	{#if data.metadata?.image}
-		<div class="blog-banner">
-			<img {...marketingImage(data.metadata.image, '(max-width: 1280px) calc(100vw - 40px), 1216px')} fetchpriority="high" alt="" />
+		<div class="post-banner">
+			<img
+				{...marketingImage(data.metadata.image, '(max-width: 1000px) calc(100vw - 36px), 960px')}
+				fetchpriority="high"
+				alt=""
+			/>
 		</div>
 	{/if}
 
-	<div class="blog-post-body" class:no-toc={!toc.length}>
+	<div class="post-layout" class:has-toc={toc.length > 0}>
 		{#if toc.length}
 			<aside class="toc" aria-label="Table of contents">
-				<p class="toc-title">Table of contents</p>
+				<p class="toc-title">On this page</p>
 				<ul class="toc-list">
 					{#each toc as heading}
 						<li class:sub={heading.level === 3}>
@@ -158,173 +158,225 @@
 	</div>
 </div>
 
+{#if data.more.length}
+	<section class="more" aria-labelledby="more-title">
+		<h2 id="more-title" class="more-title">Keep reading</h2>
+		<div class="more-grid">
+			{#each data.more as post (post.slug)}
+				<PostCard {post} />
+			{/each}
+		</div>
+	</section>
+{/if}
+
 <style>
-	.blog-post-layout {
-		width: 100%;
+	/* Manifesto-style reading column: date, one big title, then the story */
+	.post-page {
+		color: var(--text-primary);
+		animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 	}
 
-	.back-link {
-		margin-bottom: 2rem;
-	}
-
-	/* Centered header: meta line, title, subhead */
-	.blog-post-header {
+	.post-head {
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 72px 0 44px;
 		text-align: center;
-		max-width: 46rem;
-		margin: 0 auto 3.5rem;
 	}
 
 	.post-meta {
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.8125rem;
+		gap: 8px;
+		margin: 0 0 22px;
+		color: color-mix(in srgb, var(--text-primary) 45%, transparent);
+		font-size: 16px;
 		font-weight: 500;
-		color: var(--text-secondary);
-		margin: 0 0 1.5rem;
+		letter-spacing: -0.02em;
 	}
 
-	/* Middot between whichever meta items are present */
 	.post-meta > * + *::before {
-		content: '·';
-		margin-right: 0.5rem;
-		color: var(--text-tertiary);
+		content: '\00b7';
+		margin-right: 8px;
 	}
 
 	.post-title {
-		font-size: clamp(2.25rem, 5vw, 3.25rem);
-		font-weight: 600;
-		line-height: 1.1;
-		letter-spacing: -0.035em;
-		color: var(--text-primary);
-		margin: 0 0 1.25rem;
+		margin: 0;
+		font-size: 64px;
+		font-weight: 700;
+		line-height: 0.98;
+		letter-spacing: -0.06em;
+		text-wrap: balance;
 	}
 
-	.post-subhead {
-		max-width: 34rem;
-		margin: 0 auto;
-		font-size: 1.125rem;
-		line-height: 1.55;
-		color: var(--text-secondary);
+	.post-lead {
+		max-width: 620px;
+		margin: 24px auto 0;
+		color: color-mix(in srgb, var(--text-primary) 80%, transparent);
+		font-size: 22px;
+		font-weight: 500;
+		line-height: 28px;
+		letter-spacing: -0.03em;
 	}
 
-	/* Full-width hero */
-	.blog-banner {
-		border-radius: var(--radius-xl);
+	.post-banner {
+		max-width: 960px;
+		margin: 0 auto 64px;
 		overflow: hidden;
-		margin: 0 0 3.5rem;
-		box-shadow: var(--shadow-md);
+		border-radius: 48px;
+		background: var(--gradient-aurora-cool);
 	}
 
-	.blog-banner img {
-		width: 100%;
+	.post-banner img {
 		display: block;
+		width: 100%;
 		aspect-ratio: 16 / 9;
 		object-fit: cover;
 	}
 
-	/* Body: table of contents on the left, reading column on the right */
-	.blog-post-body {
-		display: grid;
-		grid-template-columns: 14rem minmax(0, 1fr);
-		gap: 3rem;
-		align-items: start;
-	}
-
-	.blog-post-body.no-toc {
-		grid-template-columns: 1fr;
+	/* Contents rail sits in the left margin; the story stays centered */
+	.post-layout {
+		position: relative;
 	}
 
 	.blog-post {
-		max-width: 46rem;
+		max-width: 680px;
 		margin: 0 auto;
 		min-width: 0;
 	}
 
-	/* Title now lives in the header, so drop the duplicate from the body */
-	.blog-post :global(h1:first-child) {
+	.post-page .blog-post {
+		color: color-mix(in srgb, var(--text-primary) 92%, transparent);
+		font-size: 19px;
+		line-height: 1.62;
+		letter-spacing: -0.012em;
+	}
+
+	.post-page .blog-post :global(h1:first-child) {
 		display: none;
 	}
 
-	/* One-shot load-in: header, banner, then body. The article itself never
-	   animates on scroll — reading stays static. */
-	.back-link,
-	.blog-post-header {
-		animation: postEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+	.post-page .blog-post :global(p) {
+		margin: 0 0 1.1em;
+		color: inherit;
 	}
 
-	.blog-banner {
-		animation: postEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+	.post-page .blog-post :global(h2) {
+		margin: 2.2em 0 0.55em;
+		font-size: 34px;
+		font-weight: 700;
+		line-height: 1.08;
+		letter-spacing: -0.05em;
+		text-shadow: none;
 	}
 
-	.blog-post-body {
-		animation: postEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
+	.post-page .blog-post :global(h3) {
+		margin: 1.8em 0 0.5em;
+		font-size: 24px;
+		font-weight: 600;
+		line-height: 1.2;
+		letter-spacing: -0.035em;
 	}
 
-	@keyframes postEnter {
+	.post-page .blog-post :global(a) {
+		color: var(--accent);
+		font-weight: 500;
+	}
+
+	.post-page .blog-post :global(img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: 28px;
+	}
+
+	.post-page .blog-post :global(pre) {
+		margin: 1.6em 0;
+		padding: 22px 26px;
+		border: none;
+		border-radius: 24px;
+		background: var(--bg-secondary);
+		box-shadow: none;
+		font-size: 15px;
+	}
+
+	.post-page .blog-post :global(:not(pre) > code) {
+		border: none;
+		border-radius: 8px;
+		background: var(--bg-secondary);
+		box-shadow: none;
+	}
+
+	.post-page .blog-post :global(blockquote) {
+		margin: 1.6em 0;
+		padding: 4px 0 4px 22px;
+		border-left: 3px solid var(--stat-affection);
+		color: color-mix(in srgb, var(--text-primary) 75%, transparent);
+	}
+
+	.post-page .blog-post :global(ul),
+	.post-page .blog-post :global(ol) {
+		padding-left: 1.3em;
+	}
+
+	.post-page .blog-post :global(li) {
+		margin: 0.35em 0;
+	}
+
+	@keyframes rise {
 		from {
 			opacity: 0;
-			filter: blur(8px);
 			transform: translateY(18px);
 		}
 		to {
 			opacity: 1;
-			filter: none;
 			transform: none;
 		}
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.back-link,
-		.blog-post-header,
-		.blog-banner,
-		.blog-post-body {
-			animation: none;
-		}
-	}
-
-	/* Table of contents. Sticky offset clears the site nav (~3.5rem tall). */
 	.toc {
-		position: sticky;
-		top: 5.5rem;
-		align-self: start;
-		max-height: calc(100vh - 7rem);
-		overflow-y: auto;
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 200px;
+		height: 100%;
 	}
 
 	.toc-title {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--text-secondary);
-		margin: 0 0 0.75rem;
-		padding-left: 0.75rem;
+		margin: 0 0 10px;
+		padding-left: 12px;
+		color: color-mix(in srgb, var(--text-primary) 45%, transparent);
+		font-size: 14px;
+		font-weight: 500;
 	}
 
 	.toc-list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
+		position: sticky;
+		top: 96px;
 		display: flex;
 		flex-direction: column;
-		gap: 0.125rem;
+		gap: 2px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 
 	.toc-list a {
 		display: block;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-md);
-		font-size: 0.8125rem;
-		line-height: 1.4;
-		color: var(--text-secondary);
+		padding: 7px 12px;
+		border-radius: 100px;
+		color: color-mix(in srgb, var(--text-primary) 55%, transparent);
+		font-size: 14px;
+		line-height: 1.3;
+		letter-spacing: -0.02em;
 		text-decoration: none;
-		transition: color 0.15s ease, background 0.15s ease;
+		transition:
+			color 0.15s ease,
+			background 0.15s ease;
 	}
 
 	.toc-list li.sub a {
-		padding-left: 1.5rem;
-		font-size: 0.78rem;
+		padding-left: 24px;
+		font-size: 13px;
 	}
 
 	.toc-list a:hover {
@@ -332,18 +384,77 @@
 	}
 
 	.toc-list a.active {
-		background: var(--bg-tertiary);
+		background: var(--bg-secondary);
 		color: var(--text-primary);
-		font-weight: 500;
 	}
 
-	@media (max-width: 1100px) {
-		.blog-post-body {
-			grid-template-columns: 1fr;
-		}
+	.more {
+		max-width: 1180px;
+		margin: 120px auto 0;
+	}
 
+	.more-title {
+		margin: 0 0 28px;
+		font-size: 40px;
+		font-weight: 700;
+		letter-spacing: -0.05em;
+		color: var(--text-primary);
+	}
+
+	.more-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 20px;
+	}
+
+	@media (max-width: 1240px) {
 		.toc {
 			display: none;
+		}
+	}
+
+	@media (max-width: 960px) {
+		.more-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 640px) {
+		.post-head {
+			padding: 40px 0 32px;
+		}
+
+		.post-title {
+			font-size: 40px;
+			letter-spacing: -0.05em;
+		}
+
+		.post-lead {
+			font-size: 18px;
+			line-height: 24px;
+		}
+
+		.post-banner {
+			margin-bottom: 40px;
+			border-radius: 32px;
+		}
+
+		.post-page .blog-post {
+			font-size: 17px;
+		}
+
+		.post-page .blog-post :global(h2) {
+			font-size: 28px;
+		}
+
+		.more-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.post-page {
+			animation: none;
 		}
 	}
 </style>

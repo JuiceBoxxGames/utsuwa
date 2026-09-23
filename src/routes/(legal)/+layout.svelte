@@ -1,20 +1,17 @@
 <script lang="ts">
 	import '$lib/styles/prose.css';
-	import { setupThemeWatcher } from '$lib/config/docs-theme';
-	import { browser } from '$app/environment';
+	import { lightVars } from '$lib/config/docs-theme';
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
-	let legalEl = $state<HTMLDivElement | null>(null);
 
-	// Sync with the shared colorMode/.dark toggle (same as the docs/blog). Needed
-	// so the legal surface gets its --docs-* variables applied.
-	$effect(() => setupThemeWatcher(() => legalEl, browser));
+	// Marketing pages are light only, so the docs aliases are fixed here.
+	const docsVars = Object.entries(lightVars).map(([k, v]) => `${k}: ${v}`).join('; ');
 </script>
 
-<div class="docs legal-site grain" bind:this={legalEl}>
+<div class="docs legal-site grain" style={docsVars}>
 	<SiteNav />
 
 	<main class="legal-main">

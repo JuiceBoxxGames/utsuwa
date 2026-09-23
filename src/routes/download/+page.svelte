@@ -1,20 +1,32 @@
 <script lang="ts">
+	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+	import GiftIcon from '@lucide/svelte/icons/gift';
+	import UserXIcon from '@lucide/svelte/icons/user-x';
+	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
+	import HardDriveIcon from '@lucide/svelte/icons/hard-drive';
 	import { marketingImage } from '$lib/utils/marketing-images';
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
-	import { reveal } from '$lib/utils/reveal';
+	import SkyZone from '$lib/components/marketing/SkyZone.svelte';
+	import HeroCard from '$lib/components/marketing/HeroCard.svelte';
+	import PlatformLine from '$lib/components/marketing/PlatformLine.svelte';
+	import SiteLetter from '$lib/components/marketing/SiteLetter.svelte';
+	import OsIcon from '$lib/components/marketing/OsIcon.svelte';
 	import { SITE_URL, GITHUB_REPO, GITHUB_RELEASES } from '$lib/config/site';
 	import { sectionUrl } from '$lib/config/links';
 
 	let { data } = $props();
 
 	// Release asset URLs resolved at build time (see +page.ts). Falls back to the
-	// releases page below if the API was unavailable during the build.
+	// releases page if the API was unavailable during the build.
 	const assets = $derived(data.assets ?? {});
 
+	type Os = 'macOS' | 'Windows' | 'Linux';
+
 	// Best-guess the visitor's OS so the primary button points at their build.
-	let os = $state<'macOS' | 'Windows' | 'Linux'>('macOS');
+	let os = $state<Os>('macOS');
 	$effect(() => {
 		const ua = navigator.userAgent;
 		if (/Windows/i.test(ua)) os = 'Windows';
@@ -23,23 +35,27 @@
 	});
 
 	const downloadFor = (key: string) => assets[key] || GITHUB_RELEASES;
+	const fallbackFile: Record<Os, string> = { macOS: 'Utsuwa.dmg', Windows: 'Utsuwa-setup.exe', Linux: 'Utsuwa.AppImage' };
+	const fileName = $derived(
+		assets[os] ? decodeURIComponent(assets[os].split('/').pop() ?? '') : fallbackFile[os]
+	);
 
-	const platforms = [
-		{ name: 'macOS', note: 'Apple Silicon and Intel, universal .dmg', key: 'macOS' },
-		{ name: 'Windows', note: 'Windows 10 and 11, x64 .exe installer', key: 'Windows' },
-		{ name: 'Linux', note: '.AppImage, .deb, and .rpm', key: 'Linux' }
+	const platforms: { name: Os; icon: 'macos' | 'windows' | 'linux'; note: string; tone: string }[] = [
+		{ name: 'macOS', icon: 'macos', note: 'Apple Silicon and Intel, universal .dmg', tone: '#1c2b33' },
+		{ name: 'Windows', icon: 'windows', note: 'Windows 10 and 11, x64 .exe installer', tone: 'color-mix(in oklab, var(--accent) 55%, #0b1620)' },
+		{ name: 'Linux', icon: 'linux', note: '.AppImage, .deb, and .rpm', tone: 'color-mix(in oklab, var(--tier-eternal-bond) 50%, #10141c)' }
 	];
 
 	const included = [
-		{ title: 'Free forever', body: 'No subscription and no paywalled features. The whole app is yours.' },
-		{ title: 'No account', body: 'Nothing to sign up for. Open it and start.' },
-		{ title: 'Your keys', body: 'Bring your own model keys, or run a local model with none at all.' },
-		{ title: 'Stays on device', body: 'Characters and conversations live in local storage, not our servers.' }
+		{ icon: GiftIcon, title: 'Free forever', body: 'No subscription and no paywalled features. The whole app is yours.', tint: 'var(--gradient-aurora)' },
+		{ icon: UserXIcon, title: 'No account', body: 'Nothing to sign up for. Open it and start.', tint: 'var(--gradient-aurora-cool)' },
+		{ icon: KeyRoundIcon, title: 'Your keys', body: 'Bring your own model keys, or run a local model with none at all.', tint: 'var(--gradient-aurora-mint)' },
+		{ icon: HardDriveIcon, title: 'Stays on device', body: 'Characters and conversations live in local storage, not our servers.', tint: 'var(--gradient-aurora-iris)' }
 	];
 </script>
 
 <svelte:head>
-	<title>Download Utsuwa - Free Open-Source AI Companion for Mac, Windows, Linux</title>
+	<title>Download Utsuwa: Free Open-Source AI Companion for Mac, Windows, Linux</title>
 	<meta
 		name="description"
 		content="Download Utsuwa, the free and open-source AI companion with 3D VRM avatars, for macOS, Windows, and Linux, or run it in your browser. Self-hosted and privacy-first."
@@ -53,9 +69,9 @@
 	/>
 	<meta property="og:url" content={`${SITE_URL}/download`} />
 	<meta property="og:site_name" content="Utsuwa" />
-	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.png`} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.png`} />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'SoftwareApplication',
@@ -68,349 +84,511 @@
 	})}<\/script>`}
 </svelte:head>
 
-<SiteNav />
+<div class="page grain">
+	<main>
+		<SkyZone fade>
+			<section class="dl-hero" aria-labelledby="dl-title">
+				<SiteNav variant="hero" />
 
-<main class="grain">
-	<section class="hero">
-		<div class="hero-copy">
-			<p class="eyebrow hero-kicker">Download</p>
-			<h1 class="hero-h1 text-balance">Get Utsuwa on your desktop.</h1>
-			<p class="hero-lead text-pretty">
-				The desktop app adds a transparent overlay you can pin over anything and a global hotkey to
-				summon your companion. Free and open source on every platform.
-			</p>
-			<div class="hero-actions">
-				<a href={downloadFor(os)} download class="btn btn-primary btn-lg">
-					<Icon name="download" size={15} />
-					Download for {os}
-				</a>
-				<a href={sectionUrl('app')} class="hero-textlink"
-					>or open the web app <span class="link-arrow">&rarr;</span></a
-				>
-			</div>
-		</div>
-
-		<div class="hero-shot">
-			<img
-				class="shot"
-				{...marketingImage('/marketing/desktop-app.webp', '(max-width: 859px) calc(100vw - 40px), (max-width: 1280px) 48vw, 616px')}
-				alt="The Utsuwa desktop overlay: a VRM companion floating on a macOS desktop"
-				loading="eager"
-			/>
-		</div>
-	</section>
-
-	<section class="platforms">
-		<h2 use:reveal class="reveal section-title">All platforms</h2>
-		<ul class="platform-list">
-			{#each platforms as p, i}
-				<li use:reveal={i * 70} class="reveal platform-row">
-					<div class="platform-meta">
-						<span class="platform-name">{p.name}</span>
-						<span class="platform-note">{p.note}</span>
+				<div class="dl-wrap">
+					<div class="dl-copy">
+						<p class="dl-eyebrow">Download</p>
+						<h1 id="dl-title" class="dl-title">Utsuwa for your desktop</h1>
+						<p class="dl-lead">
+							A transparent overlay you can pin over anything, and a global hotkey to summon her. Free
+							and open source on every platform.
+						</p>
+						<a href={downloadFor(os)} download class="btn btn-hero">
+							<DownloadIcon size={18} strokeWidth={2.25} />
+							Download for {os}
+						</a>
+						<PlatformLine />
+						<a href={sectionUrl('app')} class="dl-web">
+							or try it in your browser <ArrowRightIcon size={14} strokeWidth={2.25} />
+						</a>
 					</div>
-					<a href={downloadFor(p.key)} download class="btn btn-secondary btn-sm">
-						Download
-					</a>
-				</li>
-			{/each}
-		</ul>
-		<p use:reveal={220} class="reveal platform-foot">
-			Builds are published on
-			<a href={GITHUB_RELEASES} target="_blank" rel="noopener noreferrer" class="inline-link">GitHub Releases</a>.
-			Older versions and release notes live there too.
-		</p>
-	</section>
 
-	<section class="included">
-		<h2 use:reveal class="reveal section-title">What you get</h2>
-		<div class="included-grid">
-			{#each included as item, i}
-				<div use:reveal={i * 80} class="reveal included-item">
-					<h3 class="included-title">{item.title}</h3>
-					<p class="included-body">{item.body}</p>
+					<HeroCard
+						images={[{ src: '/landing-page/hero-home.webp', alt: 'Yuki, a 3D VRM companion, sitting and hugging her knees' }]}
+						bubble="save me a spot on your desktop?"
+						meta={fileName}
+					/>
 				</div>
-			{/each}
-		</div>
-	</section>
+			</section>
+		</SkyZone>
 
-	<section class="build">
-		<div use:reveal class="reveal build-inner">
-			<h2 class="section-title">Rather build it yourself?</h2>
-			<p class="build-body text-pretty">
-				Utsuwa is AGPL-3.0 licensed and built on SvelteKit, Three.js, and Tauri. Clone the repo, install
-				dependencies, and run it locally, or fork it and make it your own.
+		<!-- Platforms -->
+		<section class="platforms" aria-labelledby="platforms-title">
+			<h2 id="platforms-title" class="section-title">Pick your platform</h2>
+			<div class="platform-grid">
+				{#each platforms as p (p.name)}
+					<article class="platform" style="--tone: {p.tone}">
+						<div class="platform-top">
+							<OsIcon os={p.icon} size={44} />
+							{#if p.name === os}<span class="platform-tag">Your system</span>{/if}
+						</div>
+						<div class="platform-bottom">
+							<h3 class="platform-name">{p.name}</h3>
+							<p class="platform-note">{p.note}</p>
+							<a href={downloadFor(p.name)} download class="platform-link">
+								Download <ArrowDownIcon size={15} strokeWidth={2.25} />
+							</a>
+						</div>
+					</article>
+				{/each}
+			</div>
+			<p class="platform-foot">
+				Builds are published on
+				<a href={GITHUB_RELEASES} target="_blank" rel="noopener noreferrer">GitHub Releases</a>. Older
+				versions and release notes live there too.
 			</p>
-			<a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-				<Icon name="code" size={15} />
-				View the source
-			</a>
-		</div>
-	</section>
-</main>
+		</section>
 
-<SiteFooter />
+		<!-- Desktop overlay -->
+		<section class="overlay" aria-labelledby="overlay-title">
+			<p class="overlay-note">Desktop overlay</p>
+			<div class="overlay-head">
+				<h2 id="overlay-title" class="overlay-title">Pin her over anything</h2>
+				<p class="overlay-sub">
+					A transparent, always-on-top window you can drag anywhere. Hit the global hotkey and she is
+					there, over your browser, your code, or your game.
+				</p>
+			</div>
+			<div class="overlay-shot">
+				<img
+					{...marketingImage('/marketing/desktop-app.webp', '(max-width: 1180px) calc(100vw - 36px), 1110px')}
+					alt="The Utsuwa desktop overlay: a VRM companion floating on a macOS desktop"
+					loading="lazy"
+				/>
+			</div>
+		</section>
+
+		<!-- What you get -->
+		<section class="included" aria-labelledby="included-title">
+			<p class="included-note">What you get</p>
+			<h2 id="included-title" class="included-title">No catch. Really.</h2>
+			<div class="included-grid">
+				{#each included as item (item.title)}
+					<div class="included-item">
+						<span class="included-face" style="background: {item.tint}"
+							><item.icon size={24} strokeWidth={1.75} /></span
+						>
+						<h3>{item.title}</h3>
+						<p>{item.body}</p>
+					</div>
+				{/each}
+			</div>
+		</section>
+
+		<SiteLetter
+			lede="AGPL-3.0, built on SvelteKit, Three.js, and Tauri."
+			title="Rather build it yourself?"
+			body="Clone the repo, install dependencies, and run it locally, or fork it and make it your own."
+			href={GITHUB_REPO}
+			label="View the source"
+			external
+		/>
+	</main>
+
+	<SiteFooter />
+</div>
 
 <style>
+	.page {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		overflow-x: clip;
+		background: var(--bg-page);
+		color: var(--text-primary);
+	}
+
 	main {
-		max-width: 80rem;
-		margin: 0 auto;
-		padding: 0 var(--marketing-gutter);
-	}
-
-	/* Hero: copy left, screenshot right */
-	.hero {
 		display: flex;
 		flex-direction: column;
-		gap: 2.5rem;
-		padding: clamp(3rem, 8vw, 5.5rem) 0 clamp(3rem, 7vw, 4.5rem);
-	}
-
-	/* Label styling comes from the shared .eyebrow class */
-	.hero-kicker {
-		margin: 0 0 1rem;
-	}
-
-	.hero-h1 {
-		margin: 0 0 1.25rem;
-		font-size: clamp(2.25rem, 5vw, 3.5rem);
-		font-weight: 500;
-		line-height: 1.08;
-		letter-spacing: -0.03em;
-		color: var(--text-primary);
-	}
-
-	.hero-lead {
-		margin: 0;
-		max-width: 32rem;
-		font-size: clamp(1.05rem, 1.6vw, 1.15rem);
-		line-height: 1.6;
-		color: var(--text-secondary);
-	}
-
-	.hero-actions {
-		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.75rem;
-		margin-top: 2rem;
-	}
-
-	.hero-textlink {
-		margin-left: 0;
-		font-size: 0.95rem;
-		font-weight: 500;
-		color: var(--text-secondary);
-		text-decoration: none;
-		transition: color 0.15s ease;
-	}
-
-	.hero-textlink:hover {
-		color: var(--accent);
-	}
-
-	.link-arrow {
-		display: inline-block;
-		transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.hero-textlink:hover .link-arrow {
-		transform: translateX(3px);
-	}
-
-	/* Overlay-mode photo: works in both themes, so no light/dark swap needed */
-	.shot {
-		display: block;
 		width: 100%;
-		height: auto;
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-lg);
 	}
 
-	@media (min-width: 860px) {
-		.hero {
-			flex-direction: row;
-			align-items: center;
-			gap: 4rem;
-		}
-
-		.hero-copy {
-			flex: 1;
-		}
-
-		.hero-shot {
-			flex: 1.15;
-			min-width: 0;
-		}
-	}
-
-	/* Staggered load-in */
-	.hero-copy {
-		animation: pageRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-	}
-
-	.hero-shot {
-		animation: pageRise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
-	}
-
-	@keyframes pageRise {
-		from {
-			opacity: 0;
-			filter: blur(8px);
-			transform: translateY(26px);
-		}
-		to {
-			opacity: 1;
-			filter: blur(0);
-			transform: none;
-		}
-	}
-
-	/* Scroll-reveal: same blur-fade-up language as the landing page */
-	.reveal {
-		opacity: 0;
-		transform: translateY(20px);
-		filter: blur(8px);
-		transition:
-			opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-			transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-			filter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-		transition-delay: var(--reveal-delay, 0ms);
-	}
-
-	.reveal:global(.revealed) {
-		opacity: 1;
-		transform: none;
-		filter: blur(0);
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.hero-copy,
-		.hero-shot {
-			animation: none;
-		}
-
-		.reveal {
-			opacity: 1;
-			transform: none;
-			filter: none;
-			transition: none;
-		}
-	}
-
-	/* Section shared */
-	.section-title {
-		margin: 0 0 1.5rem;
-		font-size: clamp(1.4rem, 2.4vw, 1.75rem);
-		font-weight: 600;
-		letter-spacing: -0.02em;
-		color: var(--text-primary);
-	}
-
-	/* Platform list */
-	.platforms {
-		border-top: 1px solid var(--border-subtle);
-		padding: clamp(2.5rem, 6vw, 4rem) 0;
-	}
-
-	.platform-list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-
-	.platform-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 1.1rem 0;
-		border-bottom: 1px solid var(--border-subtle);
-	}
-
-	.platform-row:first-child {
-		border-top: 1px solid var(--border-subtle);
-	}
-
-	.platform-meta {
+	/* Hero: same bones as the landing hero */
+	.dl-hero {
+		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		align-items: center;
+		gap: 54px;
+		width: 100%;
+		min-height: 100vh;
+		min-height: 100dvh;
+		padding: 64px clamp(24px, 5.9vw, 85px) 150px;
+	}
+
+	.dl-wrap {
+		--card-w: clamp(290px, min(29vw, calc((100svh - 250px) * 0.658)), 400px);
+		position: relative;
+		z-index: 3;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: clamp(32px, 4vw, 56px);
+		width: 100%;
+		max-width: 1057px;
+		margin: auto 0;
+		color: #fff;
+	}
+
+	.dl-copy {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		max-width: 560px;
+	}
+
+	.dl-eyebrow {
+		margin: 0 0 16px;
+		color: rgba(255, 255, 255, 0.82);
+		font-size: 16px;
+		letter-spacing: -0.03em;
+	}
+
+	.dl-title {
+		margin: 0;
+		font-size: clamp(56px, 6.6vw, 96px);
+		font-weight: 700;
+		line-height: 0.9;
+		letter-spacing: -0.066em;
+		text-shadow: 0 2px 40px rgba(0, 48, 110, 0.12);
+	}
+
+	.dl-lead {
+		max-width: 440px;
+		margin: 26px 0 38px;
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 18px;
+		font-weight: 500;
+		line-height: 24px;
+		letter-spacing: -0.03em;
+		text-shadow: 0 1px 20px rgba(0, 48, 110, 0.14);
+	}
+
+	.dl-web {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin-top: 6px;
+		padding-block: 12px;
+		color: #fff;
+		font-size: 15px;
+		font-weight: 500;
+		text-decoration: none;
+		opacity: 0.85;
+		transition: opacity 0.2s ease;
+	}
+
+	.dl-web:hover {
+		opacity: 1;
+	}
+
+	/* Platform cards: deep, tall, rounded, like the press "mentions" row */
+	.section-title {
+		margin: 0 0 28px;
+		font-size: 40px;
+		font-weight: 700;
+		letter-spacing: -0.05em;
+	}
+
+	.platforms {
+		width: 100%;
+		max-width: 1180px;
+		padding: 40px 35px 0;
+	}
+
+	.platform-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 20px;
+	}
+
+	.platform {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		min-height: 400px;
+		padding: 32px;
+		border-radius: 40px;
+		background: var(--tone);
+		color: #fff;
+	}
+
+	.platform-top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+
+	.platform-tag {
+		padding: 8px 14px;
+		border-radius: 100px;
+		background: rgba(255, 255, 255, 0.16);
+		font-size: 13px;
+		font-weight: 500;
 	}
 
 	.platform-name {
-		font-size: 1.0625rem;
-		font-weight: 600;
-		color: var(--text-primary);
+		margin: 0;
+		font-size: 34px;
+		font-weight: 700;
+		letter-spacing: -0.05em;
 	}
 
+	/* Two lines reserved so the names line up across cards */
 	.platform-note {
-		font-size: 0.875rem;
-		color: var(--text-secondary);
+		min-height: 2.7em;
+		margin: 6px 0 24px;
+		line-height: 1.35;
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 15px;
+		letter-spacing: -0.02em;
+	}
+
+	.platform-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 16px 24px;
+		border-radius: 100px;
+		background: #fff;
+		color: #1c2b33;
+		font-size: 16px;
+		font-weight: 500;
+		text-decoration: none;
+		transition: transform 0.2s ease;
+	}
+
+	.platform-link:hover {
+		transform: translateY(-2px);
 	}
 
 	.platform-foot {
-		margin: 1.5rem 0 0;
-		font-size: 0.875rem;
-		color: var(--text-secondary);
+		margin: 22px 0 0;
+		color: color-mix(in srgb, var(--text-primary) 60%, transparent);
+		font-size: 15px;
 	}
 
-	.inline-link {
+	.platform-foot a {
+		color: var(--text-primary);
+		text-underline-offset: 3px;
+	}
+
+	/* Desktop overlay: Replika's header row, one wide rounded shot */
+	.overlay {
+		width: 100%;
+		max-width: 1180px;
+		margin-top: 140px;
+		padding: 0 35px;
+	}
+
+	.overlay-note,
+	.included-note {
+		margin: 0 0 12px;
 		color: var(--accent);
-		text-decoration: none;
+		font-size: 16px;
+		letter-spacing: -0.03em;
 	}
 
-	.inline-link:hover {
-		text-decoration: underline;
+	.overlay-head {
+		display: flex;
+		justify-content: space-between;
+		gap: 32px;
+		margin-bottom: 40px;
+	}
+
+	.overlay-title {
+		max-width: 475px;
+		margin: 0;
+		font-size: 48px;
+		font-weight: 600;
+		line-height: 50px;
+		letter-spacing: -0.065em;
+	}
+
+	.overlay-sub {
+		max-width: 370px;
+		margin: 0;
+		color: color-mix(in srgb, var(--text-primary) 80%, transparent);
+		font-size: 16px;
+		line-height: 1.2;
+		letter-spacing: -0.03em;
+	}
+
+	.overlay-shot {
+		overflow: hidden;
+		border-radius: 56px;
+		background: var(--bg-secondary);
+	}
+
+	.overlay-shot img {
+		display: block;
+		width: 100%;
+		height: auto;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		object-position: 40% 30%;
 	}
 
 	/* What you get */
 	.included {
-		border-top: 1px solid var(--border-subtle);
-		padding: clamp(2.5rem, 6vw, 4rem) 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 100%;
+		max-width: 1180px;
+		margin-top: 140px;
+		padding: 0 35px;
+		text-align: center;
+	}
+
+	.included-title {
+		margin: 0 0 48px;
+		font-size: 48px;
+		font-weight: 600;
+		line-height: 50px;
+		letter-spacing: -0.045em;
 	}
 
 	.included-grid {
 		display: grid;
-		grid-template-columns: 1fr;
-		gap: 1.75rem 3rem;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 20px;
+		width: 100%;
+		text-align: left;
 	}
 
-	.included-title {
-		margin: 0 0 0.35rem;
-		font-size: 1rem;
+	.included-item {
+		padding: 28px 26px 30px;
+		border-radius: 40px;
+		background: var(--bg-secondary);
+	}
+
+	.included-face {
+		display: grid;
+		place-items: center;
+		width: 60px;
+		height: 60px;
+		margin-bottom: 22px;
+		border: 3px solid #fff;
+		border-radius: 20px;
+		color: #1c2b33;
+		box-shadow: 0 10px 24px rgba(34, 36, 48, 0.12);
+	}
+
+	.included-item h3 {
+		margin: 0 0 8px;
+		font-size: 22px;
 		font-weight: 600;
-		color: var(--text-primary);
+		letter-spacing: -0.04em;
 	}
 
-	.included-body {
+	.included-item p {
 		margin: 0;
-		max-width: 26rem;
-		font-size: 1rem;
-		line-height: 1.6;
-		color: var(--text-secondary);
+		color: color-mix(in srgb, var(--text-primary) 75%, transparent);
+		font-size: 15px;
+		line-height: 1.35;
 	}
 
-	@media (min-width: 700px) {
-		.included-grid {
-			grid-template-columns: repeat(2, 1fr);
+	/* Big monitors: scale the composition up instead of leaving a small island */
+	@media (min-width: 1800px) and (min-height: 1000px) {
+		.dl-wrap {
+			zoom: 1.15;
 		}
 	}
 
-	/* Build from source */
-	.build {
-		border-top: 1px solid var(--border-subtle);
-		padding: clamp(2.5rem, 6vw, 4rem) 0 clamp(4rem, 9vw, 6rem);
+	@media (min-width: 2200px) and (min-height: 1250px) {
+		.dl-wrap {
+			zoom: 1.4;
+		}
 	}
 
-	.build-inner {
-		max-width: 34rem;
+	@media (max-width: 956px) {
+		.dl-hero {
+			min-height: auto;
+			padding: 20px 18px 120px;
+		}
+
+		.dl-wrap {
+			--card-w: clamp(280px, 44vw, 380px);
+			flex-direction: column;
+		}
+
+		.dl-copy {
+			align-items: center;
+			text-align: center;
+		}
+
+		.dl-title {
+			font-size: clamp(44px, 8vw, 64px);
+			line-height: 0.95;
+			letter-spacing: -0.05em;
+		}
+
+		.platform-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 14px;
+		}
+
+		.platform {
+			min-height: 280px;
+			padding: 24px;
+		}
+
+		.platform-name {
+			font-size: 28px;
+		}
+
+		.overlay-head {
+			flex-direction: column;
+			gap: 16px;
+		}
+
+		.overlay-title,
+		.included-title {
+			font-size: 36px;
+			line-height: 38px;
+		}
+
+		.overlay-shot {
+			border-radius: 36px;
+		}
 	}
 
-	.build-body {
-		margin: 0 0 1.5rem;
-		font-size: 1rem;
-		line-height: 1.6;
-		color: var(--text-secondary);
+	@media (max-width: 1100px) {
+		.included-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	/* Phones: one card per row */
+	@media (max-width: 640px) {
+		.platform-grid,
+		.included-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.platform {
+			min-height: 240px;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.platforms,
+		.overlay,
+		.included {
+			padding: 0 18px;
+		}
+
+		.overlay,
+		.included {
+			margin-top: 96px;
+		}
 	}
 </style>

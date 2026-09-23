@@ -85,7 +85,9 @@
 		<meta property="og:description" content={data.metadata.description} />
 	{/if}
 	<meta property="og:url" content={`${DOCS_URL}/${data.slug}`} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
 	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
 	<meta name="twitter:title" content={data.metadata?.title || 'Docs'} />
 	{#if data.metadata?.description}
 		<meta name="twitter:description" content={data.metadata.description} />

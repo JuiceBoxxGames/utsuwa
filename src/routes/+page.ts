@@ -7,5 +7,5 @@ import { getSortedPosts } from '$lib/utils/blog-posts';
 export const prerender = false;
 
 export const load: PageLoad = async () => {
-	return { posts: getSortedPosts().slice(0, 3) };
+	return { posts: getSortedPosts().slice(0, 6) };
 };
