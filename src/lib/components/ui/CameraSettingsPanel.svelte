@@ -31,6 +31,25 @@
 			cam.height === CAMERA_DEFAULTS.height &&
 			cam.panX === CAMERA_DEFAULTS.panX
 	);
+
+	let fileInput = $state<HTMLInputElement>();
+	let uploadError = $state('');
+	let uploadErrorTimer: ReturnType<typeof setTimeout> | undefined;
+
+	async function handleBackgroundFile(input: HTMLInputElement) {
+		const file = input.files?.[0];
+		// Reset so picking the same file again still fires change
+		input.value = '';
+		if (!file) return;
+		try {
+			await displayStore.setCustomBackgroundImage(file);
+			uploadError = '';
+		} catch (e) {
+			uploadError = e instanceof Error ? e.message : "Couldn't use that image.";
+			clearTimeout(uploadErrorTimer);
+			uploadErrorTimer = setTimeout(() => (uploadError = ''), 4000);
+		}
+	}
 </script>
 
 <div class="camera-panel" role="dialog" aria-label="Camera settings">
@@ -123,6 +142,45 @@
 				></button>
 			{/each}
 		</div>
+		<div class="swatch-row">
+			{#if displayStore.sceneBackgroundImage}
+				{@const image = displayStore.sceneBackgroundImage}
+				<button
+					class="swatch"
+					aria-pressed={displayStore.activeBackgroundImage !== null}
+					style:background={`url("${image.url}") center / cover`}
+					title="Your image"
+					aria-label="Background: your image"
+					onclick={() => displayStore.setSceneBackground({ type: 'image', value: image.id })}
+				></button>
+				<button
+					class="swatch swatch-action"
+					title="Remove image"
+					aria-label="Remove background image"
+					onclick={() => displayStore.clearCustomBackgroundImage()}
+				>
+					<Icon name="x" size={12} />
+				</button>
+			{/if}
+			<button
+				class="swatch swatch-action"
+				title="Upload image"
+				aria-label="Upload background image"
+				onclick={() => fileInput?.click()}
+			>
+				<Icon name="upload" size={12} />
+			</button>
+			<input
+				bind:this={fileInput}
+				type="file"
+				accept="image/jpeg,image/png,image/webp"
+				hidden
+				onchange={(e) => handleBackgroundFile(e.currentTarget)}
+			/>
+		</div>
+		{#if uploadError}
+			<p class="hint error" role="alert">{uploadError}</p>
+		{/if}
 	{/if}
 
 	<div class="section-divider">
@@ -236,6 +294,11 @@
 		gap: 0.35rem;
 	}
 
+	/* Custom image row sits at swatch spacing, not panel spacing */
+	.swatch-row + .swatch-row {
+		margin-top: calc(0.35rem - 0.875rem);
+	}
+
 	.swatch {
 		width: 24px;
 		height: 24px;
@@ -251,5 +314,22 @@
 
 	.swatch[aria-pressed="true"] {
 		border-color: var(--accent);
+	}
+
+	.swatch-action {
+		display: grid;
+		place-items: center;
+		padding: 0;
+		background: var(--bg-tertiary);
+		color: var(--text-secondary);
+	}
+
+	.hint {
+		margin: -0.5rem 0 0;
+		font-size: 0.6875rem;
+	}
+
+	.hint.error {
+		color: var(--color-error);
 	}
 </style>

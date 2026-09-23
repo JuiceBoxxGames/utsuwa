@@ -126,7 +126,8 @@
 						out.width,
 						out.height,
 						displayStore.sceneBackground,
-						pixelScale
+						pixelScale,
+						displayStore.activeBackgroundImage?.bitmap
 					);
 				} else {
 					drawPhotoBackground(ctx, out.width, out.height, options.background, pixelScale);

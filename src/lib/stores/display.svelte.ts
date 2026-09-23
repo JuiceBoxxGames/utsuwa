@@ -27,6 +27,13 @@ import {
 	sanitizeSceneBackground,
 	type SceneBackground
 } from '../services/scene-backgrounds.ts';
+import {
+	findStoredBackgroundImageId,
+	loadBackgroundImage,
+	removeBackgroundImage,
+	saveBackgroundImage,
+	type LoadedBackgroundImage
+} from '../services/storage/scene-background-images.ts';
 
 const STORAGE_KEY = 'utsuwa-display';
 
@@ -52,6 +59,10 @@ function createDisplayStore() {
 	let physicsIntensity = $state(PHYSICS_INTENSITY_DEFAULT);
 	// Persistent backdrop for the regular scene ('default' = the theme backdrop)
 	let sceneBackground = $state<SceneBackground>({ type: 'default' });
+	// The stored user image, decoded. Kept while a preset is active so the
+	// picker can switch back to it.
+	let sceneBackgroundImage = $state<LoadedBackgroundImage | null>(null);
+	let imageLookup = 0;
 
 	// Chat display mode and sidebar docking
 	let chatDisplayMode = $state<ChatDisplayMode>(DEFAULT_CHAT_DISPLAY_MODE);
@@ -73,6 +84,7 @@ function createDisplayStore() {
 		overlayCamera = parsed.overlayCamera;
 		physicsIntensity = parsed.physicsIntensity;
 		sceneBackground = parsed.sceneBackground;
+		void refreshStoredImage();
 		chatDisplayMode = parsed.chatDisplayMode;
 		sidebarPosition = parsed.sidebarPosition;
 		typingIndicatorDelayMs = parsed.typingIndicatorDelayMs;
@@ -139,8 +151,45 @@ function createDisplayStore() {
 		save();
 	}
 
+	async function refreshStoredImage() {
+		const lookup = ++imageLookup;
+		const id = await findStoredBackgroundImageId();
+		const loaded = id ? await loadBackgroundImage(id) : null;
+		// An upload or removal may have landed while this was reading
+		if (lookup !== imageLookup) return;
+		sceneBackgroundImage = loaded;
+		syncBackgroundImage();
+	}
+
+	// Never leave the scene pointing at an image that isn't loaded
+	function syncBackgroundImage() {
+		if (sceneBackground.type !== 'image' || sceneBackgroundImage?.id === sceneBackground.value) return;
+		sceneBackground = { type: 'default' };
+		save();
+	}
+
 	function setSceneBackground(bg: SceneBackground) {
 		sceneBackground = sanitizeSceneBackground(bg);
+		syncBackgroundImage();
+		save();
+	}
+
+	async function setCustomBackgroundImage(file: File) {
+		const id = await saveBackgroundImage(file);
+		const loaded = await loadBackgroundImage(id);
+		if (!loaded) throw new Error("That image couldn't be loaded. Try a different file.");
+		imageLookup++;
+		sceneBackgroundImage = loaded;
+		setSceneBackground({ type: 'image', value: id });
+	}
+
+	async function clearCustomBackgroundImage() {
+		imageLookup++;
+		const id = sceneBackgroundImage?.id ?? (await findStoredBackgroundImageId());
+		sceneBackgroundImage = null;
+		if (sceneBackground.type === 'image') sceneBackground = { type: 'default' };
+		if (id) await removeBackgroundImage(id);
+		// Saved after the delete so other windows re-read an empty store
 		save();
 	}
 
@@ -207,6 +256,14 @@ function createDisplayStore() {
 		get sceneBackground() {
 			return sceneBackground;
 		},
+		get sceneBackgroundImage() {
+			return sceneBackgroundImage;
+		},
+		get activeBackgroundImage() {
+			return sceneBackground.type === 'image' && sceneBackgroundImage?.id === sceneBackground.value
+				? sceneBackgroundImage
+				: null;
+		},
 		get chatDisplayMode() {
 			return chatDisplayMode;
 		},
@@ -229,6 +286,8 @@ function createDisplayStore() {
 		resetCamera,
 		setPhysicsIntensity,
 		setSceneBackground,
+		setCustomBackgroundImage,
+		clearCustomBackgroundImage,
 		setChatDisplayMode,
 		setSidebarPosition,
 		resetChatDisplay,
