@@ -12,7 +12,5 @@
 		<p>Configure the voice provider and speech settings.</p>
 	</header>
 
-	<section class="section">
-		<TtsSettings {state} />
-	</section>
+	<TtsSettings {state} />
 </div>

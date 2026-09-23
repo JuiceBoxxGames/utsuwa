@@ -33,7 +33,5 @@
 		<p>Configure the chat model and provider settings.</p>
 	</header>
 
-	<section class="section">
-		<LlmSettings {state} />
-	</section>
+	<LlmSettings {state} />
 </div>

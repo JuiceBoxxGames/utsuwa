@@ -1,33 +1,9 @@
 @import './settings-controls.css';
 
-/* Shared styles for LLM/TTS/STT settings components.
-   Imported by LlmSettings.svelte, TtsSettings.svelte, and SttSettings.svelte. */
+/* Field stack for the LLM, TTS, and STT sections */
+.ai-fields { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ai-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ai-field .settings-label { margin-bottom: 0; }
+.ai-fields .hint { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
 
-.service-group {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-}
-
-.service-header {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	font-size: 0.9375rem;
-	font-weight: 600;
-	color: var(--text-primary);
-	margin-bottom: 0.25rem;
-}
-
-.service-header > .ui-switch {
-	margin-left: auto;
-}
-
-.api-key-row {
-	display: flex;
-	gap: 0.5rem;
-	min-width: 0;
-}
-.api-key-input {
-	flex: 1;
-}
+.api-key-input { flex: 1; }
