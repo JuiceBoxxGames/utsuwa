@@ -276,3 +276,44 @@ test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', as
 	await expect(page.getByRole('menu')).toHaveCount(0);
 	await expect(page.locator('.dropdown-trigger')).toBeFocused();
 });
+
+test('Fish Audio setup offers its models and voices without a failed model fetch', async ({
+	page
+}, info) => {
+	await openApp(page);
+	await page.evaluate(async () => {
+		const path = '/src/lib/stores/modules.svelte.ts';
+		await (await import(/* @vite-ignore */ path)).modulesStore.setModuleEnabled('speech', true);
+	});
+	await page.goto('/app/settings/tts');
+	await waitForHydration(page);
+	await page.locator('.content .dropdown-trigger').click();
+	await page.getByRole('menuitem', { name: 'Fish Audio', exact: true }).click();
+
+	const key = page.getByLabel('API Key', { exact: true });
+	await key.fill('browser-test-only');
+	await key.press('Tab');
+	// Fish Audio has no model-list endpoint, so the key blur must settle on the
+	// registry models rather than an "Unknown provider" error.
+	await expect
+		.poll(() =>
+			page.evaluate(async () => {
+				const path = '/src/lib/stores/settings.svelte.ts';
+				const { settingsStore } = await import(/* @vite-ignore */ path);
+				return settingsStore.getCachedModels('fish-audio')?.map((m: { id: string }) => m.id);
+			})
+		)
+		.toEqual(['s2.1-pro', 's2.1-pro-free', 's2-pro', 's1']);
+	await expect(key).not.toHaveClass(/error/);
+	await expect(page.locator('.model-dropdown-trigger')).toHaveText('S2.1 Pro');
+	await expect(page.getByLabel('Voice ID', { exact: true })).toHaveValue(
+		'933563129e564b19a115bedd57b7406a'
+	);
+	await expect(page.locator('#fish-audio-voices option')).toHaveCount(9);
+	expect(await speechSettings(page)).toMatchObject({
+		activeProvider: 'fish-audio',
+		activeModel: 's2.1-pro',
+		activeVoiceId: '933563129e564b19a115bedd57b7406a'
+	});
+	await page.screenshot({ path: info.outputPath('fish-audio-settings.png') });
+});

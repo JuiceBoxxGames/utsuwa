@@ -495,16 +495,16 @@
 				/>
 			{/if}
 
-			{#if ttsSettings.activeProvider === 'elevenlabs'}
+			{#if ttsProvider?.id === 'elevenlabs' || ttsProvider?.id === 'fish-audio'}
 				<input
 					type="text"
 					class="api-key-input"
-					list="elevenlabs-voices"
+					list="{ttsProvider.id}-voices"
 					placeholder="Voice ID"
 					value={ttsSettings.activeVoiceId as string ?? ''}
 					oninput={(e) => handleTTSVoiceChange(e.currentTarget.value)}
 				/>
-				<datalist id="elevenlabs-voices">
+				<datalist id="{ttsProvider.id}-voices">
 					{#each ttsProvider?.voices ?? [] as voice}
 						<option value={voice.id}>{voice.name}</option>
 					{/each}

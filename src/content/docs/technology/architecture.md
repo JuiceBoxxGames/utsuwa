@@ -145,13 +145,15 @@ Text-to-speech converts LLM responses to audio with lip-sync.
 **Key files:**
 - `src/lib/services/lipsync/analyzer.ts` — Lip-sync audio analysis
 - `src/lib/services/tts/elevenlabs.ts` — ElevenLabs provider
+- `src/lib/services/tts/fish-audio.ts`: Fish Audio provider
 - `src/lib/services/tts/openai-tts.ts` — OpenAI-compatible provider (cloud OpenAI TTS and local servers)
 - `src/lib/services/tts/index.ts` — Provider factory and shared audio context
 - `src/lib/services/providers/local-endpoints.ts` — Local TTS base-URL resolution and connection hints
 
-**Supported providers (3):**
+**Supported providers (4):**
 - **ElevenLabs** (cloud, high quality, requires API key)
 - **OpenAI TTS** (cloud, requires API key)
+- **Fish Audio** (cloud, requires API key). Its TTS endpoint has no CORS support, so the web build sends requests through the `/api/tts/fish-audio` pass-through route and the desktop build uses the Tauri HTTP plugin
 - **Local TTS** — any OpenAI-compatible TTS server exposing `/v1/audio/speech` (e.g. Kokoro-FastAPI, openedai-speech). No key; defaults to `http://localhost:8880/v1`, and reuses the OpenAI TTS client pointed at the local base URL
 
 **Flow:**

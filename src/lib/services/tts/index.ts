@@ -119,6 +119,7 @@ export function unlockAudioContext(): void {
 
 // Import individual providers
 import { ElevenLabsTTS } from './elevenlabs.ts';
+import { FishAudioTTS } from './fish-audio.ts';
 import { OpenAITTS } from './openai-tts.ts';
 
 // Provider factory
@@ -153,6 +154,10 @@ export function getTTSProvider(options: TTSOptions): ITTSProvider {
 
 		case 'openai-tts':
 			currentProvider = new OpenAITTS(options);
+			break;
+
+		case 'fish-audio':
+			currentProvider = new FishAudioTTS(options);
 			break;
 
 		// Local TTS and the OmniVoice proxy are OpenAI-compatible, so they reuse

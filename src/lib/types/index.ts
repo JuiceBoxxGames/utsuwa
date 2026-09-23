@@ -16,7 +16,7 @@ export type LLMProvider =
 	| 'openai-compatible';
 
 // TTS Provider IDs
-export type TTSProvider = 'elevenlabs' | 'openai-tts' | 'local-tts' | 'omnivoice';
+export type TTSProvider = 'elevenlabs' | 'openai-tts' | 'fish-audio' | 'local-tts' | 'omnivoice';
 
 // Provider configuration (stored in settings)
 export interface ProviderConfig {

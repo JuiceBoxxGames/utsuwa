@@ -35,6 +35,11 @@ export const DEFAULT_MODELS_BASE_URLS: Record<string, string> = {
 	'openai-tts': 'https://api.openai.com/v1'
 };
 
+// Fish Audio's TTS route serves no CORS preflight, so browsers can't call it
+// directly: web posts to our /api/tts/fish-audio proxy, desktop calls this URL
+// through the Tauri HTTP plugin.
+export const FISH_AUDIO_TTS_URL = 'https://api.fish.audio/v1/tts';
+
 // Base URLs for self-hosted/local providers, before per-provider normalization.
 export const DEFAULT_LOCAL_BASE_URLS: Record<string, string> = {
 	ollama: 'http://localhost:11434',
