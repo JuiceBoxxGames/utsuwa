@@ -165,3 +165,83 @@ test('copy actions copy each message and show failure without changing the conve
 	await expect(reply.locator('.bubble')).toHaveText('Here is your reply.');
 	await expect(reply.getByRole('button', { name: 'Copy message' })).toBeEnabled();
 });
+
+// Silent 16-bit mono WAV; enough for the real decode, playback and lip-sync path.
+function silentWav(seconds: number, rate = 24000) {
+	const bytes = Math.round(seconds * rate) * 2;
+	const wav = Buffer.alloc(44 + bytes);
+	wav.write('RIFF', 0);
+	wav.writeUInt32LE(36 + bytes, 4);
+	wav.write('WAVEfmt ', 8);
+	wav.writeUInt32LE(16, 16);
+	wav.writeUInt16LE(1, 20);
+	wav.writeUInt16LE(1, 22);
+	wav.writeUInt32LE(rate, 24);
+	wav.writeUInt32LE(rate * 2, 28);
+	wav.writeUInt16LE(2, 32);
+	wav.writeUInt16LE(16, 34);
+	wav.write('data', 36);
+	wav.writeUInt32LE(bytes, 40);
+	return wav;
+}
+
+test('replies are spoken with Fish Audio through the web proxy', async ({ page }) => {
+	await page.addInitScript(() => {
+		const played: number[] = [];
+		(window as Window & { playedAudio?: number[] }).playedAudio = played;
+		const start = AudioBufferSourceNode.prototype.start;
+		AudioBufferSourceNode.prototype.start = function (...args) {
+			if (this.buffer) played.push(this.buffer.duration);
+			return start.apply(this, args);
+		};
+	});
+	await openApp(page, { chatDisplayMode: 'sidebar' });
+	const requests: { headers: Record<string, string>; body: unknown }[] = [];
+	await page.route('**/api/tts/fish-audio', async (route) => {
+		requests.push({ headers: route.request().headers(), body: route.request().postDataJSON() });
+		await route.fulfill({ contentType: 'audio/wav', body: silentWav(0.5) });
+	});
+	await page.route('**/api/chat', (route) => {
+		const reply =
+			'Hello there.\n```json\n{"mood_change":{"emotion":"happy","intensity_delta":0}}\n```';
+		return route.fulfill({ contentType: 'text/plain', body: `0:${JSON.stringify(reply)}\n` });
+	});
+	await page.evaluate(async () => {
+		const modulesPath = '/src/lib/stores/modules.svelte.ts';
+		const settingsPath = '/src/lib/stores/settings.svelte.ts';
+		const { modulesStore } = await import(/* @vite-ignore */ modulesPath);
+		const { settingsStore } = await import(/* @vite-ignore */ settingsPath);
+		settingsStore.setProviderConfig('openai', { apiKey: 'browser-test-only' });
+		settingsStore.setProviderConfig('fish-audio', { apiKey: 'browser-test-only' });
+		await modulesStore.setModuleSettings('consciousness', {
+			activeProvider: 'openai',
+			activeModel: 'gpt-4o-mini'
+		});
+		await modulesStore.setModuleSettings('speech', {
+			...modulesStore.getModuleSettings('speech'),
+			activeProvider: 'fish-audio',
+			activeModel: 's2.1-pro-free',
+			activeVoiceId: 'https://fish.audio/m/4f14b263c4ee418b9193de6ab1123015/'
+		});
+		await modulesStore.setModuleEnabled('consciousness', true);
+		await modulesStore.setModuleEnabled('speech', true);
+	});
+
+	await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Hi');
+	await page.getByRole('button', { name: 'Send message', exact: true }).click();
+
+	const played = () =>
+		page.evaluate(() => (window as Window & { playedAudio?: number[] }).playedAudio ?? []);
+	await expect.poll(async () => (await played()).length).toBe(1);
+	// Decoding resamples to the device rate (44.1 kHz on Linux CI), which can shift the length by a sample.
+	expect((await played())[0]).toBeCloseTo(0.5, 3);
+	expect(requests).toHaveLength(1);
+	expect(requests[0].headers.authorization).toBe('Bearer browser-test-only');
+	expect(requests[0].headers.model).toBe('s2.1-pro-free');
+	expect(requests[0].body).toEqual({
+		text: 'Hello there.',
+		reference_id: '4f14b263c4ee418b9193de6ab1123015',
+		format: 'mp3',
+		prosody: { speed: 1 }
+	});
+});

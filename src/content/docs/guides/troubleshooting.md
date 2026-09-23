@@ -112,7 +112,7 @@ If TTS isn't producing sound:
 
 1. **Check audio** - Make sure the tab isn't muted (web) or system audio is enabled (desktop)
 2. **Verify permissions** - Your browser or OS may need to grant audio autoplay permission
-3. **Check API key** - Verify your ElevenLabs or OpenAI TTS API key is valid
+3. **Check API key** - Verify your ElevenLabs, OpenAI TTS, or Fish Audio API key is valid
 4. **Check provider status** - The TTS provider may be experiencing issues
 
 ### Lip-sync not working
@@ -125,8 +125,12 @@ If the avatar's mouth isn't moving:
 
 ### Voice sounds wrong
 
-1. **Check voice settings** - ElevenLabs and OpenAI TTS have different available voices
-2. **Custom voice ID** - If using ElevenLabs custom voice, verify the voice ID is correct
+1. **Check voice settings** - ElevenLabs, OpenAI TTS, and Fish Audio have different available voices
+2. **Custom voice ID** - If using an ElevenLabs or Fish Audio custom voice, verify the voice ID is correct. For Fish Audio you can also paste the voice's fish.audio link
+
+### Fish Audio error 402
+
+Fish Audio returns 402 when the account has no API credits for the selected model. Pick **S2.1 Pro Free** in the model list, or add credits in your Fish Audio account.
 
 ### Local TTS not speaking
 

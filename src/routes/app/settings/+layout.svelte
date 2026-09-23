@@ -15,7 +15,7 @@
 		{ href: localPath('app', '/settings/persona'), label: 'Character', icon: 'persona', keywords: 'avatar personality name companion mode' },
 		{ href: localPath('app', '/settings/display'), label: 'Display', icon: 'monitor', keywords: 'appearance theme light dark chat typing screen awake layout' },
 		{ href: localPath('app', '/settings/llm'), label: 'LLM Model', icon: 'brain', keywords: 'ai provider api model language context' },
-		{ href: localPath('app', '/settings/tts'), label: 'TTS', icon: 'volume', keywords: 'speech voice audio omnivoice elevenlabs' },
+		{ href: localPath('app', '/settings/tts'), label: 'TTS', icon: 'volume', keywords: 'speech voice audio omnivoice elevenlabs fish audio' },
 		{ href: localPath('app', '/settings/stt'), label: 'STT', icon: 'mic', keywords: 'microphone transcription speech recognition' },
 		...(mcpStore.capability === 'none' ? [] : [{ href: localPath('app', '/settings/mcp'), label: 'MCP', icon: 'modules', keywords: 'servers tools integrations' }]),
 		{ href: localPath('app', '/settings/memory'), label: 'Memory', icon: 'brain', keywords: 'facts relationship memories graph' },

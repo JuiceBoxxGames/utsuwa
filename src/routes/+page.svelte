@@ -166,7 +166,8 @@
 		{ name: 'Ollama', icon: 'ollama', wm: null },
 		{ name: 'LM Studio', icon: 'lmstudio', wm: null },
 		{ name: 'Groq Whisper', icon: 'groq', wm: { light: `${WM}/groq-wordmark-light.svg`, dark: `${WM}/groq-wordmark-dark.svg` } },
-		{ name: 'ElevenLabs', icon: 'elevenlabs', wm: null }
+		{ name: 'ElevenLabs', icon: 'elevenlabs', wm: null },
+		{ name: 'Fish Audio', icon: 'fish-audio', wm: null }
 	];
 
 </script>

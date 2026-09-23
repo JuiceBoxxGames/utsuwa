@@ -71,7 +71,7 @@
 - **LLM Integration**: Support for 8 LLM providers: OpenAI, Anthropic, Google, xAI, DeepSeek, Ollama, LM Studio, and any OpenAI-compatible endpoint (OpenRouter, Together, vLLM, ...)
 - **Local Model Discovery**: Ollama and LM Studio discover installed local models directly from your device
 - **MCP Tools**: Connect Model Context Protocol servers — Home Assistant's official MCP integration, web search via SearXNG, and more — and let the companion call their tools during chat. Per-server HTTP/stdio transports, bearer-token authentication, and an `MCP_ENABLED=server` gate for self-hosted web deployments (see [MCP Servers](https://docs.utsuwa.ai/docs/guides/mcp))
-- **Text-to-Speech**: Support for ElevenLabs and OpenAI TTS, local voices via any OpenAI-compatible server (Kokoro-FastAPI, openedai-speech), and local OmniVoice. OmniVoice streams: speech starts while the model is still writing, and foreign words can be spoken per word in their own language and voice. With OmniVoice + Alternative Voice, the model controls its spoken reply via native `speak_segment` / `pause_segment` / `gesture_segment` tool calls (when tool calling is enabled); otherwise the documented inline `speak()` / `pause()` / `gesture()` syntax is used
+- **Text-to-Speech**: Support for ElevenLabs, OpenAI TTS, and Fish Audio, local voices via any OpenAI-compatible server (Kokoro-FastAPI, openedai-speech), and local OmniVoice. OmniVoice streams: speech starts while the model is still writing, and foreign words can be spoken per word in their own language and voice. With OmniVoice + Alternative Voice, the model controls its spoken reply via native `speak_segment` / `pause_segment` / `gesture_segment` tool calls (when tool calling is enabled); otherwise the documented inline `speak()` / `pause()` / `gesture()` syntax is used
 - **Fully Local Option**: Run the whole stack offline — local LLM (Ollama/LM Studio), local TTS, and local Whisper STT — so nothing leaves your device
 - **Lip-sync**: Audio-driven mouth animation synced to TTS playback
 - **Animations**: VRMA-based idle and talking animations with automatic blinking
@@ -149,11 +149,11 @@ The **Context Window** setting is available for every LLM provider. When enabled
 
 If the setting is left off, Utsuwa keeps the historical defaults (10 retrieved turns, 6 injected turns, 5 facts) and does not truncate history. This is useful when you want the provider to handle its own context management.
 
-### TTS Providers (4)
+### TTS Providers (5)
 
 | Category | Providers |
 |----------|-----------|
-| **Cloud** | ElevenLabs, OpenAI TTS |
+| **Cloud** | ElevenLabs, OpenAI TTS, Fish Audio |
 | **Local** | Local TTS (Kokoro-FastAPI, openedai-speech, any OpenAI-compatible server), OmniVoice |
 
 OmniVoice is a fully local text-to-speech option that runs on your own GPU or CPU. It supports both built-in synthetic voices and custom voice clones, covers many languages, and can switch between two voices **per word**: when you are learning a language, foreign words and phrases are spoken in their own language and dialect (with an optional second voice), while the surrounding explanation stays in the primary voice. Speech starts while the model is still writing — complete sentences are synthesised as soon as they arrive. See [OmniVoice Setup](https://docs.utsuwa.ai/docs/guides/omnivoice) for installation instructions.

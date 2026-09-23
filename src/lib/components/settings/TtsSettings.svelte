@@ -57,17 +57,17 @@ import { checkTTSProviderHealth } from '$lib/services/providers/health-check';
 				/>
 			{/if}
 
-			{#if state.speechSettings.activeProvider === 'elevenlabs'}
+			{#if provider?.id === 'elevenlabs' || provider?.id === 'fish-audio'}
 				<div class="api-key-row">
 					<input
 						type="text"
 						class="api-key-input"
-						list="elevenlabs-voices"
+						list="{provider.id}-voices"
 						placeholder="Voice ID" aria-label="Voice ID"
 						value={state.speechSettings.activeVoiceId as string ?? ''}
 						onchange={(e) => state.handleTTSVoiceChange(e.currentTarget.value)}
 					/>
-					<datalist id="elevenlabs-voices">
+					<datalist id="{provider.id}-voices">
 						{#each provider?.voices ?? [] as voice}
 							<option value={voice.id}>{voice.name}</option>
 						{/each}
