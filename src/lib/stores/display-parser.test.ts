@@ -247,6 +247,15 @@ test('keep-awake requires an explicit boolean opt-in', () => {
 	assert.equal(parseDisplaySettings(JSON.stringify({ keepScreenAwake: true })).keepScreenAwake, true);
 });
 
+test('mood expressions default on and only an explicit false turns them off', () => {
+	assert.equal(parseDisplaySettings(null).moodExpressions, true);
+	assert.equal(parseDisplaySettings({}).moodExpressions, true);
+	for (const value of [undefined, null, true, 'false', 0, {}]) {
+		assert.equal(parseDisplaySettings({ moodExpressions: value }).moodExpressions, true);
+	}
+	assert.equal(parseDisplaySettings(JSON.stringify({ moodExpressions: false })).moodExpressions, false);
+});
+
 test('retired off mode becomes immersive', () => {
 	assert.equal(parseDisplaySettings({ chatDisplayMode: 'off' }).chatDisplayMode, 'bubble');
 });
