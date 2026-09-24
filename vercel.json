@@ -17,9 +17,9 @@
 			"destination": "/docs"
 		},
 		{
-			"source": "/:path+",
+			"source": "/:path((?!_app/|api/).*)",
 			"has": [{ "type": "host", "value": "docs.utsuwa.ai" }],
-			"destination": "/docs/:path+"
+			"destination": "/docs/:path"
 		},
 		{
 			"source": "/",
