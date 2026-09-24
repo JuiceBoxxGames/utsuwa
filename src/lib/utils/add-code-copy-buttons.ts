@@ -6,10 +6,11 @@ const svg = (body: string) =>
 const copyIcon = svg('<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>');
 const checkIcon = svg('<path d="M20 6 9 17l-5-5"/>');
 
-export function addCodeCopyButtons(containerSelector: string) {
+// wrap: put the button on a .code-block wrapper instead of inside the scrolling pre.
+export function addCodeCopyButtons(containerSelector: string, { wrap = false } = {}) {
 	tick().then(() => {
 		document.querySelectorAll(`${containerSelector} pre`).forEach((pre) => {
-			if (pre.querySelector('.copy-btn')) return;
+			if (pre.querySelector('.copy-btn') || pre.parentElement?.classList.contains('code-block')) return;
 
 			const btn = document.createElement('button');
 			btn.type = 'button';
@@ -27,7 +28,14 @@ export function addCodeCopyButtons(containerSelector: string) {
 					btn.setAttribute('aria-label', 'Copy code');
 				}, 2000);
 			};
-			pre.appendChild(btn);
+			if (wrap) {
+				const block = document.createElement('div');
+				block.className = 'code-block';
+				pre.replaceWith(block);
+				block.append(pre, btn);
+			} else {
+				pre.appendChild(btn);
+			}
 		});
 	});
 }

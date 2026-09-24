@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/ui/Icon.svelte';
-		import { localPath, mainUrl, sectionUrl } from '$lib/config/links';
+	import { localPath, mainUrl, sectionUrl } from '$lib/config/links';
 </script>
 
 <div class="cards">
@@ -86,6 +86,7 @@
 
 	.card-actions {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 8px;
 		margin-top: 8px;

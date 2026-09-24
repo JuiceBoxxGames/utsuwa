@@ -41,35 +41,50 @@
 		void data.content;
 		if (!browser || !articleEl) return;
 
-		let observer: IntersectionObserver | null = null;
-		const raf = requestAnimationFrame(() => {
-			addCodeCopyButtons('.docs-content');
+		let headings: HTMLElement[] = [];
 
-			const headings = Array.from(
-				articleEl!.querySelectorAll<HTMLElement>('h2[id], h3[id]')
-			);
+		// Active entry is the last heading above a line near the top; at the very
+		// bottom, the last heading wins since it may never reach that line.
+		const updateActive = () => {
+			if (!headings.length) return;
+			let current = headings[0].id;
+			for (const h of headings) {
+				if (h.getBoundingClientRect().top > 120) break;
+				current = h.id;
+			}
+			const main = document.querySelector('.docs-main');
+			const atBottom = main && main.scrollHeight > main.clientHeight
+				? main.scrollTop + main.clientHeight >= main.scrollHeight - 2
+				: window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+			activeId = atBottom ? headings[headings.length - 1].id : current;
+		};
+
+		let frame = 0;
+		const onScroll = () => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(updateActive);
+		};
+
+		const raf = requestAnimationFrame(() => {
+			addCodeCopyButtons('.docs-content', { wrap: true });
+
+			headings = Array.from(articleEl!.querySelectorAll<HTMLElement>('h2[id], h3[id]'));
 			toc = headings.map((h) => ({
 				id: h.id,
 				text: h.textContent ?? '',
 				level: h.tagName === 'H3' ? 3 : 2
 			}));
 			activeId = headings[0]?.id ?? '';
-
-			if (!headings.length) return;
-			observer = new IntersectionObserver(
-				(entries) => {
-					for (const entry of entries) {
-						if (entry.isIntersecting) activeId = (entry.target as HTMLElement).id;
-					}
-				},
-				{ rootMargin: '0px 0px -75% 0px', threshold: 0 }
-			);
-			headings.forEach((h) => observer!.observe(h));
+			updateActive();
 		});
+
+		// Capture catches scrolls on .docs-main as well as the window on mobile.
+		document.addEventListener('scroll', onScroll, { capture: true, passive: true });
 
 		return () => {
 			cancelAnimationFrame(raf);
-			observer?.disconnect();
+			cancelAnimationFrame(frame);
+			document.removeEventListener('scroll', onScroll, { capture: true });
 		};
 	});
 </script>
@@ -110,26 +125,26 @@
 
 <div class="doc-wrap">
 	<div class="doc-main">
-		<nav class="breadcrumb" aria-label="Breadcrumb">
-			<a href={localPath('docs')}>Docs</a>
-			{#if section}
+		<div class="doc-head">
+			<nav class="breadcrumb" aria-label="Breadcrumb">
+				<a href={localPath('docs')}>Docs</a>
+				{#if section}
+					<Icon name="chevron-right" size={12} />
+					<span class="crumb-section">{section.title}</span>
+				{/if}
 				<Icon name="chevron-right" size={12} />
-				<span class="crumb-section">{section.title}</span>
-			{/if}
-			<Icon name="chevron-right" size={12} />
-			<span class="crumb-current">{data.metadata?.title || 'Page'}</span>
-		</nav>
+				<span class="crumb-current">{data.metadata?.title || 'Page'}</span>
+			</nav>
+			<button type="button" class="btn btn-secondary btn-sm" onclick={copyPage} title="Copy page content">
+				<Icon name={copied ? 'check' : 'copy'} size={14} />
+				<span>{copied ? 'Copied' : 'Copy page'}</span>
+			</button>
+		</div>
 
 		<article class="docs-content prose" bind:this={articleEl}>
-			<div class="page-toolbar">
-				<button type="button" class="btn btn-secondary btn-sm" onclick={copyPage} title="Copy page content">
-					<Icon name={copied ? 'check' : 'copy'} size={14} />
-					<span>{copied ? 'Copied' : 'Copy page'}</span>
-				</button>
-			</div>
 			<data.content />
-			<DocsPrevNext slug={data.slug} />
 		</article>
+		<DocsPrevNext slug={data.slug} />
 	</div>
 
 	{#if toc.length}
@@ -179,12 +194,24 @@
 		scroll-margin-top: 20px;
 	}
 
+	.doc-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 20px;
+	}
+
+	.doc-head .btn {
+		flex-shrink: 0;
+	}
+
 	.breadcrumb {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 6px;
-		margin-bottom: 16px;
+		min-width: 0;
 		color: var(--text-secondary);
 		font-size: 13px;
 		line-height: 20px;
@@ -205,10 +232,18 @@
 		font-weight: 500;
 	}
 
-	.page-toolbar {
-		display: flex;
-		justify-content: flex-end;
-		margin-bottom: 8px;
+	/* One line next to the copy button on phones; the h1 below carries the full title. */
+	@media (max-width: 768px) {
+		.breadcrumb {
+			flex-wrap: nowrap;
+			white-space: nowrap;
+		}
+
+		.crumb-current {
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 	}
 
 	.toc {

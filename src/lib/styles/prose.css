@@ -278,9 +278,11 @@ html.dark .shiki span {
 	color: var(--text-primary);
 	font-size: 15px;
 	line-height: 1.7;
+	/* Long paths and env vars in inline code would otherwise push the page sideways on phones. */
+	overflow-wrap: break-word;
 }
 
-.docs-site .prose :is(h1, h2, h3, h4) {
+.docs-site .prose :is(h1, h2, h3, h4, h5, h6) {
 	color: var(--text-primary);
 	font-weight: 600;
 }
@@ -310,7 +312,7 @@ html.dark .shiki span {
 	letter-spacing: normal;
 }
 
-.docs-site .prose h4 {
+.docs-site .prose :is(h4, h5, h6) {
 	margin: 24px 0 8px;
 	font-size: 15px;
 	letter-spacing: normal;
@@ -365,6 +367,45 @@ html.dark .shiki span {
 	font-size: inherit;
 }
 
+.docs-site .prose pre:focus-visible {
+	outline: 2px solid var(--t3-focus);
+	outline-offset: 2px;
+}
+
+/* Inline code and code blocks sit on the same fill as tables and callouts, so step them up. */
+.docs-site .prose :is(td, th, blockquote, details) code:not(pre code) {
+	background: var(--bg-tertiary);
+}
+
+.docs-site .prose blockquote pre.shiki {
+	background-color: var(--bg-page) !important;
+}
+
+.docs-site .prose blockquote .copy-btn {
+	background: var(--bg-page);
+}
+
+.docs-site .prose kbd {
+	display: inline-block;
+	padding: 0 5px;
+	border-radius: var(--radius-xs);
+	background: var(--control-bg);
+	color: var(--text-primary);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	line-height: 20px;
+}
+
+/* The copy button lives on a wrapper so it stays put while the code scrolls sideways. */
+.docs-site .prose .code-block {
+	position: relative;
+	margin: 20px 0;
+}
+
+.docs-site .prose .code-block > pre {
+	margin: 0;
+}
+
 .docs-site .prose .copy-btn {
 	position: absolute;
 	top: 8px;
@@ -377,14 +418,14 @@ html.dark .shiki span {
 	padding: 0;
 	border: 0;
 	border-radius: var(--control-radius);
-	background: transparent;
+	background: var(--bg-secondary);
 	color: var(--text-secondary);
 	cursor: pointer;
 	opacity: 0;
 	transition: opacity 150ms, background 150ms, color 150ms;
 }
 
-.docs-site .prose pre:hover .copy-btn,
+.docs-site .prose .code-block:hover .copy-btn,
 .docs-site .prose .copy-btn:focus-visible {
 	opacity: 1;
 }
@@ -394,9 +435,22 @@ html.dark .shiki span {
 	color: var(--text-primary);
 }
 
+/* The button is always visible on touch, so leave room for it at the end of each line. */
 @media (hover: none) {
 	.docs-site .prose .copy-btn {
 		opacity: 1;
+	}
+
+	.docs-site .prose .code-block > pre {
+		padding-right: 48px;
+	}
+}
+
+@media (pointer: coarse) {
+	.docs-site .prose .copy-btn::after {
+		content: '';
+		position: absolute;
+		inset: -8px;
 	}
 }
 
@@ -417,6 +471,10 @@ html.dark .shiki span {
 	list-style: circle;
 }
 
+.docs-site .prose ul ul ul {
+	list-style: square;
+}
+
 .docs-site .prose li {
 	margin-bottom: 6px;
 }
@@ -429,6 +487,24 @@ html.dark .shiki span {
 	margin: 6px 0 0;
 }
 
+/* Loose list items wrap their text in paragraphs; keep steps closer than body paragraphs. */
+.docs-site .prose li > p {
+	margin-bottom: 8px;
+}
+
+.docs-site .prose li > :is(pre, .code-block) {
+	margin: 8px 0 12px;
+}
+
+.docs-site .prose .task-list-item {
+	list-style: none;
+}
+
+.docs-site .prose .task-list-item > input {
+	margin: 0 4px 0 -24px;
+	vertical-align: -2px;
+}
+
 .docs-site .prose blockquote {
 	margin: 20px 0;
 	padding: 12px 16px;
@@ -437,8 +513,73 @@ html.dark .shiki span {
 	background: var(--bg-secondary);
 }
 
+.docs-site .prose blockquote > :first-child {
+	margin-top: 0;
+}
+
 .docs-site .prose blockquote > :last-child {
 	margin-bottom: 0;
+}
+
+.docs-site .prose blockquote blockquote {
+	margin: 12px 0;
+}
+
+.docs-site .prose details {
+	margin: 20px 0;
+	padding: 0 16px;
+	border-radius: var(--control-radius);
+	background: var(--bg-primary);
+}
+
+.docs-site .prose summary {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 40px;
+	font-weight: 500;
+	list-style: none;
+	cursor: pointer;
+}
+
+.docs-site .prose summary::-webkit-details-marker {
+	display: none;
+}
+
+.docs-site .prose summary::before {
+	content: '';
+	flex-shrink: 0;
+	width: 6px;
+	height: 6px;
+	margin: 0 3px;
+	border-right: 1.5px solid var(--text-secondary);
+	border-bottom: 1.5px solid var(--text-secondary);
+	transform: rotate(-45deg);
+	transition: transform 150ms;
+}
+
+.docs-site .prose details[open] > summary::before {
+	transform: rotate(45deg);
+}
+
+.docs-site .prose details[open] {
+	padding-bottom: 12px;
+}
+
+.docs-site .prose details > :last-child {
+	margin-bottom: 0;
+}
+
+.docs-site .prose summary:focus-visible {
+	outline: 2px solid var(--t3-focus);
+	outline-offset: 2px;
+	border-radius: var(--control-radius);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.docs-site .prose summary::before {
+		transition: none;
+	}
 }
 
 .docs-site .prose img {

@@ -53,7 +53,7 @@
 		border-radius: var(--control-radius);
 		background: var(--bg-primary);
 		color: var(--text-secondary);
-		text-decoration: none !important;
+		text-decoration: none;
 		transition: background 150ms;
 	}
 
@@ -100,8 +100,7 @@
 
 		.next {
 			grid-column: 1;
-			flex-direction: row-reverse;
-			justify-content: flex-start;
+			justify-content: space-between;
 		}
 
 		.next .nav-text {
