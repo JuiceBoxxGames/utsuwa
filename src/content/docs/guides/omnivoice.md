@@ -45,7 +45,7 @@ If the model download is slow or you hit rate limits, set a `HF_TOKEN` environme
    - `http://<host-ip>:8881/v1/` from another device or from the Utsuwa dev container
 5. Choose a voice, language, and speed, then send a message.
 
-The proxy sends permissive CORS headers, so a hosted site can reach it as long as the browser allows the request.
+The proxy sends permissive CORS headers, so a hosted site can reach it as long as the browser allows the request. If you self-host Utsuwa and the browser still can't reach the proxy, set `ALLOW_LOCAL_PROVIDER_HOSTS=true` on the Utsuwa server: the app then sends speech through the server whenever the direct request is blocked, and the proxy only has to be reachable from the Utsuwa server.
 
 ## Configure your voice
 

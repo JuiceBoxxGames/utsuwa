@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { defaultVoiceForProvider, legacyVoiceToAdopt, providerErrorMessage } from './provider-utils.ts';
+import {
+	defaultVoiceForProvider,
+	legacyVoiceToAdopt,
+	providerErrorMessage,
+	shouldProxyLocalTts
+} from './provider-utils.ts';
 
 // --- defaultVoiceForProvider ---
 
@@ -73,4 +78,16 @@ test('nothing to adopt when the legacy slot is empty or whitespace', () => {
 	assert.equal(legacyVoiceToAdopt('elevenlabs', '', '', elevenlabs), null);
 	assert.equal(legacyVoiceToAdopt('elevenlabs', '', '   ', elevenlabs), null);
 	assert.equal(legacyVoiceToAdopt('elevenlabs', '', undefined, elevenlabs), null);
+});
+
+// --- shouldProxyLocalTts ---
+
+test('proxies a local web request that failed at the network layer', () => {
+	assert.equal(shouldProxyLocalTts({ isLocal: true, isTauri: false, directFailedAtNetwork: true }), true);
+});
+
+test('never proxies cloud providers, desktop builds, or aborted requests', () => {
+	assert.equal(shouldProxyLocalTts({ isLocal: false, isTauri: false, directFailedAtNetwork: true }), false);
+	assert.equal(shouldProxyLocalTts({ isLocal: true, isTauri: true, directFailedAtNetwork: true }), false);
+	assert.equal(shouldProxyLocalTts({ isLocal: true, isTauri: false, directFailedAtNetwork: false }), false);
 });

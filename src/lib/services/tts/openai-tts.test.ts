@@ -543,3 +543,88 @@ test('fetchAudioBuffer skips the HTTP request when nothing speakable remains', a
 	await tts.fetchAudioBuffer('Hallo.');
 	assert.equal(fetchCalls, 1);
 });
+
+// --- server proxy fallback for local engines that block the browser ---
+
+function proxyAfterBlockedDirect(proxy: () => Response) {
+	const calls: { url: string; init: RequestInit }[] = [];
+	// @ts-expect-error global fetch mock
+	globalThis.fetch = (url: string, init: RequestInit) => {
+		calls.push({ url, init });
+		if (url !== '/api/tts/local') return Promise.reject(new TypeError('Failed to fetch'));
+		return Promise.resolve(proxy());
+	};
+	return calls;
+}
+
+test('a blocked local request retries once through /api/tts/local', async () => {
+	const calls = proxyAfterBlockedDirect(() => new Response(new Uint8Array(256), { status: 200 }));
+	const tts = new OpenAITTS({
+		provider: 'local-tts',
+		baseUrl: 'http://127.0.0.1:8899',
+		voiceId: 'af_bella',
+		apiKey: 'tok'
+	});
+
+	const ctx = tts.getAudioContext() as unknown as MockAudioContext;
+	ctx.decodeAudioData = async () => ctx.createBuffer(1, 7200, 24000);
+
+	const buffer = await tts.fetchAudioBuffer('Hello.');
+
+	assert.equal(buffer.duration, 0.3);
+	assert.deepEqual(
+		calls.map((c) => c.url),
+		['http://127.0.0.1:8899/v1/audio/speech', '/api/tts/local']
+	);
+	const sent = parseBody(calls[1].init);
+	assert.equal(sent.provider, 'local-tts');
+	assert.equal(sent.baseUrl, 'http://127.0.0.1:8899/v1/');
+	assert.deepEqual(sent.body, parseBody(calls[0].init));
+	assert.equal((calls[1].init.headers as Record<string, string>).Authorization, 'Bearer tok');
+});
+
+test('a disabled proxy or a static build shows the existing connection hint', async () => {
+	for (const status of [403, 404]) {
+		proxyAfterBlockedDirect(() => Response.json({ message: 'disabled' }, { status }));
+		await assert.rejects(
+			() => new OpenAITTS({ provider: 'local-tts' }).fetchAudioBuffer('Hi.'),
+			/Could not reach a local TTS server/
+		);
+		await assert.rejects(
+			() => new OpenAITTS({ provider: 'omnivoice' }).fetchAudioBuffer('Hi.'),
+			/OmniVoice proxy/
+		);
+	}
+});
+
+test('proxy validation and upstream failures surface the proxy message', async () => {
+	for (const status of [400, 502]) {
+		proxyAfterBlockedDirect(() => Response.json({ message: `proxy said ${status}` }, { status }));
+		await assert.rejects(
+			() => new OpenAITTS({ provider: 'local-tts' }).fetchAudioBuffer('Hi.'),
+			new RegExp(`proxy said ${status}`)
+		);
+	}
+});
+
+test('no proxy retry for aborted requests, HTTP errors, or cloud providers', async () => {
+	const controller = new AbortController();
+	controller.abort();
+	let calls = proxyAfterBlockedDirect(() => new Response(new Uint8Array(256)));
+	await assert.rejects(() =>
+		new OpenAITTS({ provider: 'local-tts' }).fetchAudioBuffer('Hi.', { signal: controller.signal })
+	);
+	assert.equal(calls.length, 1);
+
+	calls = proxyAfterBlockedDirect(() => new Response(new Uint8Array(256)));
+	await assert.rejects(() => new OpenAITTS({ provider: 'openai-tts', apiKey: 'k' }).fetchAudioBuffer('Hi.'));
+	assert.equal(calls.length, 1);
+
+	let count = 0;
+	globalThis.fetch = () => {
+		count++;
+		return Promise.resolve(new Response('nope', { status: 500 }));
+	};
+	await assert.rejects(() => new OpenAITTS({ provider: 'local-tts' }).fetchAudioBuffer('Hi.'));
+	assert.equal(count, 1);
+});

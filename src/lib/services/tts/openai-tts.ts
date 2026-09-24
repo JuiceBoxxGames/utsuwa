@@ -1,3 +1,4 @@
+import { isTauri } from '@tauri-apps/api/core';
 import {
 	getSharedAudioContext,
 	type ITTSProvider,
@@ -12,7 +13,7 @@ import {
 	getOmniVoiceConnectionHint,
 	isLocalTTSProvider
 } from '../providers/local-endpoints.ts';
-import { providerErrorMessage } from './provider-utils.ts';
+import { providerErrorMessage, shouldProxyLocalTts } from './provider-utils.ts';
 
 function ensureTrailingSlash(url: string): string {
 	return url.endsWith('/') ? url : url + '/';
@@ -276,13 +277,19 @@ export class OpenAITTS implements ITTSProvider {
 		} catch (err) {
 			// A thrown fetch is usually a refused connection or a CORS block, which
 			// is the exact failure mode that broke local LLMs before they were fixed.
-			if (this.isOmniVoice) {
-				throw new Error(getOmniVoiceConnectionHint(this.baseUrl, getCurrentSiteOrigin()));
-			}
-			if (this.isPlainLocal) {
-				throw new Error(getLocalTTSConnectionHint(this.baseUrl, getCurrentSiteOrigin()));
-			}
-			throw err;
+			if (!this.isLocal) throw err;
+			const hint = new Error(
+				this.isOmniVoice
+					? getOmniVoiceConnectionHint(this.baseUrl, getCurrentSiteOrigin())
+					: getLocalTTSConnectionHint(this.baseUrl, getCurrentSiteOrigin())
+			);
+			const proxy = shouldProxyLocalTts({
+				isLocal: this.isLocal,
+				isTauri: isTauri(),
+				directFailedAtNetwork: !options?.signal?.aborted
+			});
+			if (!proxy) throw hint;
+			response = await this.fetchViaServer(body, headers, hint, options?.signal);
 		}
 
 		if (!response.ok) {
@@ -321,6 +328,38 @@ export class OpenAITTS implements ITTSProvider {
 		}
 
 		return audioContext.decodeAudioData(arrayBuffer);
+	}
+
+	// One retry through the self-hosted server, which can reach engines that
+	// reject the browser's origin. 403 means the server has not opted in and 404
+	// means a static build with no routes; either way today's hint still applies.
+	private async fetchViaServer(
+		body: Record<string, unknown>,
+		headers: Record<string, string>,
+		hint: Error,
+		signal?: AbortSignal
+	): Promise<Response> {
+		let response: Response;
+		try {
+			response = await fetch('/api/tts/local', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({ provider: this.providerId, baseUrl: this.baseUrl, body }),
+				signal
+			});
+		} catch {
+			throw hint;
+		}
+		if (response.status === 403 || response.status === 404) throw hint;
+		if (response.status === 400 || response.status === 502) {
+			const data: unknown = await response
+				.clone()
+				.json()
+				.catch(() => null);
+			const message = (data as { message?: unknown } | null)?.message;
+			if (typeof message === 'string') throw new Error(message);
+		}
+		return response;
 	}
 
 	private playAudioBuffer(audioBuffer: AudioBuffer): TTSSpeakResult {
