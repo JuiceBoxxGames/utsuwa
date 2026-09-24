@@ -261,7 +261,6 @@
 				storeName: 'models'
 			});
 			await vrmStorage.clear();
-			// console.log('VRM storage cleared');
 			// Reload to reset state
 			window.location.reload();
 		} catch (e) {
@@ -281,7 +280,6 @@
 	async function clearCharacterData() {
 		try {
 			indexedDB.deleteDatabase('utsuwa-db');
-			// console.log('Character database cleared');
 			window.location.reload();
 		} catch (e) {
 			console.error('Failed to clear character data:', e);

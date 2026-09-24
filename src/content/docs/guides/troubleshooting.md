@@ -150,8 +150,8 @@ See [Local TTS Setup](/docs/guides/local-tts-setup#desktop-app-vs-hosted-website
 
 The desktop app uses Tauri's webview, which does not support the browser's Web Speech API. Configure a local Whisper server or Groq for voice input on desktop:
 
-1. Go to **Settings > Character**
-2. Under **Voice Input (STT)**, either point Local STT at your Whisper server's base URL (default `http://localhost:8000/v1/`) or enter your Groq API key
+1. Go to **Settings > STT**
+2. Either point **Local server** at your Whisper server's base URL (default `http://localhost:8000/v1/`) or enter your Groq API key
 
 ### Mic button not responding (web)
 
@@ -159,7 +159,7 @@ If the mic button shows an error in the browser:
 
 1. **Check browser support** - Web Speech API works in Chrome, Edge, and Safari. Firefox has limited support.
 2. **Allow microphone access** - Your browser may be blocking the microphone permission.
-3. **Use a local Whisper server or Groq** - For better quality or broader browser support, configure Local STT (a self-hosted OpenAI-compatible Whisper server) or add a Groq API key in **Settings > Character** under Voice Input (STT). A configured local server takes top priority, then Groq, then OpenAI, then Web Speech API.
+3. **Use a local Whisper server or Groq** - For better quality or broader browser support, configure Local STT (a self-hosted OpenAI-compatible Whisper server) or add a Groq API key in **Settings > STT**. A configured local server takes top priority, then Groq, then OpenAI, then Web Speech API.
 
 ### "Microphone access denied"
 
@@ -188,7 +188,7 @@ On the desktop app, most local providers need only that the server is running. T
 2. **Ollama (Windows/Linux)** - Same, plus allow the app's origin: `setx OLLAMA_ORIGINS "http://tauri.localhost"` on Windows (then restart Ollama from the tray), or `OLLAMA_ORIGINS=http://tauri.localhost ollama serve` on Linux. Full steps: [Local LLM Setup](/docs/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama)
 3. **LM Studio** - Load a model and click Start Server
 4. **Local TTS** - Start your TTS server (e.g. Kokoro-FastAPI on `http://localhost:8880`)
-5. **Base URL** - Confirm the port in **Settings > Character** matches the port your server is using
+5. **Base URL** - Confirm the port in **Settings > LLM Model** or **Settings > TTS** matches the port your server is using
 
 ### No sound (desktop)
 

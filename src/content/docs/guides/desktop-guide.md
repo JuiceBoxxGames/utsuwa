@@ -118,14 +118,14 @@ Some features are still being worked on:
 
 | Feature | Status |
 |---------|--------|
-| macOS support | ✅ Available |
-| Windows support | ✅ Available |
-| Linux support | ✅ Available |
-| Click-through transparency | ❌ Disabled (blocks UI) |
-| Global hotkeys | ✅ Available |
-| In-app auto-updates | ✅ Available |
-| Size and lock persistence | ✅ Available (window position across relaunch still planned) |
-| System tray | ⏳ Planned |
+| macOS support | Available |
+| Windows support | Available |
+| Linux support | Available |
+| Click-through transparency | Disabled (blocks UI) |
+| Global hotkeys | Available |
+| In-app auto-updates | Available |
+| Size and lock persistence | Available (window position across relaunch still planned) |
+| System tray | Planned |
 
 ## Troubleshooting
 
@@ -158,7 +158,7 @@ The camera is locked in overlay mode. If the character appears rotated, exit ove
 
 ### Voice input not working
 
-The desktop app uses Tauri's webview, which does not support the browser's Web Speech API. For voice input on desktop, configure a local Whisper server, a Groq API key, or an OpenAI API key in **Settings > Character** under the Voice Input (STT) section.
+The desktop app uses Tauri's webview, which does not support the browser's Web Speech API. For voice input on desktop, configure a local Whisper server, a Groq API key, or an OpenAI API key in **Settings > STT**.
 
 ### Can't interact with overlay UI
 

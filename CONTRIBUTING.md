@@ -52,6 +52,7 @@ Before pushing:
 ```bash
 pnpm check   # svelte-check, must be 0 errors 0 warnings
 pnpm test    # full unit suite, must be green
+pnpm test:browser  # Playwright browser tests (tests/browser)
 ```
 
 CI runs both plus a Rust `cargo check` on every PR. A red check means no review until it's green.
@@ -160,9 +161,9 @@ git push origin v0.9.0
 
 The [`Release` workflow](.github/workflows/release.yml) then builds the app on macOS, Windows, and Linux runners in parallel and attaches the installers to a **draft** GitHub Release:
 
-- **macOS** — `.dmg` (universal: Apple Silicon + Intel)
-- **Windows** — `.exe` installer
-- **Linux** — `.AppImage`, `.deb`, and `.rpm`
+- **macOS**: `.dmg` (universal: Apple Silicon + Intel)
+- **Windows**: `.exe` installer
+- **Linux**: `.AppImage`, `.deb`, and `.rpm`
 
 A maintainer reviews the draft, edits the release notes, and publishes it. You can also trigger the workflow manually from the Actions tab to verify a build without cutting a release.
 

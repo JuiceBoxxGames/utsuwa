@@ -7,7 +7,6 @@
 .settings-layout .page-header h2 { margin: 0 0 6px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
 .settings-layout .page-header p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
 .settings-layout .section { min-width: 0; flex-shrink: 0; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 16px; box-shadow: none; }
-.settings-layout .settings-stack { gap: 0; }
 .settings-layout .setting-row { padding: 12px 0; gap: 24px; }
 .settings-layout .setting-row:first-child { padding-top: 0; }
 .settings-layout .setting-row:last-child { padding-bottom: 0; }

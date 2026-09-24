@@ -1,7 +1,8 @@
 [package]
 name = "utsuwa"
 version = "0.17.0"
-description = "Open Source AI Soul Vessel - VRM Avatar Companion"
+description = "An open-source VRM avatar companion app with AI chat, voice, memory, and relationship mechanics"
+license = "AGPL-3.0-or-later"
 authors = ["Juice Boxx Games LLC"]
 edition = "2021"
 rust-version = "1.70"

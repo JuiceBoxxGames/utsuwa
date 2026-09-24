@@ -30,7 +30,7 @@ This serves the API at `http://localhost:8880/v1`.
 ### Connecting to Utsuwa
 
 1. Open the **Controls** panel (sliders icon, top right) and click **Settings** (gear)
-2. Navigate to the **Character** tab and open the **AI Services** section
+2. Open the **TTS** page
 3. Enable the **Speech (TTS)** toggle, then select **Local TTS** from the provider dropdown
 4. Leave the base URL as `http://localhost:8880/v1/` unless you changed the port
 5. Pick a **voice** (start typing in the voice field to see suggestions like `af_bella`)

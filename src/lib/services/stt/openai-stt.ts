@@ -26,7 +26,7 @@ export function resolveSttTimeoutMs(seconds: number | undefined): number {
 
 export function sttTimeoutMessage(label: string, timeoutMs: number): string {
 	const seconds = Math.round(timeoutMs / 1000);
-	const msg = `${label} did not respond within ${seconds} seconds. Raise the transcription timeout in Settings > Voice Input if your server is slow.`;
+	const msg = `${label} did not respond within ${seconds} seconds. Raise the transcription timeout in Settings > STT if your server is slow.`;
 	// Labels like "the local STT server" start lowercase; the toast should not
 	return msg.charAt(0).toUpperCase() + msg.slice(1);
 }
@@ -93,7 +93,7 @@ class OpenAiSttService {
 	async startListening(callbacks: SpeechRecognitionCallbacks): Promise<boolean> {
 		if (this.listening) return true;
 		if (!this.config) {
-			callbacks.onError('Speech-to-text is not configured. Set it up in Settings > Persona.');
+			callbacks.onError('Speech-to-text is not configured. Set it up in Settings > STT.');
 			return false;
 		}
 

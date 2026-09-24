@@ -167,7 +167,7 @@
 		<Icon name="camera" size={16} />
 		<span>
 			{#if providerIsLocal}
-				Photos you show her stay on your machine — they never leave this device.
+				Photos you show her stay on your machine. They never leave this device.
 			{:else}
 				Photos you show her are sent to {providerLabel} so she can see them. They're also saved on this
 				device; delete them anytime from the board.
