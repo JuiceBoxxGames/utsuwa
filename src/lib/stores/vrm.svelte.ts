@@ -5,6 +5,7 @@ import { isTauri } from '$lib/services/platform/platform';
 import { createTempVrmStoreIntegration } from '$lib/utils/temp-vrm-store';
 import type { TouchZone } from '$lib/engine/photo-reactions';
 import { animationLibraryStore } from './animation-library.svelte';
+import type { Emotion } from '$lib/types/character';
 
 export interface VrmModel {
 	id: string;
@@ -136,6 +137,13 @@ function createVrmStore() {
 	let reactionSeq = 0;
 	function requestReaction(zone: TouchZone) {
 		reactionRequest = { zone, seq: ++reactionSeq };
+	}
+
+	// Brief expression the model asked for; same request pattern as reactions
+	let flashRequest = $state<{ emotion: Emotion; seq: number } | null>(null);
+	let flashSeq = 0;
+	function requestFlash(emotion: Emotion) {
+		flashRequest = { emotion, seq: ++flashSeq };
 	}
 
 	// Head position for 3D speech bubble positioning
@@ -540,6 +548,10 @@ function createVrmStore() {
 			return reactionRequest;
 		},
 		requestReaction,
+		get flashRequest() {
+			return flashRequest;
+		},
+		requestFlash,
 		get headPosition() {
 			return headPosition;
 		},

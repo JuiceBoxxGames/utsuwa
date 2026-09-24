@@ -11,7 +11,7 @@
 	import { photomodeStore } from '$lib/stores/photomode.svelte';
 	import { loadPoseAnimation, loadPoseManifest } from '$lib/services/poses';
 	import { pickReaction, stageTier, type TouchZone } from '$lib/engine/photo-reactions';
-	import { moodExpressionTarget } from '$lib/engine/mood-expression';
+	import { flashExpressionTarget, moodExpressionTarget } from '$lib/engine/mood-expression';
 	import { characterStore } from '$lib/stores/character.svelte';
 	import {
 		computeSpringJointParams,
@@ -501,6 +501,9 @@
 	// expressions all win over it for the expression they touch
 	let moodFace: { name: string; weight: number } | null = null;
 	let emoteFace: string | null = null;
+	// A reaction the model asked for, between the mood face and tap reactions.
+	// holdUntil is fixed once the release starts so late speech can't pop it back.
+	let flashFace: { name: string; weight: number; t: number; holdUntil: number | null } | null = null;
 	const recentTaps = { zone: null as TouchZone | null, at: 0, count: 0 };
 	const REACTION_REPEAT_WINDOW_MS = 4000;
 
@@ -557,6 +560,21 @@
 					direction: Math.random() > 0.5 ? 1 : -1
 				});
 			}
+		});
+	});
+
+	$effect(() => {
+		const request = vrmStore.flashRequest;
+		if (!request) return;
+		untrack(() => {
+			// Same switch as the resting face; off means no automatic faces at all
+			if (!displayStore.moodExpressions) return;
+			const target = flashExpressionTarget(request.emotion, vrmStore.availableExpressions);
+			if (!target) return;
+			if (flashFace && flashFace.name !== target.name) {
+				vrm?.expressionManager?.setValue(flashFace.name, 0);
+			}
+			flashFace = { name: target.name, weight: target.weight, t: 0, holdUntil: null };
 		});
 	});
 
@@ -923,6 +941,7 @@
 				heldExpression = null;
 				moodFace = null;
 				emoteFace = null;
+				flashFace = null;
 			}
 		};
 	});
@@ -1155,6 +1174,33 @@
 				setExpression(name, Math.max(floor, moodFace.weight));
 			}
 			if (moodFace.weight === 0) moodFace = null;
+		}
+
+		// === Flash face ===
+		// Attack 0.25s, hold 2.5s (longer while she speaks, up to 8s), release 0.8s
+		if (flashFace) {
+			const flash = flashFace;
+			const name = flash.name;
+			const owned = heldExpression === name || emoteFace === name || reactionFace?.name === name;
+			if (photomodeStore.active) {
+				if (heldExpression !== name) setExpression(name, 0);
+				flashFace = null;
+			} else {
+				flash.t += delta;
+				if (flash.holdUntil === null) {
+					const holdEnd = ttsStore.isSpeaking ? Math.min(8, Math.max(2.5, flash.t + 0.01)) : 2.5;
+					if (flash.t >= holdEnd) flash.holdUntil = flash.t;
+				}
+				const shape =
+					flash.holdUntil === null ? Math.min(1, flash.t / 0.25) : 1 - (flash.t - flash.holdUntil) / 0.8;
+				if (shape <= 0) {
+					if (!owned && moodFace?.name !== name) setExpression(name, 0);
+					flashFace = null;
+				} else if (!owned) {
+					// Never dip the resting face on the same expression
+					setExpression(name, Math.max(moodFace?.name === name ? moodFace.weight : 0, flash.weight * shape));
+				}
+			}
 		}
 
 		// === Blinking Animation (runs during idle, disabled during emotes) ===

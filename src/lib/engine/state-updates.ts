@@ -323,5 +323,9 @@ export function mergeUpdates(
 		merged.action = llmSuggestion.action;
 	}
 
+	if (llmSuggestion.expression) {
+		merged.expression = llmSuggestion.expression;
+	}
+
 	return merged;
 }
