@@ -133,6 +133,8 @@ export interface StateUpdates {
 	newMemory?: string;
 	newInsideJoke?: string;
 	triggeredEvent?: string;
+	// Animation library id she wants to perform this reply
+	action?: string;
 }
 
 // Default values for creating new state

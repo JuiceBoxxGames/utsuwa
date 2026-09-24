@@ -41,6 +41,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			getModuleSettings: (id: string) => id === 'speech' ? speech : { activeProvider: llmProvider, activeModel: 'test-model', contextSize }
 		},
 		vrmStore: { startTalking: () => {} },
+		animationLibraryStore: { enabledForLlm: [] },
 		reminderStore: { upcoming: [] },
 		ttsStore: {
 			beginStreaming: async () => {
@@ -80,7 +81,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	};
 	for (const [path, name] of Object.entries({
 		chat: 'chatStore', character: 'characterStore', persona: 'personaStore', settings: 'settingsStore',
-		modules: 'modulesStore', vrm: 'vrmStore', reminders: 'reminderStore', tts: 'ttsStore', mcp: 'mcpStore'
+		modules: 'modulesStore', vrm: 'vrmStore', 'animation-library': 'animationLibraryStore', reminders: 'reminderStore', tts: 'ttsStore', mcp: 'mcpStore'
 	})) replacements[`src/lib/stores/${path}.svelte`] = `export const ${name} = globalThis.__utsuwaChatIntegration.${name};`;
 	const server = await createServer({
 		root, configFile: false, server: { middlewareMode: true }, appType: 'custom',

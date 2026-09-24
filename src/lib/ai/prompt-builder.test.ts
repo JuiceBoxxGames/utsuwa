@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
 	buildSystemPrompt,
+	buildAvatarActionsLayer,
 	buildExtractionSystemPrompt,
 	buildMcpSecurityInstructions,
 	truncateMessagesToContext,
@@ -617,5 +618,35 @@ test('injected tool results never replace the real question during context trimm
 		assert.deepEqual(kept, messages.slice(2));
 		kept = truncateChatHistory(kept, 'system', size, undefined, question);
 		assert.deepEqual(kept, messages.slice(2), 'the same question survives successive rounds');
+	}
+});
+
+// --- avatar actions ---
+
+test('buildAvatarActionsLayer is empty without actions', () => {
+	assert.equal(buildAvatarActionsLayer([]), '');
+});
+
+test('buildAvatarActionsLayer lists each id as given with its description', () => {
+	const layer = buildAvatarActionsLayer([
+		{ id: 'vrma_02', description: 'Greet with a polite bowing motion' },
+		{ id: 'anim-1-ABC', description: 'Wave hello\nwith the right hand' }
+	]);
+	assert.ok(layer.startsWith('<avatar>\n'));
+	assert.ok(layer.endsWith('\n</avatar>'));
+	assert.ok(layer.includes('- vrma_02: Greet with a polite bowing motion'));
+	assert.ok(layer.includes('- anim-1-ABC: Wave hello with the right hand'));
+	assert.ok(layer.includes('at most one per reply'));
+});
+
+test('the action field and avatar layer appear only when actions exist, in both modes', () => {
+	const avatarActions = [{ id: 'vrma_02', description: 'Greet with a polite bowing motion' }];
+	for (const appMode of ['dating_sim', 'companion'] as const) {
+		const without = buildSystemPrompt(makeContext({ state: makeState({ appMode }) }));
+		assert.ok(!without.includes('<avatar>'), appMode);
+		assert.ok(!without.includes('"action"'), appMode);
+		const withActions = buildSystemPrompt(makeContext({ state: makeState({ appMode }), avatarActions }));
+		assert.ok(withActions.includes('- vrma_02: Greet with a polite bowing motion'), appMode);
+		assert.ok(withActions.includes('"action": null | "animation_id"'), appMode);
 	}
 });

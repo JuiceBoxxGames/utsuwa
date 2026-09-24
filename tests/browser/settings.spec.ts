@@ -47,6 +47,7 @@ for (const theme of ['light', 'dark']) {
 		for (const route of [
 			'persona',
 			'display',
+			'animations',
 			'llm',
 			'tts',
 			'stt',

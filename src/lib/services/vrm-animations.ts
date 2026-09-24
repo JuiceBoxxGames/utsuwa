@@ -59,3 +59,8 @@ export function loadVrmAnimation(
 export function clearVrmAnimationCache(): void {
 	cache.clear();
 }
+
+/** Forget one URL, e.g. a deleted custom animation's revoked blob: URL. */
+export function evictVrmAnimation(url: string): void {
+	cache.delete(url);
+}

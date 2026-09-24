@@ -334,3 +334,8 @@ test('trustLLMDeltas keeps baseline values for fields the LLM omitted', () => {
 	assert.equal(merged.energyDelta, -3);
 	assert.equal(merged.trustDelta, 4);
 });
+
+test('mergeUpdates passes the action through', () => {
+	assert.equal(mergeUpdates({ affectionDelta: 1 }, { action: 'vrma_02' }).action, 'vrma_02');
+	assert.equal(mergeUpdates({}, {}).action, undefined);
+});

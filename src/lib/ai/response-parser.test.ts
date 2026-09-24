@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseResponse } from './response-parser.ts';
+import { parseResponse, validateStateUpdates } from './response-parser.ts';
 
 test('parses a clean fenced json block', () => {
 	const raw = [
@@ -261,4 +261,30 @@ test('a dangling reasoning block is cut like the streaming path does', () => {
 	// must agree so the chat never shows reasoning the voice already skipped.
 	const { dialogue } = parseResponse(['Hola!', '<thinking>Er wirkt müde, ich sollte', '```json', '{ "energy_delta": 1 }', '```'].join('\n'));
 	assert.equal(dialogue, 'Hola!');
+});
+
+// --- action ---
+
+test('action ids are trimmed and lowercased', () => {
+	const raw = 'Hi there!\n```json\n{ "mood_change": { "emotion": "happy", "intensity_delta": 2 }, "action": "  VRMA_02 " }\n```';
+	assert.equal(parseResponse(raw).stateUpdates?.action, 'vrma_02');
+});
+
+test('null, malformed, or non-string actions are dropped', () => {
+	for (const action of ['null', '"wave hello"', '"a/b"', '""', '5', `"${'a'.repeat(65)}"`]) {
+		const raw = `Hi!\n\`\`\`json\n{ "energy_delta": 0, "action": ${action} }\n\`\`\``;
+		assert.equal(parseResponse(raw).stateUpdates?.action, undefined, `action ${action}`);
+	}
+});
+
+test('a leftover action object is cleaned out of the dialogue', () => {
+	const { dialogue } = parseResponse('Sure thing. {"action": "vrma_02"} See you.');
+	assert.ok(!dialogue.includes('action'), dialogue);
+});
+
+test('validateStateUpdates passes a well-formed action and drops a bad one', () => {
+	assert.equal(validateStateUpdates({ action: 'anim-1-abc' }).sanitized.action, 'anim-1-abc');
+	const bad = validateStateUpdates({ action: 'drop table' });
+	assert.equal(bad.sanitized.action, undefined);
+	assert.equal(bad.valid, false);
 });

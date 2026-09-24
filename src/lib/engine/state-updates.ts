@@ -319,5 +319,9 @@ export function mergeUpdates(
 		merged.triggeredEvent = llmSuggestion.triggeredEvent;
 	}
 
+	if (llmSuggestion.action) {
+		merged.action = llmSuggestion.action;
+	}
+
 	return merged;
 }
