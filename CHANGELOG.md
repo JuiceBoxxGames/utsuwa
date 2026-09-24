@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-09-24
+
+### Added
+- Animation library: upload your own `.vrma` motions, describe them, and let the companion use them. She can trigger one gesture per reply when it fits, with cooldowns so she never spams. The built-in emotes ship with names and descriptions contributed by @dezihh ([#196](https://github.com/JuiceBoxxGames/utsuwa/pull/196)).
+- Base animations: choose which idle motions she cycles through and give her a thinking motion for the wait before a reply. Proposed by @dezihh ([#198](https://github.com/JuiceBoxxGames/utsuwa/pull/198)).
+- Brief facial reactions on request: the model can flash an expression when a moment calls for it, layered over the resting mood face. Proposed by @dezihh ([#193](https://github.com/JuiceBoxxGames/utsuwa/pull/193)).
+- Personalized event moments: anniversary and story scenes are written by the companion from your shared memories, in the language you write in. State changes always come from the built-in scene, which plays unchanged when there is no provider or generation fails. Toggle under Settings > Display. Proposed by @dezihh ([#195](https://github.com/JuiceBoxxGames/utsuwa/pull/195)).
+- Self-hosted web builds can proxy local TTS engines (OmniVoice, Kokoro-FastAPI, openedai-speech) through the server when the browser is blocked by CORS, behind `ALLOW_LOCAL_PROVIDER_HOSTS=true`. Proposed by @dezihh ([#194](https://github.com/JuiceBoxxGames/utsuwa/pull/194)).
+
+### Changed
+- Repo hygiene: stale settings paths in errors and guides now name the LLM Model, TTS, and STT pages; unreferenced assets (about 22 MB) and dead CSS removed; copy cleaned up ([#199](https://github.com/JuiceBoxxGames/utsuwa/pull/199)).
+- In-range updates for svelte, SvelteKit, and vite clear their security advisories ([#200](https://github.com/JuiceBoxxGames/utsuwa/pull/200)).
+
+### Upgrade notes
+- Custom animations, uploaded backgrounds, and animation settings are stored on the device and are not part of the save export.
+
 ## [0.17.0] - 2026-09-23
 
 ### Added
