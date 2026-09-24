@@ -8,6 +8,8 @@
 
 	interface Props {
 		scene: Scene;
+		/** She is still writing the scene; hold on a waiting state. */
+		pending?: boolean;
 		eventName?: string;
 		eventType?: EventType;
 		companionName?: string;
@@ -16,7 +18,7 @@
 		onClose: () => void;
 	}
 
-	let { scene, eventName, eventType, companionName = 'Companion', overlay = false, onComplete, onClose }: Props = $props();
+	let { scene, pending = false, eventName, eventType, companionName = 'Companion', overlay = false, onComplete, onClose }: Props = $props();
 
 	// Get icon based on event type
 	const eventIcon = $derived.by(() => {
@@ -34,14 +36,15 @@
 	let selectedChoice = $state<SceneChoice | null>(null);
 	let selectedChoiceIndex = $state<number | null>(null);
 
-	// Skip intro if not present
+	// Skip intro if not present (once the scene is final)
 	$effect(() => {
-		if (phase === 'intro' && scene && !scene.intro) {
+		if (!pending && phase === 'intro' && scene && !scene.intro) {
 			phase = 'dialogue';
 		}
 	});
 
 	function advance() {
+		if (pending) return;
 		const next = nextPhase(phase, scene);
 		if (next === null) return;
 		if (next === 'complete') {
@@ -99,10 +102,15 @@
 
 		<div class="scene-content">
 			<!-- Each narrative phase fades in on its own beat -->
-			{#key phase}
+			{#key pending ? 'pending' : phase}
 				<div class="phase-wrap" in:pop={{ duration: 260, y: 10 }}>
-			<!-- Intro phase -->
-			{#if phase === 'intro' && scene.intro}
+			{#if pending}
+				<div class="scene-waiting" role="status" aria-label="{companionName} is writing">
+					<div class="speaker-name">{companionName}</div>
+					<div class="waiting-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+					<button class="btn btn-primary" disabled>Continue</button>
+				</div>
+			{:else if phase === 'intro' && scene.intro}
 				<div class="scene-intro">
 					<p class="intro-text">{scene.intro}</p>
 					<button class="btn btn-primary" onclick={advance}>Continue</button>
@@ -151,7 +159,7 @@
 			{/if}
 
 			<!-- Click to continue hint -->
-			{#if phase !== 'choices'}
+			{#if phase !== 'choices' && !pending}
 				<div class="hint">Click anywhere to continue</div>
 			{/if}
 				</div>
@@ -264,6 +272,32 @@
 	.choice-text {
 		color: var(--text-primary);
 		margin: 0.25rem 0 0;
+	}
+
+	.waiting-dots {
+		display: flex;
+		gap: 0.375rem;
+		padding: 0.75rem 0.25rem 1.5rem;
+	}
+
+	.waiting-dots span {
+		width: 6px;
+		height: 6px;
+		border-radius: var(--radius-full);
+		background: var(--text-tertiary);
+		animation: dot-pulse 1.2s ease-in-out infinite;
+	}
+
+	.waiting-dots span:nth-child(2) { animation-delay: 0.15s; }
+	.waiting-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+	@keyframes dot-pulse {
+		0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+		40% { opacity: 1; transform: translateY(-3px); }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.waiting-dots span { animation: none; opacity: 0.6; }
 	}
 
 	.hint {

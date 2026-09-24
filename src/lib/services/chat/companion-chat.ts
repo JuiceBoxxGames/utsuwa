@@ -144,15 +144,17 @@ function buildMessages(images: PreparedImage[]) {
 
 // Buffer partial lines from the server's text, tool-call and error events.
 // Always release the reader lock, including when an error event arrives.
-async function streamServerRoute(
+export async function streamServerRoute(
 	body: unknown,
 	onDelta: (fullContent: string) => void,
-	onToolCall?: (name: string, args: Record<string, unknown>, id?: string) => void
+	onToolCall?: (name: string, args: Record<string, unknown>, id?: string) => void,
+	signal?: AbortSignal
 ): Promise<string> {
 	const response = await fetch('/api/chat', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(body)
+		body: JSON.stringify(body),
+		signal
 	});
 
 	if (!response.ok) {

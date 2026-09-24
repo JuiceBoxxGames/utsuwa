@@ -256,6 +256,15 @@ test('mood expressions default on and only an explicit false turns them off', ()
 	assert.equal(parseDisplaySettings(JSON.stringify({ moodExpressions: false })).moodExpressions, false);
 });
 
+test('generated moments default on and only an explicit false turns them off', () => {
+	assert.equal(parseDisplaySettings(null).generatedMoments, true);
+	assert.equal(parseDisplaySettings({}).generatedMoments, true);
+	for (const value of [undefined, null, true, 'false', 0, {}]) {
+		assert.equal(parseDisplaySettings({ generatedMoments: value }).generatedMoments, true);
+	}
+	assert.equal(parseDisplaySettings(JSON.stringify({ generatedMoments: false })).generatedMoments, false);
+});
+
 test('retired off mode becomes immersive', () => {
 	assert.equal(parseDisplaySettings({ chatDisplayMode: 'off' }).chatDisplayMode, 'bubble');
 });

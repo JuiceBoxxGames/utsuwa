@@ -77,6 +77,7 @@ function createDisplayStore() {
 	let chatBarAlignment = $state<ChatBarAlignment>(DEFAULT_CHAT_BAR_ALIGNMENT);
 	let keepScreenAwake = $state(false);
 	let moodExpressions = $state(true);
+	let generatedMoments = $state(true);
 
 	function applySavedSettings(saved: string | null) {
 		const parsed = parseDisplaySettings(saved);
@@ -93,6 +94,7 @@ function createDisplayStore() {
 		chatBarAlignment = parsed.chatBarAlignment;
 		keepScreenAwake = parsed.keepScreenAwake;
 		moodExpressions = parsed.moodExpressions;
+		generatedMoments = parsed.generatedMoments;
 	}
 	if (browser) {
 		applySavedSettings(localStorage.getItem(STORAGE_KEY));
@@ -120,7 +122,8 @@ function createDisplayStore() {
 					textRevealSpeed,
 					chatBarAlignment,
 					keepScreenAwake,
-					moodExpressions
+					moodExpressions,
+					generatedMoments
 				})
 			);
 		}
@@ -244,6 +247,8 @@ function createDisplayStore() {
 		setKeepScreenAwake(value: boolean) { keepScreenAwake = value; save(); },
 		get moodExpressions() { return moodExpressions; },
 		setMoodExpressions(value: boolean) { moodExpressions = value; save(); },
+		get generatedMoments() { return generatedMoments; },
+		setGeneratedMoments(value: boolean) { generatedMoments = value; save(); },
 		get camera() {
 			return camera;
 		},

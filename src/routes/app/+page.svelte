@@ -46,7 +46,7 @@
 	import { getLLMProvider, providerSupportsVision } from '$lib/services/providers/registry';
 	import { isLocalLLMProvider } from '$lib/services/providers/local-endpoints';
 	import { canShowImages } from '$lib/services/providers/vision';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { sendCompanionMessage, type SendCompanionMessageOptions } from '$lib/services/chat/companion-chat';
 	import { createReminderFiredHandler } from '$lib/services/chat/reminder-chat';
 	import { reminderStore } from '$lib/stores/reminders.svelte';
@@ -54,7 +54,8 @@
 	import { isTauri } from '$lib/services/platform';
 	import { browser } from '$app/environment';
 	import type { StateUpdates } from '$lib/types/character';
-	import type { EventDefinition } from '$lib/types/events';
+	import type { EventDefinition, Scene } from '$lib/types/events';
+	import { canGenerateMoment, generateMoment } from '$lib/services/events/moment-generator';
 	import { pop, fadeFast } from '$lib/utils/motion';
 
 	// V2 companion system imports
@@ -71,6 +72,23 @@
 
 	// Event scene state
 	let activeEvent = $state<EventDefinition | null>(null);
+
+	// Generated moments: the event stays the source of truth for structure and
+	// completion; generatedScene only swaps the words when the model delivers.
+	let generatedScene = $state<Scene | null>(null);
+	let momentPending = $state(false);
+
+	function openEvent(e: EventDefinition) {
+		activeEvent = e;
+		generatedScene = null;
+		momentPending = canGenerateMoment(e);
+		if (!momentPending) return;
+		void generateMoment(e).then((scene) => {
+			if (activeEvent?.id !== e.id) return;
+			generatedScene = scene;
+			momentPending = false;
+		});
+	}
 
 	// Info modal state
 	let showInfoModal = $state(false);
@@ -182,9 +200,7 @@
 	// Check for debug events (from developer tools)
 	$effect(() => {
 		const debugEvent = debugEventsStore.consume();
-		if (debugEvent) {
-			activeEvent = debugEvent;
-		}
+		if (debugEvent) untrack(() => openEvent(debugEvent));
 	});
 
 	// Start reminder polling and react to fired reminders by sending them back
@@ -223,7 +239,7 @@
 		await sendCompanionMessage(content, images, {
 			setTyping: (v) => (isTyping = v),
 			setLatestResponse: (v) => (latestResponse = v),
-			setActiveEvent: (e) => (activeEvent = e),
+			setActiveEvent: openEvent,
 			setPhase: (p) => (thinkingPhase = p),
 			onShownImages: (shown) => (thinkingImages = shown),
 			onNewMemory: (m) => (lastNewMemory = m)
@@ -419,7 +435,8 @@
 		<!-- Event Scene Overlay (deferred while posing; renders on exit) -->
 		{#if activeEvent?.scene && !photomodeStore.active}
 			<EventScene
-				scene={activeEvent?.scene}
+				scene={generatedScene ?? activeEvent.scene}
+				pending={momentPending}
 				eventName={activeEvent?.name}
 				eventType={activeEvent?.type}
 				companionName={personaStore.activeCard.name}

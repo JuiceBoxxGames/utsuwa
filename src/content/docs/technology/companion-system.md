@@ -300,6 +300,10 @@ interface SceneChoice {
 }
 ```
 
+### Generated Moments
+
+When an event triggers, the chat model rewrites the scene's intro, dialogue, choice lines, and outro from the persona, mode, stage, mood, up to eight stored memories (shared experiences and relationship facts first), and the user's recent messages, so the scene comes out in the language they write in. Structure never changes: the static scene is the template, choices keep their count and order, and `stateChanges`, `nextSceneId`, `unlocks`, and the completion record all come from the template, never from the model. The prompt only allows references to the memories it was given and tells the model to stay general otherwise, since invented shared history is worse than a generic line. No provider, a timeout (15 s), or output that fails validation plays the built-in scene, so the popup never hangs. Users can turn it off under Display > Behavior > Personalized moments. The logic lives in `src/lib/engine/moments.ts` (prompt, parsing, memory selection) and `src/lib/services/events/moment-generator.ts` (transport).
+
 ### Event Categories
 
 Events are organized by type (`milestone`, `random`, `scheduled`, `conditional`, `anniversary`), and grouped into four files:

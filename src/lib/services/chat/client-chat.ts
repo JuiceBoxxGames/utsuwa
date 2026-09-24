@@ -244,24 +244,25 @@ function processStreamLine(
 	}
 }
 
-interface ExtractOptions {
+interface JsonCompletionOptions {
 	provider: LLMProvider;
 	model: string;
 	apiKey?: string;
 	baseURL?: string;
 	system: string;
-	userMessage: string;
-	reply: string;
+	user: string;
+	maxTokens: number;
+	signal?: AbortSignal;
 }
 
 /**
- * Non-streaming, forced-JSON call used as the decoupled state/memory extractor.
- * Returns the raw JSON string the model produced (or null on any failure).
- * Uses response_format json_object for OpenAI-compatible providers (incl. Ollama
- * and LM Studio), which constrains the output to valid JSON.
+ * Non-streaming, forced-JSON call to the provider. Returns the raw text the
+ * model produced (or null on any failure). Uses response_format json_object for
+ * OpenAI-compatible providers (incl. Ollama and LM Studio), which constrains the
+ * output to valid JSON.
  */
-export async function extractStateUpdates(options: ExtractOptions): Promise<string | null> {
-	const { provider, model, apiKey, baseURL, system, userMessage, reply } = options;
+export async function requestJsonCompletion(options: JsonCompletionOptions): Promise<string | null> {
+	const { provider, model, apiKey, baseURL, system, user, maxTokens, signal } = options;
 	const isLocal = isLocalLLMProvider(provider);
 	if (!apiKey && !isLocal && provider !== 'openai-compatible') return null;
 
@@ -273,7 +274,6 @@ export async function extractStateUpdates(options: ExtractOptions): Promise<stri
 	if (!base) return null;
 
 	const trimmedBase = base.replace(/\/+$/, '');
-	const userContent = `User: ${userMessage}\nCompanion: ${reply}\n\nReturn the JSON.`;
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
 	let url: string;
@@ -285,9 +285,9 @@ export async function extractStateUpdates(options: ExtractOptions): Promise<stri
 		url = `${trimmedBase}/messages`;
 		body = JSON.stringify({
 			model,
-			max_tokens: 400,
+			max_tokens: maxTokens,
 			system,
-			messages: [{ role: 'user', content: userContent }]
+			messages: [{ role: 'user', content: user }]
 		});
 	} else {
 		if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
@@ -296,16 +296,16 @@ export async function extractStateUpdates(options: ExtractOptions): Promise<stri
 			model,
 			messages: [
 				{ role: 'system', content: system },
-				{ role: 'user', content: userContent }
+				{ role: 'user', content: user }
 			],
 			response_format: { type: 'json_object' },
 			stream: false,
-			max_tokens: 400
+			max_tokens: maxTokens
 		});
 	}
 
 	try {
-		const response = await fetch(url, { method: 'POST', headers, body });
+		const response = await fetch(url, { method: 'POST', headers, body, signal });
 		if (!response.ok) return null;
 		const json = await response.json();
 		if (provider === 'anthropic') {
@@ -315,4 +315,24 @@ export async function extractStateUpdates(options: ExtractOptions): Promise<stri
 	} catch {
 		return null;
 	}
+}
+
+interface ExtractOptions {
+	provider: LLMProvider;
+	model: string;
+	apiKey?: string;
+	baseURL?: string;
+	system: string;
+	userMessage: string;
+	reply: string;
+}
+
+/** The decoupled state/memory extractor. */
+export async function extractStateUpdates(options: ExtractOptions): Promise<string | null> {
+	const { userMessage, reply, ...rest } = options;
+	return requestJsonCompletion({
+		...rest,
+		user: `User: ${userMessage}\nCompanion: ${reply}\n\nReturn the JSON.`,
+		maxTokens: 400
+	});
 }
