@@ -10,7 +10,7 @@
 	import HotkeyHandler from '$lib/components/overlay/HotkeyHandler.svelte';
 	import CompanionStats from '$lib/components/ui/CompanionStats.svelte';
 	import { goto } from '$app/navigation';
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import CameraSettingsPanel from '$lib/components/ui/CameraSettingsPanel.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
 	import { EventScene } from '$lib/components/events';
@@ -32,7 +32,8 @@
 	import { eventsApi } from '$lib/engine/events';
 	import { completionMarkers } from '$lib/engine/event-completion';
 	import { reminderStore } from '$lib/stores/reminders.svelte';
-	import type { EventDefinition } from '$lib/types/events';
+	import type { EventDefinition, Scene } from '$lib/types/events';
+	import { canGenerateMoment, generateMoment } from '$lib/services/events/moment-generator';
 	import type { StateUpdates } from '$lib/types/character';
 
 	import {
@@ -47,6 +48,22 @@
 	let isTyping = $state(false);
 	let thinkingPhase = $state<ThinkingPhase>('thinking');
 	let activeEvent = $state<EventDefinition | null>(null);
+
+	// Generated moments (see app/+page.svelte).
+	let generatedScene = $state<Scene | null>(null);
+	let momentPending = $state(false);
+
+	function openEvent(e: EventDefinition) {
+		activeEvent = e;
+		generatedScene = null;
+		momentPending = canGenerateMoment(e);
+		if (!momentPending) return;
+		void generateMoment(e).then((scene) => {
+			if (activeEvent?.id !== e.id) return;
+			generatedScene = scene;
+			momentPending = false;
+		});
+	}
 	let showCamera = $state(false);
 	let windowError = $state('');
 	let positionLocked = $state(false);
@@ -174,9 +191,7 @@
 	// Debug events (from developer tools)
 	$effect(() => {
 		const debugEvent = debugEventsStore.consume();
-		if (debugEvent) {
-			activeEvent = debugEvent;
-		}
+		if (debugEvent) untrack(() => openEvent(debugEvent));
 	});
 	// Start reminder polling in the overlay too, so timers fire even when the
 	// main app window is hidden. Fired reminders are sent back through the LLM
@@ -235,7 +250,7 @@
 		await sendCompanionMessage(content, images, {
 			setTyping: (v) => (isTyping = v),
 			setLatestResponse: (v) => (latestResponse = v),
-			setActiveEvent: (e) => (activeEvent = e),
+			setActiveEvent: openEvent,
 			setPhase: (p) => (thinkingPhase = p),
 			beforeStream: () => overlayStore.setChatExpanded(false)
 		});
@@ -246,7 +261,7 @@
 		await sendCompanionMessage(content, [], {
 			setTyping: (v) => (isTyping = v),
 			setLatestResponse: (v) => (latestResponse = v),
-			setActiveEvent: (e) => (activeEvent = e),
+			setActiveEvent: openEvent,
 			setPhase: (p) => (thinkingPhase = p),
 			beforeStream: () => overlayStore.setChatExpanded(false)
 		}, options);
@@ -399,7 +414,8 @@
 	<!-- Event Scene Overlay -->
 	{#if activeEvent?.scene}
 		<EventScene
-			scene={activeEvent?.scene}
+			scene={generatedScene ?? activeEvent.scene}
+			pending={momentPending}
 			eventName={activeEvent?.name}
 			eventType={activeEvent?.type}
 			companionName={personaStore.activeCard.name}

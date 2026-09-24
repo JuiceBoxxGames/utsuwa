@@ -123,6 +123,13 @@
 			</div>
 			<Switch label="Mood expressions" checked={displayStore.moodExpressions} onchange={displayStore.setMoodExpressions} />
 		</div>
+		<div class="setting-row">
+			<div class="setting-info">
+				<span class="setting-label">Personalized moments</span>
+				<span class="setting-desc">Let her write anniversary and story moments from what you have shared, in your language. Off plays the built-in scenes.</span>
+			</div>
+			<Switch label="Personalized moments" checked={displayStore.generatedMoments} onchange={displayStore.setGeneratedMoments} />
+		</div>
 	</SettingsSection>
 </div>
 
