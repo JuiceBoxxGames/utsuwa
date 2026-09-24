@@ -23,6 +23,7 @@ interface LLMStateOutput {
 	new_inside_joke?: string | null;
 	triggered_event?: string | null;
 	action?: string | null;
+	expression?: string | null;
 }
 
 // Animation ids the model may name in "action"; the library checks it exists
@@ -70,7 +71,10 @@ const EMOTION_SYNONYMS: Record<string, Emotion> = {
 	lonely: 'melancholy', somber: 'melancholy', gloomy: 'melancholy',
 	unhappy: 'sad', hurt: 'sad', disappointed: 'sad', heartbroken: 'sad', sorrowful: 'sad',
 	embarrassed: 'flustered', shy: 'flustered', bashful: 'flustered', blushing: 'flustered',
-	fine: 'neutral', okay: 'neutral', indifferent: 'neutral'
+	fine: 'neutral', okay: 'neutral', indifferent: 'neutral',
+	surprised: 'curious', shocked: 'curious', amazed: 'excited', amused: 'playful',
+	laughing: 'happy', giggling: 'playful', smiling: 'happy', smile: 'happy', laugh: 'happy',
+	wink: 'playful', grin: 'playful', pout: 'flustered'
 };
 
 // Resolve a model's emotion string to one of our canonical emotions, taking the
@@ -277,6 +281,11 @@ function convertLLMOutput(output: LLMStateOutput): Partial<StateUpdates> {
 
 	const action = normalizeAction(output.action);
 	if (action) updates.action = action;
+	// neutral is no reaction at all, so it never flashes
+	const expression = typeof output.expression === 'string' ? normalizeEmotion(output.expression) : null;
+	if (expression && expression !== 'neutral') {
+		updates.expression = expression;
+	}
 
 	return updates;
 }
@@ -334,7 +343,7 @@ function cleanDialogue(text: string, companionName?: string): string {
 	cleaned = stripTruncatedStateBlock(cleaned);
 
 	// Remove any leftover (closed) JSON-like content
-	cleaned = cleaned.replace(/\{[^}]*"(?:mood|delta|emotion|action)[^}]*\}/gi, '');
+	cleaned = cleaned.replace(/\{[^}]*"(?:mood|delta|emotion|action|expression)[^}]*\}/gi, '');
 
 	// Remove action asterisks (we want dialogue only)
 	cleaned = cleaned.replace(/\*[^*]+\*/g, '');
@@ -427,6 +436,14 @@ export function validateStateUpdates(updates: Partial<StateUpdates>): {
 		const action = normalizeAction(updates.action);
 		if (action) sanitized.action = action;
 		else warnings.push(`Invalid action: ${updates.action}`);
+	}
+
+	if (updates.expression !== undefined) {
+		if (VALID_EMOTIONS.includes(updates.expression)) {
+			sanitized.expression = updates.expression;
+		} else {
+			warnings.push(`Invalid expression: ${updates.expression}`);
+		}
 	}
 
 	return {

@@ -288,3 +288,32 @@ test('validateStateUpdates passes a well-formed action and drops a bad one', () 
 	assert.equal(bad.sanitized.action, undefined);
 	assert.equal(bad.valid, false);
 });
+
+// --- expression flash ---
+
+const withBlock = (json: string) => ['Oh! I did not see that coming.', '```json', json, '```'].join('\n');
+
+test('expression maps through the emotion synonyms', () => {
+	const { stateUpdates } = parseResponse(withBlock('{ "mood_change": null, "expression": "surprised" }'));
+	assert.equal(stateUpdates?.expression, 'curious');
+});
+
+test('null, neutral, and unknown expressions are dropped', () => {
+	for (const value of ['null', '"neutral"', '"flabbergasted-ish"']) {
+		const { stateUpdates } = parseResponse(withBlock(`{ "affection_delta": 1, "expression": ${value} }`));
+		assert.ok(stateUpdates);
+		assert.equal('expression' in stateUpdates, false, `kept expression for ${value}`);
+	}
+});
+
+test('validateStateUpdates keeps a valid expression and drops an invalid one', () => {
+	assert.equal(validateStateUpdates({ expression: 'happy' }).sanitized.expression, 'happy');
+	const bad = validateStateUpdates({ expression: 'smug' as never });
+	assert.equal('expression' in bad.sanitized, false);
+	assert.equal(bad.warnings.length, 1);
+});
+
+test('a leaked expression-only object is stripped from dialogue', () => {
+	const { dialogue } = parseResponse('Say cheese! {"expression":"happy"} There we go.');
+	assert.ok(!dialogue.includes('expression'), dialogue);
+});

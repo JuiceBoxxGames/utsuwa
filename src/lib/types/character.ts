@@ -135,6 +135,7 @@ export interface StateUpdates {
 	triggeredEvent?: string;
 	// Animation library id she wants to perform this reply
 	action?: string;
+	expression?: Emotion;
 }
 
 // Default values for creating new state

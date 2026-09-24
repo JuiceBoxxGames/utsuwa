@@ -22,6 +22,13 @@ const MOOD_FACES: Record<Emotion, { candidates: string[]; scale: number } | null
 	neutral: null
 };
 
+function pickCandidate(candidates: string[], available: readonly string[]): string | undefined {
+	for (const candidate of candidates) {
+		const name = available.find((n) => n.toLowerCase() === candidate);
+		if (name) return name;
+	}
+}
+
 // Picks the VRM expression that best represents a mood, or null for neutral / no match.
 export function moodExpressionTarget(
 	mood: MoodState | undefined,
@@ -32,9 +39,18 @@ export function moodExpressionTarget(
 	const intensity = Math.max(0, Math.min(100, mood.intensity));
 	const weight = Math.round(((face.scale * intensity) / 100) * 1000) / 1000;
 	if (!(weight > 0)) return null;
-	for (const candidate of face.candidates) {
-		const name = available.find((n) => n.toLowerCase() === candidate);
-		if (name) return { name, weight };
-	}
-	return null;
+	const name = pickCandidate(face.candidates, available);
+	return name ? { name, weight } : null;
+}
+
+// A short reaction on top of the resting face: same mapping, stronger, capped
+export function flashExpressionTarget(
+	emotion: Emotion,
+	available: readonly string[]
+): MoodExpressionTarget | null {
+	const face = MOOD_FACES[emotion];
+	if (!face) return null;
+	const name = pickCandidate(face.candidates, available);
+	if (!name) return null;
+	return { name, weight: Math.round(Math.min(0.9, face.scale * 1.4) * 1000) / 1000 };
 }

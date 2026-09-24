@@ -283,7 +283,8 @@ After your reply, ALWAYS end with a JSON block, even when little changed:
 {
   "mood_change": { "emotion": "emotion_name", "intensity_delta": number },
   "energy_delta": number,
-  "new_memory": null | "something specific worth remembering about them"${actionField(ctx)}
+  "new_memory": null | "something specific worth remembering about them"${actionField(ctx)},
+  "expression": null | "emotion_name"
 }
 \`\`\`
 
@@ -293,6 +294,8 @@ Examples of good new_memory values:
 - "They have a job interview this Thursday they're nervous about"
 - "They showed me their dog, a scruffy terrier they clearly adore"
 - null (small talk where nothing notable came up)
+
+Use expression only for a visible reaction on your face right now, separate from your mood: they asked you to smile, something surprised you, a line made you laugh, or the moment is sad. Same emotion names as mood_change. Use null most of the time.
 
 In Companion Mode, only mood and energy change. Do NOT suggest affection, trust, intimacy, comfort, or respect changes - these relationship stats are disabled.
 </instructions>`);
@@ -512,7 +515,8 @@ After your reply, ALWAYS end with a JSON block, even when little changed:
   "intimacy_delta": number,
   "comfort_delta": number,
   "new_memory": null | "something specific worth remembering about them",
-  "triggered_event": null | "event_id"${actionField(ctx)}
+  "triggered_event": null | "event_id"${actionField(ctx)},
+  "expression": null | "emotion_name"
 }
 \`\`\`
 
@@ -522,6 +526,8 @@ Examples of good new_memory values:
 - "They grew up in Seattle and miss the rain"
 - "They showed me a photo of their late grandmother's garden; it clearly meant a lot"
 - null (small talk where nothing notable came up)
+
+Use expression only for a visible reaction on your face right now, separate from your mood: they asked you to smile, something surprised you, a line made you laugh, or the moment is sad. Same emotion names as mood_change. Use null most of the time.
 </instructions>`;
 }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { moodExpressionTarget } from './mood-expression.ts';
+import { flashExpressionTarget, moodExpressionTarget } from './mood-expression.ts';
 import type { Emotion, MoodState } from '../types/character.ts';
 
 const VRM1 = ['happy', 'angry', 'sad', 'relaxed', 'surprised', 'aa', 'blink', 'neutral'];
@@ -64,4 +64,27 @@ test('intensity is clamped to 0..100', () => {
 	assert.deepEqual(moodExpressionTarget(mood('happy', 250), VRM1), { name: 'happy', weight: 0.6 });
 	assert.equal(moodExpressionTarget(mood('happy', -40), VRM1), null);
 	assert.equal(moodExpressionTarget(mood('happy', Number.NaN), VRM1), null);
+});
+
+// --- flash ---
+
+test('flash is the mood mapping at full intensity, stronger', () => {
+	assert.deepEqual(flashExpressionTarget('happy', VRM1), { name: 'happy', weight: 0.84 });
+	assert.deepEqual(flashExpressionTarget('curious', VRM1), { name: 'surprised', weight: 0.42 });
+});
+
+test('flash weight caps at 0.9', () => {
+	assert.deepEqual(flashExpressionTarget('excited', VRM1), { name: 'happy', weight: 0.9 });
+});
+
+test('neutral flash returns null', () => {
+	assert.equal(flashExpressionTarget('neutral', VRM1), null);
+});
+
+test('flash uses legacy names', () => {
+	assert.deepEqual(flashExpressionTarget('sad', VRM0), { name: 'Sorrow', weight: 0.84 });
+});
+
+test('flash with no matching expression returns null', () => {
+	assert.equal(flashExpressionTarget('curious', VRM0), null);
 });

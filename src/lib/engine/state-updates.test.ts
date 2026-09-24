@@ -223,6 +223,11 @@ test('missing LLM fields keep the baseline values', () => {
 	assert.equal(merged.energyDelta, -3);
 });
 
+test('LLM expression passes through', () => {
+	assert.equal(mergeUpdates({}, { expression: 'curious' }).expression, 'curious');
+	assert.equal('expression' in mergeUpdates({}, {}), false);
+});
+
 test('LLM can override mood and pass through memory/events', () => {
 	const merged = mergeUpdates(
 		{ moodChange: { emotion: 'neutral', intensityDelta: 0, cause: 'baseline' } },

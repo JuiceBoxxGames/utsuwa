@@ -95,7 +95,7 @@ type Emotion =
   | 'flustered' | 'neutral';
 ```
 
-The avatar's resting face follows this state. `moodExpressionTarget()` in `src/lib/engine/mood-expression.ts` maps each emotion to a VRM expression (VRM 1.0 presets first, VRM 0.x names like `joy` and `sorrow` as fallbacks) with a per-emotion ceiling, so `excited` smiles wider than `content` and `neutral` leaves the face alone. Intensity scales that ceiling linearly, and `VrmModel.svelte` fades toward the target each frame, fully fading out the old expression before a new one comes in. Photo mode, emotes, and tap reactions all take priority over the mood face, and it can be switched off under Settings > Display.
+The avatar's resting face follows this state. `moodExpressionTarget()` in `src/lib/engine/mood-expression.ts` maps each emotion to a VRM expression (VRM 1.0 presets first, VRM 0.x names like `joy` and `sorrow` as fallbacks) with a per-emotion ceiling, so `excited` smiles wider than `content` and `neutral` leaves the face alone. Intensity scales that ceiling linearly, and `VrmModel.svelte` fades toward the target each frame, fully fading out the old expression before a new one comes in. Photo mode, emotes, and tap reactions all take priority over the mood face, and it can be switched off under Settings > Display. On top of that, the model can set an optional `expression` field in its JSON block (same emotion names as `mood_change`) for a visible reaction in the moment, which `flashExpressionTarget()` turns into a stronger expression that holds 2.5 seconds, or while she speaks up to 8, then fades back. This flash layer sits below tap reactions, emotes, and photo mode and above the resting face, and never dips a resting expression it shares.
 
 ### Relationship Stages
 

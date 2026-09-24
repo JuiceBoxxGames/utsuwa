@@ -1,4 +1,5 @@
 import { characterStore } from '$lib/stores/character.svelte';
+import { vrmStore } from '$lib/stores/vrm.svelte';
 import { parseResponse, validateStateUpdates, extractPotentialFacts } from '$lib/ai/response-parser';
 import { buildExtractionSystemPrompt } from '$lib/ai/prompt-builder';
 import { calculateBaselineUpdates, analyzeMessage } from '$lib/engine/heuristics';
@@ -126,6 +127,7 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 			});
 	characterStore.applyUpdates(finalUpdates, { countInteraction: !systemEvent });
 	if (finalUpdates.action) requestAvatarAction(finalUpdates.action);
+	if (finalUpdates.expression) vrmStore.requestFlash(finalUpdates.expression);
 
 	// Save the model's memory observation
 	if (finalUpdates.newMemory) {
