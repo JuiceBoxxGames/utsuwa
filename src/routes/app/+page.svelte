@@ -290,6 +290,10 @@
 	}
 </script>
 
+<svelte:head>
+	<meta name="description" content="Chat with your AI companion: a 3D VRM avatar with voice, memory, and moods, running in your browser." />
+</svelte:head>
+
 <div class="app-container">
 	<div class="wake-status"><WakeLockIndicator /></div>
 {#if !photomodeStore.active}

@@ -110,7 +110,6 @@
 
 <svelte:head>
 	<title>Utsuwa</title>
-	<meta name="description" content="Open-source AI companion with 3D VRM avatars, voice chat, semantic memory, and multi-provider LLM support. Self-hosted and privacy-first." />
 </svelte:head>
 
 {#if !redirecting}
