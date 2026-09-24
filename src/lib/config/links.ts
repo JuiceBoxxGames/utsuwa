@@ -21,9 +21,13 @@ function hostname(): string {
 }
 
 // Only the real production domain uses the subdomain split. localhost and
-// preview deploys (e.g. *.vercel.app) fall back to path-based routing.
+// preview deploys (e.g. *.vercel.app) fall back to path-based routing. During
+// prerendering there is no real hostname, and that HTML is what production
+// serves until the page hydrates, so it must default to the production layout.
 function usesSubdomains(): boolean {
-	return hostname().endsWith(APEX);
+	const host = hostname();
+	if (!host || host === 'sveltekit-prerender') return true;
+	return host.endsWith(APEX);
 }
 
 function norm(path: string): string {

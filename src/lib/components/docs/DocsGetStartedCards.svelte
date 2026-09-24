@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/ui/Icon.svelte';
-	import { GITHUB_RELEASES } from '$lib/config/site';
-	import { localPath, sectionUrl } from '$lib/config/links';
+		import { localPath, mainUrl, sectionUrl } from '$lib/config/links';
 </script>
 
 <div class="cards">
@@ -31,7 +30,7 @@
 			Desktop app with transparent overlay mode for macOS, Windows, and Linux.
 		</p>
 		<div class="card-actions">
-			<a href={GITHUB_RELEASES} target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+			<a href={mainUrl('/download')} class="btn btn-primary btn-sm">
 				<span>Download</span>
 				<Icon name="download" size={14} />
 			</a>
