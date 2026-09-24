@@ -35,6 +35,11 @@ export function canGenerateMoment(event: EventDefinition): boolean {
 	return displayStore.generatedMoments && !!event.scene && activeLLM() !== null;
 }
 
+// A dismissed event comes back on the next turn; keep what she already wrote
+// so reopening costs nothing. Session only, and a null (fallback) is not kept
+// so a transient failure gets another try.
+const written = new Map<string, Scene>();
+
 export async function generateMoment(
 	event: EventDefinition,
 	opts: { timeoutMs?: number } = {}
@@ -42,6 +47,8 @@ export async function generateMoment(
 	const llm = activeLLM();
 	const template = event.scene;
 	if (!displayStore.generatedMoments || !template || !llm) return null;
+	const cached = written.get(event.id);
+	if (cached) return cached;
 
 	try {
 		const state = characterStore.state;
@@ -92,6 +99,7 @@ export async function generateMoment(
 					);
 
 		const scene = raw ? parseMoment(raw, template) : null;
+		if (scene) written.set(event.id, scene);
 		if (!scene) console.debug('[moments] no usable moment, playing the built-in scene');
 		return scene;
 	} catch (e) {
