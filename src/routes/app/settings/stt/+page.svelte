@@ -6,7 +6,7 @@
 <div class="page">
 	<header class="page-header">
 		<h2>Voice Input</h2>
-		<p>Configure speech-to-text providers and microphone sensitivity.</p>
+		<p>Configure speech-to-text providers and the local server timeout.</p>
 	</header>
 
 	<SttSettings />
