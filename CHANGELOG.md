@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-09-23
+
+### Added
+- Fish Audio is available as a TTS provider, with voices from its official library or any voice id. Web requests go through a pass-through route because Fish Audio's API has no CORS support; desktop calls it directly ([#183](https://github.com/JuiceBoxxGames/utsuwa/pull/183)).
+- The avatar's resting face follows her tracked mood, scaled by intensity, with a toggle in Settings > Display ([#185](https://github.com/JuiceBoxxGames/utsuwa/pull/185)).
+- Upload your own background image from the camera controls. It persists locally, shows behind the avatar, and bakes into room photo captures ([#188](https://github.com/JuiceBoxxGames/utsuwa/pull/188)).
+- The transcription timeout for a local STT server is configurable in Settings > Voice Input ([#184](https://github.com/JuiceBoxxGames/utsuwa/pull/184)).
+
+### Changed
+- The LLM, TTS, and Voice Input settings pages use the shared section layout, labels, and fields introduced in 0.16.0 ([#187](https://github.com/JuiceBoxxGames/utsuwa/pull/187)).
+- The marketing site has a new landing page, download page, and a Japanese version at `/ja` ([#186](https://github.com/JuiceBoxxGames/utsuwa/pull/186)).
+
+### Fixed
+- A transcription request that outran the STT timeout was treated like a user cancel and failed with no message. It now reports the timeout ([#184](https://github.com/JuiceBoxxGames/utsuwa/pull/184)).
+
 ## [0.16.0] - 2026-09-21
 
 ### Changed
