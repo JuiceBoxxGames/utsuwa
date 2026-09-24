@@ -1,8 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { page } from '$app/state';
-	import { GITHUB_RELEASES } from '$lib/config/site';
-	import { localPath, sectionUrl, mainUrl, isSection } from '$lib/config/links';
+		import { localPath, sectionUrl, mainUrl, isSection } from '$lib/config/links';
 
 	interface Props {
 		onToggleSidebar?: () => void;
@@ -36,7 +35,7 @@
 			<a href={localPath('docs')} class="nav-link" class:active={isSection('docs')} aria-current={isSection('docs') ? 'page' : undefined}>Docs</a>
 			<a href={mainUrl('/blog')} class="nav-link" class:active={currentPath.startsWith('/blog')}>Blog</a>
 		</nav>
-		<a href={GITHUB_RELEASES} aria-label="Download Utsuwa" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+		<a href={mainUrl('/download')} aria-label="Download Utsuwa" class="btn btn-secondary btn-sm">
 			<Icon name="download" size={14} />
 			<span class="download-label">Download</span>
 		</a>

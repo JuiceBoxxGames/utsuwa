@@ -38,11 +38,8 @@ Every option is covered in the [Settings Reference](/docs/guides/settings-refere
 
 ## Getting Started
 
-<script>
-import DocsGetStartedCards from '$lib/components/docs/DocsGetStartedCards.svelte';
-</script>
-
-<DocsGetStartedCards />
+- **Web**: open [app.utsuwa.ai](https://app.utsuwa.ai) and follow the [Web Guide](/docs/guides/web-guide). Nothing to install.
+- **Desktop**: get the installer from the [download page](https://utsuwa.ai/download) and follow the [Desktop Guide](/docs/guides/desktop-guide) for the overlay and hotkeys.
 
 ## Under the Hood
 

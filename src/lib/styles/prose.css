@@ -320,13 +320,13 @@ html.dark .shiki span {
 	margin: 0 0 16px;
 }
 
-.docs-site .prose a {
+.docs-site .prose a:not(.btn) {
 	color: var(--accent);
 	text-decoration: none;
 	border-radius: 2px;
 }
 
-.docs-site .prose a:hover {
+.docs-site .prose a:not(.btn):hover {
 	text-decoration: underline;
 	text-underline-offset: 3px;
 }
