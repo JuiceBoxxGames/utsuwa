@@ -1,70 +1,79 @@
 ---
 title: Memory Graph
-description: Interactive visualization of semantic memory connections
+description: How the memory graph in Settings > Memory is built and what it shows.
 ---
 
 # Memory Graph
 
-The Memory Graph is an interactive network visualization that shows how your companion's memories are semantically connected.
+The memory graph is an interactive network of your companion's memories. Memories that mean similar things are linked, so clusters show what she knows about a topic.
 
-## Accessing the Memory Graph
+## Opening the Graph
 
-Open **Settings > Memory > Graph**, or click the brain icon on the main screen to go there directly. Choose **Expand graph** for more room. Escape or **Collapse graph** returns to the Memory page.
+Open **Settings > Memory**. The **Graph** tab is the default view. The brain button at the top left of the main screen ("Open memory graph") goes straight there.
 
-The same page has **Facts** for adding and deleting memories, **Sessions** for current turns and saved summaries, and **Settings > Advanced** for character state and parser testing.
+Choose **Expand graph** for a larger dialog. Press Escape or the close button ("Collapse graph") to return to the page.
 
-## Understanding the Visualization
+The other tabs on the Memory page:
 
-### Nodes (Memories)
+- **Facts**: search, filter by category, add a memory, or delete one after confirming
+- **Sessions**: the current session's turns and saved session summaries
+- **Settings**: a link to Settings > Data, and an **Advanced** section with a read-only character state view and a parser test
 
-Each node represents a stored memory (fact) about you, your relationship, or shared experiences.
+## Reading the Graph
 
-**Node Colors:**
-- **Blue** — User facts (your preferences, background, attributes)
-- **Pink** — Relationship facts (dynamics between you and the companion)
-- **Green** — Shared experiences (events you've discussed together)
+### Nodes
 
-### Connections
+Each node is one saved memory (a fact). The color shows its category:
 
-Lines between nodes indicate **semantic similarity** — memories that are related in meaning are connected. Animated particles flow along connections to visualize these relationships.
+| Color | Category | Filter button |
+|-------|----------|---------------|
+| Blue | Facts about you: preferences, background, plans | About you |
+| Pink | The relationship between you and the companion | Relationship |
+| Green | Things you did or talked about together | Shared |
 
-### Statistics
+### Links
 
-The count below the graph shows the memories and connections in the current view.
+A line joins two memories whose embeddings have a cosine similarity of 0.5 or more. Small particles move along the lines. With reduced motion turned on in your system settings, the particles stop and the layout settles without animation.
 
-## Interactions
+### Count
+
+The line under the graph shows how many memories and connections are in the current view.
+
+## Interacting
 
 ### Selecting a Memory
 
-Click a node or choose it from **Inspect a memory**:
-- The selected memory and its connections are highlighted
-- Unrelated memories fade
-- Details appear beside the graph on wide screens and below it on smaller screens
-- **Open in Facts** opens that exact saved memory in the inspector, where deletion requires confirmation
+Click a node, or pick it from the **Inspect a memory** list (the keyboard-friendly way).
 
-### Filtering Categories
+- The selected memory and its direct connections stay colored. Everything else fades.
+- **Memory details** appears beside the graph on wide screens and below it on narrow ones. It shows the text, category, importance, confidence, how many times it was referenced, and when it was created.
+- **Open in Facts** opens that exact memory in the Facts tab, where you can delete it.
 
-Use the category buttons above the graph to show or hide specific memory types. This helps focus on particular aspects of what your companion knows.
+### Filtering
+
+The category buttons above the graph show or hide each category. If a filter hides everything, **Show all categories** brings them back.
 
 ### Reset View
 
-Click "Reset view" to zoom out and see the full graph, clearing any selection.
+**Reset view** clears the selection and zooms to fit the whole graph. You can also drag nodes and zoom with the mouse or trackpad.
 
-## Technical Details
+## How It Is Built
 
-The Memory Graph uses **384-dimensional embeddings** (via Transformers.js with the multilingual paraphrase-multilingual-MiniLM-L12-v2 model) to compute semantic relationships between memories. Memories with a **cosine similarity >= 0.5** are connected.
+`src/lib/services/memory-graph.ts` loads every fact that has an embedding from the current model, then compares each pair. Pairs at 0.5 similarity or above become links. `src/lib/components/memory/MemoryGraph.svelte` draws the result with the `force-graph` library on a canvas.
 
-**Reference Count** tracks how many times a memory has been retrieved during conversations — higher counts indicate memories that frequently inform responses.
+Embeddings come from `Xenova/paraphrase-multilingual-MiniLM-L12-v2`, run locally through Transformers.js. Each is a 384-dimension vector, and the model handles many languages.
 
-**Importance Score** (0-100) reflects how significant the memory is based on emotional content, personal details, and other heuristics.
+- **Reference count:** how many times retrieval has pulled the memory into a prompt. A high count means it often shapes her replies.
+- **Importance (0 to 100):** set when the memory is saved, from its length, emotional words, personal details, and sentiment. Retrieval uses it alongside similarity.
+- **Confidence (0 to 1):** how sure the app is that the memory is accurate. New memories default to 0.8.
 
 ### Requirements
 
-- Memories must have embeddings to appear in the graph
-- The embedding model is loaded automatically on app startup
-- Existing memories without embeddings are backfilled automatically when the embedding model finishes loading
+- Only memories with an embedding from the current model appear. Facts still waiting for one are listed in the Facts tab.
+- The embedding model loads when the app opens. After it loads, facts without an embedding, or with one from an older model, are embedded in the background.
+- If no memory has a current embedding yet, the graph shows "No connected memories yet" with a **View facts** button.
 
 ## Related
 
-- [Companion System](/docs/technology/companion-system) — Full architecture including the three-tier memory system
-- [Architecture Overview](/docs/technology/architecture) — System design and component interactions
+- [Companion System](/docs/technology/companion-system#memory-system): retrieval, dedup, and the memory budget
+- [Architecture Overview](/docs/technology/architecture#memory-system): where the memory code lives
