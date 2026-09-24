@@ -14,7 +14,6 @@
 				const host = location.hostname;
 				const path = location.pathname;
 				if (!/^(docs|app)\./.test(host) && (path === '/' || /^\/(ja|blog|download|privacy|terms)(\/|$)/.test(path))) {
-					document.documentElement.setAttribute('data-docs-theme', 'light');
 					return;
 				}
 				const colorMode = localStorage.getItem('colorMode') || 'system';

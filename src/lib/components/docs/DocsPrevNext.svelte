@@ -40,33 +40,25 @@
 	.prev-next {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 1.25rem;
-		margin-top: 4rem;
-		padding-top: 2rem;
-		border-top: 1px solid var(--border-subtle);
+		gap: 12px;
+		margin-top: 48px;
 	}
 
 	.nav-link {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
-		padding: 1.25rem 1.5rem;
-		background: var(--bg-tertiary);
-		border: none;
-		border-radius: var(--radius-lg);
+		gap: 12px;
+		min-height: 64px;
+		padding: 12px 16px;
+		border-radius: var(--control-radius);
+		background: var(--bg-primary);
+		color: var(--text-secondary);
 		text-decoration: none !important;
-		color: var(--text-primary);
-		transition: box-shadow 0.2s ease, transform 0.2s ease;
-		box-shadow: var(--shadow-sm);
+		transition: background 150ms;
 	}
 
 	.nav-link:hover {
-		transform: translateY(-3px);
-		box-shadow: var(--shadow-md);
-	}
-
-	.nav-link:active {
-		transform: translateY(-1px);
+		background: var(--control-hover);
 	}
 
 	.prev {
@@ -81,11 +73,7 @@
 	.nav-text {
 		display: flex;
 		flex-direction: column;
-		gap: 0.375rem;
-	}
-
-	.prev .nav-text {
-		text-align: left;
+		gap: 2px;
 	}
 
 	.next .nav-text {
@@ -93,22 +81,16 @@
 	}
 
 	.label {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
 		color: var(--text-secondary);
+		font-size: 13px;
+		line-height: 18px;
 	}
 
 	.title {
-		font-weight: 600;
-		font-size: 0.9375rem;
 		color: var(--text-primary);
-		transition: color 0.15s;
-	}
-
-	.nav-link:hover .title {
-		color: var(--accent);
+		font-size: 14px;
+		font-weight: 500;
+		line-height: 20px;
 	}
 
 	@media (max-width: 640px) {

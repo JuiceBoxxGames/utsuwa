@@ -33,7 +33,6 @@
 	function syncTheme(hostname: string, pathname: string) {
 		if (isLightOnlyRoute(hostname, pathname)) {
 			document.documentElement.classList.remove('dark');
-			document.documentElement.setAttribute('data-docs-theme', 'light');
 		} else {
 			applyColorMode(getColorMode());
 		}

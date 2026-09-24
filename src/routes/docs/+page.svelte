@@ -51,7 +51,7 @@
 				<div class="section-panel">
 					<div class="panel-head">
 						<div class="panel-icon">
-							<Icon name={section.icon} size={18} />
+							<Icon name={section.icon} size={16} />
 						</div>
 						<h3 class="panel-title">{section.title}</h3>
 					</div>
@@ -80,171 +80,157 @@
 	.docs-home {
 		max-width: 60rem;
 		margin: 0 auto;
-		padding: 3rem 2.5rem 4rem;
+		padding: 48px 40px 64px;
 	}
 
-	/* Hero */
 	.home-hero {
-		position: relative;
 		text-align: center;
-		margin-bottom: 3.5rem;
-		padding-top: 1rem;
+		margin-bottom: 40px;
 	}
 
+	/* Overrides the uppercase site .eyebrow from app.css. */
 	.eyebrow {
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--docs-accent);
-		margin: 0 0 0.85rem;
+		margin: 0 0 8px;
+		text-transform: none;
+		letter-spacing: normal;
+		color: var(--text-secondary);
+		font-size: 13px;
+		font-weight: 500;
+		line-height: 20px;
 	}
 
 	.home-title {
-		font-family: var(--font-sans);
-		font-size: clamp(2rem, 4vw, 3rem);
+		margin: 0 0 8px;
+		color: var(--text-primary);
+		font-size: 28px;
 		font-weight: 600;
-		line-height: 1.05;
+		line-height: 36px;
 		letter-spacing: -0.02em;
 		text-wrap: balance;
-		margin: 0 0 1rem;
-		color: var(--docs-text);
 	}
 
 	.home-lead {
-		font-size: 1.05rem;
-		line-height: 1.6;
-		color: var(--docs-text-muted);
 		max-width: 34rem;
-		margin: 0 auto 1.75rem;
+		margin: 0 auto 24px;
+		color: var(--text-secondary);
+		font-size: 15px;
+		line-height: 1.6;
 		text-wrap: pretty;
 	}
 
 	.home-search {
-		position: relative;
 		max-width: 30rem;
 		margin: 0 auto;
+		text-align: left;
 	}
 
-	/* Sections */
 	.home-section {
-		margin-top: 3rem;
+		margin-top: 28px;
 	}
 
+	/* Matches the settings group headings. */
 	.section-heading {
-		font-family: var(--font-sans);
-		font-size: 1.35rem;
-		font-weight: 600;
-		color: var(--docs-text);
-		margin: 0 0 1.25rem;
+		margin: 0 0 8px;
+		padding: 0 16px;
+		color: var(--text-secondary);
+		font-size: 14px;
+		font-weight: 500;
+		line-height: 20px;
+		letter-spacing: normal;
 	}
 
 	.section-grid {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 1.25rem;
+		gap: 12px;
 	}
 
 	.section-panel {
-		border: none;
-		border-radius: var(--radius-xl);
-		padding: 1.5rem;
-		background: var(--bg-tertiary);
-		transition:
-			transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-			box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.section-panel:hover {
-		transform: translateY(-3px);
-		box-shadow: var(--shadow-lg);
+		padding: 16px;
+		border-radius: var(--radius-lg);
+		background: var(--bg-primary);
 	}
 
 	.panel-head {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
+		gap: 12px;
+		margin-bottom: 8px;
 	}
 
 	.panel-icon {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: 0.625rem;
-		background: var(--accent-subtle);
-		color: var(--accent);
 		flex-shrink: 0;
+		width: 32px;
+		height: 32px;
+		border-radius: var(--control-radius);
+		background: var(--control-bg);
+		color: var(--text-primary);
 	}
 
 	.panel-title {
-		font-family: var(--font-sans);
-		font-size: 1.05rem;
-		font-weight: 600;
-		color: var(--docs-text);
 		margin: 0;
+		color: var(--text-primary);
+		font-size: 16px;
+		font-weight: 600;
+		line-height: 24px;
+		letter-spacing: normal;
 	}
 
 	.panel-list {
 		list-style: none;
-		margin: 0;
+		margin: 0 -8px;
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 2px;
 	}
 
 	.panel-link {
 		display: flex;
 		flex-direction: column;
-		gap: 0.15rem;
-		padding: 0.6rem 0.7rem;
-		border-radius: 0.6rem;
+		gap: 2px;
+		padding: 8px;
+		border-radius: var(--control-radius);
 		text-decoration: none;
-		transition: background 0.18s ease;
+		transition: background 150ms;
 	}
 
 	.panel-link:hover {
-		background: var(--accent-subtle);
+		background: var(--control-hover);
 	}
 
 	.link-title {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.9rem;
-		font-weight: 600;
-		color: var(--docs-text);
+		gap: 6px;
+		color: var(--text-primary);
+		font-size: 14px;
+		font-weight: 500;
+		line-height: 20px;
 	}
 
 	.link-title :global(svg) {
+		color: var(--text-secondary);
 		opacity: 0;
-		transform: translateX(-4px);
-		transition: opacity 0.18s ease, transform 0.18s ease;
-		color: var(--docs-accent);
+		transition: opacity 150ms;
 	}
 
-	.panel-link:hover .link-title {
-		color: var(--docs-accent);
-	}
-
-	.panel-link:hover .link-title :global(svg) {
+	.panel-link:is(:hover, :focus-visible) .link-title :global(svg) {
 		opacity: 1;
-		transform: translateX(0);
 	}
 
 	.link-desc {
-		font-size: 0.8rem;
-		line-height: 1.45;
-		color: var(--docs-text-muted);
+		color: var(--text-secondary);
+		font-size: 13px;
+		line-height: 18px;
 	}
 
 	@media (max-width: 768px) {
 		.docs-home {
-			padding: 2rem 1rem 3rem;
+			padding: 32px 16px 48px;
 		}
 
 		.section-grid {

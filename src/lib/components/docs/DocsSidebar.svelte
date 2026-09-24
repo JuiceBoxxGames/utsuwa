@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import DocsSidebarSection from './DocsSidebarSection.svelte';
 	import DocsSearch from './DocsSearch.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { docsNav } from '$lib/config/docs-nav';
-	import { cycleTheme, getIconName, getLabel } from '$lib/config/docs-theme-toggle.svelte';
+	import { cycleColorMode, getColorMode, type ColorMode } from '$lib/utils/color-mode';
 	import { GITHUB_REPO } from '$lib/config/site';
 
 	interface Props {
@@ -13,13 +14,18 @@
 	let { mobileOpen = false }: Props = $props();
 
 	let searchComponent = $state<DocsSearch | null>(null);
+	let colorMode = $state<ColorMode>('system');
+
+	onMount(() => {
+		colorMode = getColorMode();
+	});
 
 	export function focusSearch() {
 		searchComponent?.focus();
 	}
 
-	const iconName = $derived(getIconName());
-	const label = $derived(getLabel());
+	const iconName = $derived(colorMode === 'light' ? 'sun' : colorMode === 'dark' ? 'moon' : 'monitor');
+	const label = $derived(colorMode === 'light' ? 'Light' : colorMode === 'dark' ? 'Dark' : 'System');
 </script>
 
 <aside class="sidebar" class:mobile-open={mobileOpen}>
@@ -27,18 +33,24 @@
 		<div class="sidebar-search">
 			<DocsSearch bind:this={searchComponent} id="sidebar-search" />
 		</div>
-		<nav class="sidebar-nav">
+		<nav class="sidebar-nav" aria-label="Documentation">
 			{#each docsNav as section}
 				<DocsSidebarSection {section} />
 			{/each}
 		</nav>
 	</div>
 	<div class="sidebar-footer">
-		<button type="button" class="footer-btn" onclick={cycleTheme} title={label}>
+		<button
+			type="button"
+			class="btn btn-ghost btn-sm"
+			onclick={() => (colorMode = cycleColorMode())}
+			aria-label={`Theme: ${label}`}
+			title={`Theme: ${label}`}
+		>
 			<Icon name={iconName} size={14} />
 			<span>{label}</span>
 		</button>
-		<a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" class="footer-btn" title="GitHub">
+		<a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" aria-label="GitHub" title="GitHub">
 			<Icon name="github" size={14} />
 		</a>
 	</div>
@@ -51,79 +63,57 @@
 		height: 100%;
 		display: flex;
 		flex-direction: column;
-		background: var(--bg-page);
+		background: var(--t3-sidebar);
 	}
 
 	.sidebar-top {
 		flex: 1;
 		overflow-y: auto;
-		padding: 0.75rem;
+		padding: 8px 8px 16px;
 		scrollbar-width: thin;
 		scrollbar-color: transparent transparent;
 	}
 
 	.sidebar-top:hover {
-		scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+		scrollbar-color: var(--scrollbar-thumb) transparent;
 	}
 
 	.sidebar-search {
-		margin-bottom: 1rem;
+		margin-bottom: 16px;
 	}
 
 	.sidebar-nav {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 20px;
 	}
 
 	.sidebar-footer {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
-		padding: 0.625rem 0.75rem;
-		border-top: 1px solid var(--border-subtle);
-	}
-
-	.footer-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.375rem 0.5rem;
-		font-size: 0.6875rem;
-		font-weight: 500;
-		color: var(--text-secondary);
-		background: var(--bg-tertiary);
-		border: none;
-		border-radius: var(--radius-md);
-		cursor: pointer;
-		text-decoration: none;
-		transition: background 0.15s ease, color 0.15s ease;
-	}
-
-	.footer-btn:hover {
-		color: var(--text-primary);
-		background: color-mix(in srgb, var(--bg-tertiary), var(--text-primary) 8%);
+		gap: 4px;
+		padding: 8px;
 	}
 
 	@media (max-width: 768px) {
 		.sidebar {
 			display: none;
 			position: fixed;
-			top: 3.5rem;
+			top: 56px;
 			left: 0;
 			bottom: 0;
 			z-index: 20;
-			height: calc(100vh - 3.5rem);
-			box-shadow: 8px 0 32px rgba(0, 0, 0, 0.15);
-		}
-
-		.footer-btn {
-			padding: 0.5rem 0.625rem;
-			min-height: 2.5rem;
+			height: calc(100dvh - 56px);
+			box-shadow: var(--shadow-lg);
 		}
 
 		.sidebar.mobile-open {
 			display: flex;
+		}
+
+		.sidebar-footer :global(.btn) {
+			min-height: 44px;
+			min-width: 44px;
 		}
 	}
 </style>

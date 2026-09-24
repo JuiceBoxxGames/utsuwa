@@ -1,6 +1,6 @@
 /* Adapted from T3 Code. See THIRD_PARTY_NOTICES.md for source and license.
    Root scoping also themes dialogs and menus portaled to body. */
-html:has(.app, .overlay-app) {
+html:has(.app, .overlay-app, .docs-site) {
 	color-scheme: light;
 	--t3-canvas: #fcfcfc;
 	--t3-surface: #f3f3f5;
@@ -35,7 +35,7 @@ html:has(.app, .overlay-app) {
 	--t3-warning-surface: #fcf4e8;
 }
 
-html.dark:has(.app, .overlay-app) {
+html.dark:has(.app, .overlay-app, .docs-site) {
 	color-scheme: dark;
 	--t3-canvas: #0a0a0a;
 	--t3-surface: #171717;
@@ -65,7 +65,7 @@ html.dark:has(.app, .overlay-app) {
 	--t3-warning-surface: #312108;
 }
 
-html:has(.app, .overlay-app) {
+html:has(.app, .overlay-app, .docs-site) {
 	--bg-page: var(--t3-canvas);
 	--bg-primary: var(--t3-surface);
 	--bg-secondary: var(--t3-accent-surface);
@@ -106,14 +106,14 @@ html:has(.app, .overlay-app) {
 	font-family: var(--font-sans);
 }
 
-html:has(.app, .overlay-app) body {
+html:has(.app, .overlay-app, .docs-site) body {
 	font-family: var(--font-sans);
 	font-size: 14px;
 	-webkit-font-smoothing: antialiased;
 }
 
 /* T3 button geometry with neutral fills, primary, and ghost treatments. */
-html:has(.app, .overlay-app) .btn {
+html:has(.app, .overlay-app, .docs-site) .btn {
 	min-height: 32px;
 	padding: 5px 11px;
 	gap: 8px;
@@ -125,34 +125,34 @@ html:has(.app, .overlay-app) .btn {
 	box-shadow: none;
 	transition: background 150ms, box-shadow 150ms, transform 100ms;
 }
-html:has(.app, .overlay-app) .btn-sm { min-height: 28px; padding: 3px 9px; font-size: 13px; }
-html:has(.app, .overlay-app) .btn-lg { min-height: 36px; padding: 7px 13px; }
-html:has(.app, .overlay-app) .btn-primary {
+html:has(.app, .overlay-app, .docs-site) .btn-sm { min-height: 28px; padding: 3px 9px; font-size: 13px; }
+html:has(.app, .overlay-app, .docs-site) .btn-lg { min-height: 36px; padding: 7px 13px; }
+html:has(.app, .overlay-app, .docs-site) .btn-primary {
 	background: var(--accent);
 	border-color: var(--accent);
 	color: var(--accent-contrast);
 	box-shadow: none;
 }
-html:has(.app, .overlay-app) .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-html:has(.app, .overlay-app) .btn-secondary {
+html:has(.app, .overlay-app, .docs-site) .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+html:has(.app, .overlay-app, .docs-site) .btn-secondary {
 	background: var(--control-bg);
 	border-color: transparent;
 	color: var(--text-primary);
 	box-shadow: none;
 }
-html:has(.app, .overlay-app) .btn-secondary:hover:not(:disabled) { background: var(--control-hover); }
-html:has(.app, .overlay-app) .btn-ghost { color: var(--text-secondary); background: transparent; }
-html:has(.app, .overlay-app) .btn-ghost:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-secondary); }
-html:has(.app, .overlay-app) .btn-danger { background: var(--color-error); color: white; }
-html:has(.app, .overlay-app) .btn:disabled { opacity: 0.64; }
-html:has(.app, .overlay-app) .btn:active:not(:disabled) { transform: scale(0.97); }
+html:has(.app, .overlay-app, .docs-site) .btn-secondary:hover:not(:disabled) { background: var(--control-hover); }
+html:has(.app, .overlay-app, .docs-site) .btn-ghost { color: var(--text-secondary); background: transparent; }
+html:has(.app, .overlay-app, .docs-site) .btn-ghost:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-secondary); }
+html:has(.app, .overlay-app, .docs-site) .btn-danger { background: var(--color-error); color: white; }
+html:has(.app, .overlay-app, .docs-site) .btn:disabled { opacity: 0.64; }
+html:has(.app, .overlay-app, .docs-site) .btn:active:not(:disabled) { transform: scale(0.97); }
 /* Composite inputs show focus on their container, not the inner text field. */
-html:has(.app, .overlay-app) :where(button, a, input, select, textarea):not(:where(.chat-input textarea, .settings-search input)):focus-visible {
+html:has(.app, .overlay-app, .docs-site) :where(button, a, input, select, textarea):not(:where(.chat-input textarea, .settings-search input)):focus-visible {
 	outline: 2px solid var(--t3-focus);
 	outline-offset: 2px;
 }
-html:has(.app, .overlay-app) :where(input, textarea, select) { accent-color: var(--accent); }
-html:has(.app, .overlay-app) ::-webkit-scrollbar { width: 6px; height: 6px; }
+html:has(.app, .overlay-app, .docs-site) :where(input, textarea, select) { accent-color: var(--accent); }
+html:has(.app, .overlay-app, .docs-site) ::-webkit-scrollbar { width: 6px; height: 6px; }
 @media (pointer: coarse) {
-	html:has(.app, .overlay-app) .btn { min-height: 44px; }
+	html:has(.app, .overlay-app, .docs-site) .btn { min-height: 44px; }
 }

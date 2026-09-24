@@ -1,7 +1,10 @@
 import { tick } from 'svelte';
 
-const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 448 512" fill="currentColor"><path d="M208 0H332.1c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9V336c0 26.5-21.5 48-48 48H208c-26.5 0-48-21.5-48-48V48c0-26.5 21.5-48 48-48zM48 128h80v64H64V448H256V416h64v48c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V176c0-26.5 21.5-48 48-48z"/></svg>`;
-const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 448 512" fill="currentColor"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`;
+// Lucide copy and check, inlined since these buttons are built outside Svelte.
+const svg = (body: string) =>
+	`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const copyIcon = svg('<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>');
+const checkIcon = svg('<path d="M20 6 9 17l-5-5"/>');
 
 export function addCodeCopyButtons(containerSelector: string) {
 	tick().then(() => {
@@ -9,6 +12,7 @@ export function addCodeCopyButtons(containerSelector: string) {
 			if (pre.querySelector('.copy-btn')) return;
 
 			const btn = document.createElement('button');
+			btn.type = 'button';
 			btn.className = 'copy-btn';
 			btn.innerHTML = copyIcon;
 			btn.title = 'Copy code';
@@ -17,7 +21,11 @@ export function addCodeCopyButtons(containerSelector: string) {
 				const code = pre.querySelector('code')?.textContent || pre.textContent || '';
 				await navigator.clipboard.writeText(code);
 				btn.innerHTML = checkIcon;
-				setTimeout(() => (btn.innerHTML = copyIcon), 2000);
+				btn.setAttribute('aria-label', 'Copied');
+				setTimeout(() => {
+					btn.innerHTML = copyIcon;
+					btn.setAttribute('aria-label', 'Copy code');
+				}, 2000);
 			};
 			pre.appendChild(btn);
 		});

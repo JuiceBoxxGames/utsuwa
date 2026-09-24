@@ -122,7 +122,7 @@
 
 		<article class="docs-content prose" bind:this={articleEl}>
 			<div class="page-toolbar">
-				<button type="button" class="btn btn-secondary" onclick={copyPage} title="Copy page content">
+				<button type="button" class="btn btn-secondary btn-sm" onclick={copyPage} title="Copy page content">
 					<Icon name={copied ? 'check' : 'copy'} size={14} />
 					<span>{copied ? 'Copied' : 'Copy page'}</span>
 				</button>
@@ -155,10 +155,10 @@
 <style>
 	.doc-wrap {
 		display: flex;
-		gap: 2.5rem;
+		gap: 40px;
 		max-width: 70rem;
 		margin: 0 auto;
-		padding: 1.75rem 3rem 2rem;
+		padding: 24px 40px 40px;
 		align-items: flex-start;
 	}
 
@@ -176,24 +176,24 @@
 
 	.docs-content :global(h2),
 	.docs-content :global(h3) {
-		scroll-margin-top: 1.25rem;
+		scroll-margin-top: 20px;
 	}
 
-	/* Breadcrumb */
 	.breadcrumb {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.78rem;
-		font-weight: 500;
+		gap: 6px;
+		margin-bottom: 16px;
 		color: var(--text-secondary);
-		margin-bottom: 1.25rem;
+		font-size: 13px;
+		line-height: 20px;
 	}
 
 	.breadcrumb a {
-		color: var(--text-secondary);
+		color: inherit;
 		text-decoration: none;
-		transition: color 0.15s ease;
+		border-radius: var(--radius-xs);
 	}
 
 	.breadcrumb a:hover {
@@ -202,36 +202,32 @@
 
 	.crumb-current {
 		color: var(--text-primary);
-		font-weight: 600;
-	}
-
-	.breadcrumb :global(svg) {
-		opacity: 0.5;
+		font-weight: 500;
 	}
 
 	.page-toolbar {
 		display: flex;
 		justify-content: flex-end;
-		margin-bottom: 0.5rem;
+		margin-bottom: 8px;
 	}
 
-	/* On-page table of contents */
 	.toc {
 		position: sticky;
-		top: 1.5rem;
+		top: 24px;
 		width: 14rem;
 		flex-shrink: 0;
 		align-self: start;
-		max-height: calc(100vh - 6rem);
+		max-height: calc(100vh - 104px);
 		overflow-y: auto;
 	}
 
 	.toc-title {
-		font-size: 0.8125rem;
-		font-weight: 600;
+		margin: 0 0 4px;
+		padding: 4px 10px;
 		color: var(--text-secondary);
-		margin: 0 0 0.75rem;
-		padding-left: 0.75rem;
+		font-size: 13px;
+		font-weight: 500;
+		line-height: 20px;
 	}
 
 	.toc-list {
@@ -240,32 +236,32 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.125rem;
+		gap: 2px;
 	}
 
 	.toc-list a {
 		display: block;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-md);
-		font-size: 0.8125rem;
-		line-height: 1.4;
+		padding: 6px 10px;
+		border-radius: var(--control-radius);
 		color: var(--text-secondary);
+		font-size: 14px;
+		line-height: 20px;
 		text-decoration: none;
-		transition: color 0.15s ease, background 0.15s ease;
+		transition: color 150ms, background 150ms;
 	}
 
 	.toc-list li.sub a {
-		padding-left: 1.5rem;
-		font-size: 0.78rem;
+		padding-left: 22px;
 	}
 
 	.toc-list a:hover {
 		color: var(--text-primary);
+		background: var(--control-hover);
 	}
 
 	.toc-list a.active {
-		background: var(--bg-tertiary);
 		color: var(--text-primary);
+		background: var(--control-selected);
 		font-weight: 500;
 	}
 
@@ -281,7 +277,7 @@
 
 	@media (max-width: 768px) {
 		.doc-wrap {
-			padding: 1.5rem 1rem;
+			padding: 16px 16px 32px;
 		}
 	}
 </style>
