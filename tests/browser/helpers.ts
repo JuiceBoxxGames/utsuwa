@@ -49,6 +49,9 @@ export async function waitForHydration(page: Page, waitForAvatar = true) {
 		.poll(
 			() =>
 				page.evaluate(async (hasAvatar) => {
+					// Kit reads its app version from a global the Vite client defines. Importing a
+					// store before that client runs poisons $app/environment for the whole page.
+					if (!('__SVELTEKIT_APP_VERSION__' in globalThis)) return false;
 					const path = '/src/lib/stores/modules.svelte.ts';
 					if (!(await import(/* @vite-ignore */ path)).modulesStore.getModuleState('speech')) {
 						return false;
