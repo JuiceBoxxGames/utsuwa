@@ -1,6 +1,6 @@
 ---
 title: MCP Servers
-description: Give your companion external tools through the Model Context Protocol: Home Assistant, Brave Search, GitHub, and more.
+description: "Give your companion external tools through the Model Context Protocol: Home Assistant, Brave Search, GitHub, and more."
 ---
 
 # MCP Servers
