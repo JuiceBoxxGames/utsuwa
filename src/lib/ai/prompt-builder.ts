@@ -41,6 +41,8 @@ export interface PromptContext {
 	// disabled). The speech layer then mandates tool calls instead of
 	// teaching the inline speak()/pause()/gesture() syntax.
 	ttsToolCalling?: boolean;
+	// Animations she may trigger through "action" (enabled library entries).
+	avatarActions?: { id: string; description: string }[];
 }
 
 function getContextMemoryBudget(contextSize?: number): MemoryBudget | undefined {
@@ -80,6 +82,20 @@ function buildReminderInstruction(): string {
 Use this when the user asks you to remind them (or yourself) about something later. The tag will be removed from the visible text.`;
 }
 
+export function buildAvatarActionsLayer(actions: { id: string; description: string }[]): string {
+	if (actions.length === 0) return '';
+	const lines = actions.map((a) => `- ${a.id}: ${a.description.replace(/\s+/g, ' ').trim()}`);
+	return `<avatar>
+Motions you can perform. Set "action" to the id when one fits what you are saying, at most one per reply and only when it feels natural. Otherwise use null.
+${lines.join('\n')}
+</avatar>`;
+}
+
+// Extra JSON field, only offered when there is something to pick from
+function actionField(ctx: PromptContext): string {
+	return ctx.avatarActions?.length ? ',\n  "action": null | "animation_id"' : '';
+}
+
 function buildEventLayer(ctx: PromptContext): string | null {
 	if (!ctx.systemEvent) return null;
 	return `<event>\n${ctx.systemEvent}\n</event>`;
@@ -99,6 +115,7 @@ export function buildSystemPrompt(context: PromptContext): string {
 		...(context.hasImages ? [buildBeingShownLayer()] : []),
 		buildEventLayer(context),
 		buildOmniVoiceLayer(context),
+		buildAvatarActionsLayer(context.avatarActions ?? []) || null,
 		buildInstructionLayer(context)
 	].filter((layer): layer is string => layer !== null);
 
@@ -252,6 +269,9 @@ Energy: ${energyDesc} (${ctx.state.energy}/100)
 	const eventLayer = buildEventLayer(ctx);
 	if (eventLayer) parts.push(eventLayer);
 
+	const avatarLayer = buildAvatarActionsLayer(ctx.avatarActions ?? []);
+	if (avatarLayer) parts.push(avatarLayer);
+
 	// Simple instructions (no relationship mechanics)
 	parts.push(`<instructions>
 Respond naturally as ${ctx.persona.name}. Be helpful and engaging.
@@ -263,7 +283,7 @@ After your reply, ALWAYS end with a JSON block, even when little changed:
 {
   "mood_change": { "emotion": "emotion_name", "intensity_delta": number },
   "energy_delta": number,
-  "new_memory": null | "something specific worth remembering about them"
+  "new_memory": null | "something specific worth remembering about them"${actionField(ctx)}
 }
 \`\`\`
 
@@ -492,7 +512,7 @@ After your reply, ALWAYS end with a JSON block, even when little changed:
   "intimacy_delta": number,
   "comfort_delta": number,
   "new_memory": null | "something specific worth remembering about them",
-  "triggered_event": null | "event_id"
+  "triggered_event": null | "event_id"${actionField(ctx)}
 }
 \`\`\`
 

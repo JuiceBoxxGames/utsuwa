@@ -311,7 +311,7 @@ Events are organized by type (`milestone`, `random`, `scheduled`, `conditional`,
 
 ## Prompt Architecture
 
-The system prompt is built from up to 7 layers:
+The system prompt is built from up to 8 layers:
 
 1. **System** — Rules, output format, current time
 2. **Character** — Name, personality, background, speech patterns
@@ -319,7 +319,8 @@ The system prompt is built from up to 7 layers:
 4. **Memory** — Recent conversation turns, relevant facts, session context
 5. **Being Shown** *(optional)* — Present only when the user shows an image: frames the photo as something she is being shown in the moment, not a file attachment
 6. **Event** *(optional)* — Present only for system events such as a fired reminder: the trigger text arrives in an `<event>` block instead of a user turn
-7. **Instructions** — Stage-specific behavior guidance, JSON output format
+7. **Avatar** *(optional)*: Present only when animations are enabled for her: an `<avatar>` block listing each motion's id and description
+8. **Instructions**: Stage-specific behavior guidance, JSON output format
 
 ### Turn Progress Hooks
 
@@ -378,6 +379,10 @@ Both modes write memories: **Companion Mode** also emits `new_memory` (only mood
 - **Emotion normalization** — free-form and compound emotions (`"grateful|cared-for"`, `"excitement"`, `"nervous"`) are mapped to the canonical set; genuinely unknown ones are dropped rather than guessed.
 
 All deltas are clamped and emotions whitelisted, so a malformed or exaggerated update can't corrupt saved state.
+
+### Animation Library
+
+Settings > Animations lists the seven built-in emotes and any `.vrma` files the user uploads. Uploads are parsed with the real loader before anything is saved (25 MB and 60 second caps); the blobs live in IndexedDB and the names, descriptions, and "Companion can use" switches in localStorage (`utsuwa-animations`), so other windows pick up edits. Enabled entries are listed in the `<avatar>` prompt layer by id and description, and the JSON block gains `"action": null | "animation_id"`. The parser keeps the id only if it is well formed, and `action-gate.ts` drops unknown ids and repeats inside a 20 second per-animation or 8 second global cooldown. Photo mode and an emote already playing always win, so a requested action is skipped rather than queued.
 
 ## Heuristics Engine
 

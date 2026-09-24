@@ -4,6 +4,7 @@ import localforage from 'localforage';
 import { isTauri } from '$lib/services/platform/platform';
 import { createTempVrmStoreIntegration } from '$lib/utils/temp-vrm-store';
 import type { TouchZone } from '$lib/engine/photo-reactions';
+import { animationLibraryStore } from './animation-library.svelte';
 
 export interface VrmModel {
 	id: string;
@@ -146,19 +147,6 @@ function createVrmStore() {
 		'/animations/idle_3.vrma',
 		'/animations/idle_4.vrma',
 		'/animations/idle_5.vrma'
-	];
-
-	// Selectable one-shot emotes (played via the developer tools). These are the
-	// VRMA files shipped in static/animations/ that aren't part of the idle cycle
-	// or the talking loop.
-	const availableAnimations: { id: string; name: string; url: string }[] = [
-		{ id: 'vrma_01', name: 'Emote 1', url: '/animations/VRMA_01.vrma' },
-		{ id: 'vrma_02', name: 'Emote 2', url: '/animations/VRMA_02.vrma' },
-		{ id: 'vrma_03', name: 'Emote 3', url: '/animations/VRMA_03.vrma' },
-		{ id: 'vrma_04', name: 'Emote 4', url: '/animations/VRMA_04.vrma' },
-		{ id: 'vrma_05', name: 'Emote 5', url: '/animations/VRMA_05.vrma' },
-		{ id: 'vrma_06', name: 'Emote 6', url: '/animations/VRMA_06.vrma' },
-		{ id: 'vrma_07', name: 'Emote 7', url: '/animations/VRMA_07.vrma' }
 	];
 
 	// Guard against saveToStorage running before init completes
@@ -377,20 +365,16 @@ function createVrmStore() {
 		headScreenPosition = pos;
 	}
 
+	// Takes a library id or url (custom uploads are blob: urls), or a direct path
 	function setCurrentAnimation(animationIdOrPath: string | null) {
-		// Accept either an animation ID or a direct path
-		// If it's a path (starts with /), use it directly
-		// Otherwise, look up the animation by ID
 		if (animationIdOrPath === null || animationIdOrPath === 'none') {
 			currentAnimation = null;
-		} else if (animationIdOrPath.startsWith('/')) {
-			// Direct path - use as-is
-			currentAnimation = animationIdOrPath;
-		} else {
-			// Look up by ID in availableAnimations
-			const anim = availableAnimations.find((a) => a.id === animationIdOrPath);
-			currentAnimation = anim?.url || null;
+			return;
 		}
+		const anim = animationLibraryStore.playable.find(
+			(a) => a.id === animationIdOrPath || a.url === animationIdOrPath
+		);
+		currentAnimation = anim?.url ?? (animationIdOrPath.startsWith('/') ? animationIdOrPath : null);
 	}
 
 	// Start talking animation based on text length
@@ -536,8 +520,9 @@ function createVrmStore() {
 		get currentAnimation() {
 			return currentAnimation;
 		},
+		// One-shot emotes: the built-ins plus the user's uploads
 		get availableAnimations() {
-			return availableAnimations;
+			return animationLibraryStore.playable;
 		},
 		get idleAnimationUrl() {
 			return idleAnimationUrl;

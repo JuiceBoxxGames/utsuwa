@@ -610,9 +610,15 @@
 		}
 	});
 
+	// Flips once per model, when its first idle clip is running. An emote asked
+	// for before that (Play from settings lands here mid-load) waits for it
+	// instead of being dropped or blending with the idle as it fades in.
+	const idleReady = $derived(idleAction !== null);
+
 	// Play emote animations when currentAnimation changes
 	$effect(() => {
 		const animId = currentAnimation;
+		if (!idleReady) return;
 		const currentVrm = untrack(() => vrm);
 		const currentMixer = untrack(() => mixer);
 		const currentIdleAction = untrack(() => idleAction);
@@ -636,8 +642,15 @@
 		}
 
 		// Find the emote animation
-		const animationData = vrmStore.availableAnimations.find((a) => a.url === animId || a.id === animId);
-		if (!animationData?.url) return;
+		// Untracked: editing a description must not restart the emote
+		const animationData = untrack(() =>
+			vrmStore.availableAnimations.find((a) => a.url === animId || a.id === animId)
+		);
+		if (!animationData?.url) {
+			// Deleted or unknown; don't leave a stale request blocking the next one
+			vrmStore.setCurrentAnimation(null);
+			return;
+		}
 
 		// Load emote VRMA file
 		loadVrmAnimation(animationData.url)
@@ -697,6 +710,7 @@
 			})
 			.catch((error) => {
 				console.error('Error loading emote animation:', error);
+				if (vrmStore.currentAnimation === animId) vrmStore.setCurrentAnimation(null);
 			});
 	});
 

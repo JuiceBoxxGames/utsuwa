@@ -15,6 +15,7 @@ import { extractStateUpdates } from './client-chat';
 import { extractReminderTags } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { ensureSession } from '$lib/engine/memory';
+import { requestAvatarAction } from '$lib/services/animation-actions';
 import type { LLMProvider } from '$lib/types';
 import type { EventDefinition } from '$lib/types/events';
 
@@ -124,6 +125,7 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 				trustLLMDeltas: userAnalysis?.nonLatinDominant ?? false
 			});
 	characterStore.applyUpdates(finalUpdates, { countInteraction: !systemEvent });
+	if (finalUpdates.action) requestAvatarAction(finalUpdates.action);
 
 	// Save the model's memory observation
 	if (finalUpdates.newMemory) {

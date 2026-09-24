@@ -22,6 +22,16 @@ interface LLMStateOutput {
 	new_memory?: string | null;
 	new_inside_joke?: string | null;
 	triggered_event?: string | null;
+	action?: string | null;
+}
+
+// Animation ids the model may name in "action"; the library checks it exists
+const ACTION_ID = /^[a-z0-9_-]{1,64}$/i;
+
+function normalizeAction(value: unknown): string | undefined {
+	if (typeof value !== 'string') return undefined;
+	const id = value.trim().toLowerCase();
+	return ACTION_ID.test(id) ? id : undefined;
 }
 
 // Valid emotions for validation
@@ -265,6 +275,9 @@ function convertLLMOutput(output: LLMStateOutput): Partial<StateUpdates> {
 		updates.triggeredEvent = output.triggered_event.trim();
 	}
 
+	const action = normalizeAction(output.action);
+	if (action) updates.action = action;
+
 	return updates;
 }
 
@@ -321,7 +334,7 @@ function cleanDialogue(text: string, companionName?: string): string {
 	cleaned = stripTruncatedStateBlock(cleaned);
 
 	// Remove any leftover (closed) JSON-like content
-	cleaned = cleaned.replace(/\{[^}]*"(?:mood|delta|emotion)[^}]*\}/gi, '');
+	cleaned = cleaned.replace(/\{[^}]*"(?:mood|delta|emotion|action)[^}]*\}/gi, '');
 
 	// Remove action asterisks (we want dialogue only)
 	cleaned = cleaned.replace(/\*[^*]+\*/g, '');
@@ -408,6 +421,12 @@ export function validateStateUpdates(updates: Partial<StateUpdates>): {
 
 	if (updates.triggeredEvent) {
 		sanitized.triggeredEvent = updates.triggeredEvent;
+	}
+
+	if (updates.action !== undefined) {
+		const action = normalizeAction(updates.action);
+		if (action) sanitized.action = action;
+		else warnings.push(`Invalid action: ${updates.action}`);
 	}
 
 	return {
