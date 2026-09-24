@@ -388,6 +388,8 @@ All deltas are clamped and emotions whitelisted, so a malformed or exaggerated u
 
 Settings > Animations lists the seven built-in emotes and any `.vrma` files the user uploads. Uploads are parsed with the real loader before anything is saved (25 MB and 60 second caps); the blobs live in IndexedDB and the names, descriptions, and "Companion can use" switches in localStorage (`utsuwa-animations`), so other windows pick up edits. Enabled entries are listed in the `<avatar>` prompt layer by id and description, and the JSON block gains `"action": null | "animation_id"`. The parser keeps the id only if it is well formed, and `action-gate.ts` drops unknown ids and repeats inside a 20 second per-animation or 8 second global cooldown. Photo mode and an emote already playing always win, so a requested action is skipped rather than queued.
 
+The same page sets her base behavior. The idle cycle picks from a user-chosen pool (the five built-in idles plus any uploads) with the usual rules: no immediate repeat, a switch after one or two loops, paused during emotes and photo mode. Pool ids are checked against the library at read time, so a deleted upload drops out, and an empty result falls back to all five built-in idles. An optional thinking clip loops from the moment a message is sent until the first reply text streams in; talking always uses the built-in talking clip.
+
 ## Heuristics Engine
 
 ### Message Analysis

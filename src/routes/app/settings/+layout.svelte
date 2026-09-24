@@ -14,7 +14,7 @@
 	const navItems = $derived([
 		{ href: localPath('app', '/settings/persona'), label: 'Character', icon: 'persona', keywords: 'avatar personality name companion mode' },
 		{ href: localPath('app', '/settings/display'), label: 'Display', icon: 'monitor', keywords: 'appearance theme light dark chat typing screen awake layout' },
-		{ href: localPath('app', '/settings/animations'), label: 'Animations', icon: 'play', keywords: 'vrma emote gesture upload motion library' },
+		{ href: localPath('app', '/settings/animations'), label: 'Animations', icon: 'play', keywords: 'vrma emote gesture upload motion library idle thinking' },
 		{ href: localPath('app', '/settings/llm'), label: 'LLM Model', icon: 'brain', keywords: 'ai provider api model language context' },
 		{ href: localPath('app', '/settings/tts'), label: 'TTS', icon: 'volume', keywords: 'speech voice audio omnivoice elevenlabs fish audio' },
 		{ href: localPath('app', '/settings/stt'), label: 'STT', icon: 'mic', keywords: 'microphone transcription speech recognition timeout whisper' },

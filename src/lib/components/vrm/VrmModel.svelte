@@ -5,6 +5,7 @@
 	import { createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 	import { loadVrmAnimation } from '$lib/services/vrm-animations';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { animationLibraryStore } from '$lib/stores/animation-library.svelte';
 	import { ttsStore } from '$lib/stores/tts.svelte';
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { photomodeStore } from '$lib/stores/photomode.svelte';
@@ -117,10 +118,13 @@
 	let talkingClip = $state<THREE.AnimationClip | null>(null); // Cached talking clip
 	let emoteAction = $state<THREE.AnimationAction | null>(null); // One-shot emote animations
 	let isEmotePlaying = $state(false); // True when an emote is playing (disables blinking)
-	let lastIdleIndex = $state(-1); // Track last played idle to avoid repeats
+	// A url, not an index: the pool can change size between picks
+	let lastIdleUrl: string | null = null;
 	const currentAnimation = $derived(vrmStore.currentAnimation);
 	// Talking animation plays when TTS is speaking OR when text-based talking is triggered
 	const shouldTalk = $derived(ttsStore.isSpeaking || vrmStore.isTalking);
+	// The wait before the first words, when the user picked a thinking clip
+	const shouldThink = $derived(vrmStore.isThinking && !!animationLibraryStore.thinkingUrl && !shouldTalk);
 	// Resting face from her tracked mood; photo mode hands the face to the user
 	const moodTarget = $derived(
 		displayStore.moodExpressions && !photomodeStore.active
@@ -224,17 +228,13 @@
 		}
 	}
 
-	// Pick a random idle animation index, excluding the last played one
-	function pickRandomIdleIndex(): number {
-		const urls = vrmStore.idleAnimationUrls;
-		if (urls.length <= 1) return 0;
-
-		let newIndex: number;
-		do {
-			newIndex = Math.floor(Math.random() * urls.length);
-		} while (newIndex === lastIdleIndex);
-
-		return newIndex;
+	// Pick a random idle from the pool, excluding the last played one. Runs from
+	// timers, so the pool is read untracked and a change lands on the next cycle.
+	function pickRandomIdleUrl(): string | null {
+		const urls = untrack(() => vrmStore.idleAnimationUrls);
+		const choices = urls.length > 1 ? urls.filter((u) => u !== lastIdleUrl) : urls;
+		lastIdleUrl = choices[Math.floor(Math.random() * choices.length)] ?? null;
+		return lastIdleUrl;
 	}
 
 	// Idle animation cycling timer
@@ -242,12 +242,8 @@
 
 	// Load and start the looping idle animation
 	function startIdleAnimation(targetVrm: VRM, targetMixer: THREE.AnimationMixer) {
-		const urls = vrmStore.idleAnimationUrls;
-		if (!urls || urls.length === 0) return;
-
-		const index = pickRandomIdleIndex();
-		lastIdleIndex = index;
-		const idleUrl = urls[index];
+		const idleUrl = pickRandomIdleUrl();
+		if (!idleUrl) return;
 
 		loadVrmAnimation(idleUrl)
 			.then((vrmAnimation) => {
@@ -280,10 +276,10 @@
 		const loops = 1 + Math.random();
 		const delay = duration * loops * 1000;
 		idleCycleTimeout = setTimeout(() => {
-			if (!shouldTalk && !isEmotePlaying && !photomodeStore.active) {
+			if (!shouldTalk && !shouldThink && !isEmotePlaying && !photomodeStore.active) {
 				playNextIdleAnimation(targetVrm, targetMixer);
 			} else {
-				// Retry later if we're busy (talking, emoting, or posing for a photo)
+				// Retry later if we're busy (talking, thinking, emoting, or posing for a photo)
 				scheduleIdleCycle(targetVrm, targetMixer, duration);
 			}
 		}, delay);
@@ -291,12 +287,8 @@
 
 	// Play the next random idle animation with smooth crossfade
 	function playNextIdleAnimation(targetVrm: VRM, targetMixer: THREE.AnimationMixer) {
-		const urls = vrmStore.idleAnimationUrls;
-		if (!urls || urls.length === 0) return;
-
-		const index = pickRandomIdleIndex();
-		lastIdleIndex = index;
-		const idleUrl = urls[index];
+		const idleUrl = pickRandomIdleUrl();
+		if (!idleUrl) return;
 
 		loadVrmAnimation(idleUrl)
 			.then((vrmAnimation) => {
@@ -420,6 +412,10 @@
 			}
 			if (active && !wasPhotoActive) {
 				if (talkingAction) talkingAction.fadeOut(0.2);
+				if (thinkingAction) {
+					thinkingAction.fadeOut(0.2);
+					thinkingAction = null;
+				}
 				if (idleAction) {
 					// Ensure the idle actually holds weight (entering mid-talk left it
 					// faded out), then freeze it as the held stance.
@@ -439,8 +435,9 @@
 				// the resumed animation drift strangely. When TTS is still speaking,
 				// the talking-switch effect fades the talking action back in instead;
 				// starting an idle at the same time would blend both at half weight.
+				// Thinking likewise restarts through its own effect.
 				if (idleAction) idleAction.paused = false;
-				if (!shouldTalk) {
+				if (!shouldTalk && !shouldThink) {
 					playNextIdleAnimation(targetVrm, targetMixer);
 				}
 			}
@@ -608,6 +605,53 @@
 			}
 
 		}
+	});
+
+	// Thinking: loops the user's pick while the reply is on its way. Same fades
+	// as talking; if talking starts, the effect above takes over the idle.
+	let thinkingAction: THREE.AnimationAction | null = null;
+	let thinkingClip: { url: string; clip: THREE.AnimationClip } | null = null;
+	let thinkingToken = 0;
+	$effect(() => {
+		const think = shouldThink;
+		if (photomodeStore.active) return;
+		untrack(() => {
+			const targetVrm = vrm;
+			const targetMixer = mixer;
+			const url = animationLibraryStore.thinkingUrl;
+			if (!targetVrm || !targetMixer || isEmotePlaying) return;
+
+			if (!think) {
+				thinkingToken++;
+				if (!thinkingAction) return;
+				thinkingAction.fadeOut(0.3);
+				thinkingAction = null;
+				if (!shouldTalk && idleAction) idleAction.reset().fadeIn(0.3).play();
+				return;
+			}
+			if (thinkingAction || !url) return;
+
+			const token = ++thinkingToken;
+			const cached = thinkingClip?.url === url ? thinkingClip.clip : null;
+			const clipReady = cached
+				? Promise.resolve(cached)
+				: loadVrmAnimation(url).then((anim) => createVRMAnimationClip(anim, targetVrm));
+			clipReady
+				.then((clip) => {
+					// Model swapped, thinking ended, or something else took the stage
+					if (mixer !== targetMixer || token !== thinkingToken) return;
+					if (!shouldThink || isEmotePlaying || photomodeStore.active) return;
+					thinkingClip = { url, clip };
+					if (idleAction) idleAction.fadeOut(0.3);
+					const action = targetMixer.clipAction(clip);
+					action.setLoop(THREE.LoopRepeat, Infinity);
+					action.reset().fadeIn(0.3).play();
+					thinkingAction = action;
+				})
+				.catch((error) => {
+					console.debug('[VrmModel] thinking clip failed to load, staying idle:', error);
+				});
+		});
 	});
 
 	// Flips once per model, when its first idle clip is running. An emote asked
@@ -853,6 +897,9 @@
 				talkingClip = null;
 				emoteAction = null;
 			}
+			thinkingAction = null;
+			thinkingClip = null;
+			thinkingToken++;
 			// If an emote was mid-play, its 'finished' handler (bound to the old
 			// mixer) never runs, so reset the flags it would have cleared —
 			// otherwise currentAnimation stays stale and the next model can

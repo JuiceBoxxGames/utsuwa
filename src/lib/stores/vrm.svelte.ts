@@ -124,6 +124,12 @@ function createVrmStore() {
 	let isTalking = $state(false);
 	let talkingTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	// Request in flight and no reply text yet
+	let isThinking = $state(false);
+	function setThinking(value: boolean) {
+		isThinking = value;
+	}
+
 	// Tap reactions: the scene raycasts a tap into a touch zone and the model
 	// component applies the staged reaction. Universal, not photo-mode-only.
 	let reactionRequest = $state<{ zone: TouchZone; seq: number } | null>(null);
@@ -136,18 +142,7 @@ function createVrmStore() {
 	let headPosition = $state<[number, number, number]>([0, 1.6, 0]);
 	// Screen-space position (x, y as percentages 0-100)
 	let headScreenPosition = $state<{ x: number; y: number } | null>(null);
-	// Default animations
-	const idleAnimationUrl = '/animations/idle.vrma';
 	const talkingAnimationUrl = '/animations/talking.vrma';
-
-	// All idle animations for random cycling
-	const idleAnimationUrls = [
-		'/animations/idle.vrma',
-		'/animations/idle_2.vrma',
-		'/animations/idle_3.vrma',
-		'/animations/idle_4.vrma',
-		'/animations/idle_5.vrma'
-	];
 
 	// Guard against saveToStorage running before init completes
 	let storageReady = false;
@@ -524,11 +519,12 @@ function createVrmStore() {
 		get availableAnimations() {
 			return animationLibraryStore.playable;
 		},
-		get idleAnimationUrl() {
-			return idleAnimationUrl;
-		},
+		// The user's idle pool, or all five built-ins when it is empty
 		get idleAnimationUrls() {
-			return idleAnimationUrls;
+			return animationLibraryStore.idlePoolUrls;
+		},
+		get idleAnimationUrl() {
+			return animationLibraryStore.idlePoolUrls[0];
 		},
 		get talkingAnimationUrl() {
 			return talkingAnimationUrl;
@@ -536,6 +532,10 @@ function createVrmStore() {
 		get isTalking() {
 			return isTalking;
 		},
+		get isThinking() {
+			return isThinking;
+		},
+		setThinking,
 		get reactionRequest() {
 			return reactionRequest;
 		},

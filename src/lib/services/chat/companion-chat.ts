@@ -241,6 +241,7 @@ export async function sendCompanionMessage(
 	chatStore.setLoading(true);
 	chatStore.setError(null);
 	hooks.setTyping(true);
+	vrmStore.setThinking(true);
 	hooks.setLatestResponse('');
 	hooks.setPhase?.('remembering');
 	hooks.beforeStream?.();
@@ -346,6 +347,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		let displayCapped = false;
 
 		const onDelta = (roundFull: string) => {
+			if (roundFull) vrmStore.setThinking(false);
 			if (displayTtsProvider !== 'omnivoice') {
 				// Across MCP rounds the message shows everything produced so far.
 				chatStore.updateLastMessage(assembledContent + roundFull);
@@ -700,6 +702,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		}
 
 		hooks.setTyping(false);
+		vrmStore.setThinking(false);
 
 		if (streamingTTS) {
 			// Intentionally fire-and-forget: endStreaming flushes the buffer and
@@ -794,6 +797,7 @@ if (speechState?.enabled && !streamingTTS) {
 		if (streamingTTS) ttsStore.cancelStreaming();
 		chatStore.setError(err instanceof Error ? err.message : 'Unknown error');
 		hooks.setTyping(false);
+		vrmStore.setThinking(false);
 	} finally {
 		chatStore.setLoading(false);
 	}
