@@ -1,7 +1,6 @@
 <script lang="ts">
 	import DocsHeader from '$lib/components/docs/DocsHeader.svelte';
 	import DocsSidebar from '$lib/components/docs/DocsSidebar.svelte';
-	import { setupThemeWatcher } from '$lib/config/docs-theme';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 
@@ -34,23 +33,16 @@
 		document.addEventListener('keydown', handleKeydown);
 		return () => document.removeEventListener('keydown', handleKeydown);
 	});
-
-	let docsEl = $state<HTMLDivElement | null>(null);
-
-	$effect(() => setupThemeWatcher(() => docsEl, browser));
 </script>
 
-<div class="docs" bind:this={docsEl}>
-	<DocsHeader
-		onToggleSidebar={() => sidebarOpen = !sidebarOpen}
-		{sidebarOpen}
-		hideSearch
-		hideThemeToggle
-	/>
+<!-- .docs-site opts these pages into the app theme (app-theme.css). Blog and
+     legal pages use a plain .docs wrapper and keep the site styles. -->
+<div class="docs-site">
+	<DocsHeader onToggleSidebar={() => (sidebarOpen = !sidebarOpen)} {sidebarOpen} />
 	<div class="docs-body">
 		{#if sidebarOpen}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="sidebar-overlay" onclick={() => sidebarOpen = false} onkeydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}></div>
+			<div class="sidebar-overlay" onclick={() => (sidebarOpen = false)} onkeydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}></div>
 		{/if}
 		<DocsSidebar bind:this={sidebarComponent} mobileOpen={sidebarOpen} />
 		<div class="docs-main" data-pagefind-body>
@@ -60,40 +52,29 @@
 </div>
 
 <style>
-	.docs {
+	/* Same shell as app settings: sidebar fill for the chrome, canvas for content. */
+	.docs-site {
 		min-height: 100vh;
-		background: var(--bg-page);
-		color: var(--docs-text);
+		background: var(--t3-sidebar);
+		color: var(--text-primary);
 		font-family: var(--font-sans);
 	}
 
 	.docs-body {
 		display: flex;
-		height: calc(100vh - 3.5rem);
+		height: calc(100vh - 56px);
 		overflow: hidden;
 	}
 
 	.docs-main {
-		position: relative;
 		flex: 1;
 		min-width: 0;
-		background: var(--docs-surface-solid);
-		border-radius: 0.75rem;
-		margin: 0.5rem;
-		margin-left: 0;
+		margin: 0 8px 8px 0;
+		border-radius: var(--radius-lg);
+		background: var(--bg-page);
 		overflow-y: auto;
 		scrollbar-width: thin;
-		scrollbar-color: transparent transparent;
-	}
-
-	/* Keep page content in a clean stacking context */
-	.docs-main > :global(*) {
-		position: relative;
-		z-index: 1;
-	}
-
-	.docs-main:hover {
-		scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+		scrollbar-color: var(--scrollbar-thumb) transparent;
 	}
 
 	.sidebar-overlay {
@@ -107,18 +88,17 @@
 		}
 
 		.docs-main {
-			border-radius: 0;
 			margin: 0;
+			border-radius: 0;
+			min-height: calc(100vh - 56px);
 		}
 
 		.sidebar-overlay {
 			display: block;
 			position: fixed;
 			inset: 0;
-			background: rgba(0, 0, 0, 0.5);
-			backdrop-filter: blur(4px);
-			-webkit-backdrop-filter: blur(4px);
 			z-index: 19;
+			background: color-mix(in srgb, var(--bg-page) 60%, transparent);
 		}
 	}
 </style>

@@ -2,13 +2,13 @@
 
 The app uses layered neutral fills, compact controls, and a single blue accent. Shape and hierarchy come from background color, spacing, and rounded corners. Resting controls and panels do not need visible strokes.
 
-These rules cover the main app, settings, desktop overlay, and their portaled menus and dialogs. The website and documentation pages retain their existing stylesheet and layout.
+These rules cover the main app, settings, desktop overlay, documentation, and their portaled menus and dialogs. The docs share the app tokens and components; the marketing site, blog, and legal pages keep their own stylesheet and layout.
 
 ## Shared styles
 
 - `src/lib/styles/app-theme.css` owns the app palette, typography, button variants, and focus defaults.
 - `src/lib/styles/app-controls.css` owns fields, selects, dropdowns, sliders, native checkboxes and radios, badges, and floating panels.
-- The `html:has(.app, .overlay-app)` scope includes content portaled to the document body and stops applying outside the app.
+- The `html:has(.app, .overlay-app, .docs-site)` scope includes content portaled to the document body and stops applying outside the app and docs.
 - Components consume tokens. Do not add per-component hex colors or duplicate shared control styling. Keep semantic status colors, graph categories, and authored media separate from interface colors.
 
 ## Palette
@@ -70,6 +70,10 @@ Use one readable column with a maximum width of 960px. The desktop sidebar provi
 `SettingsSection.svelte` places a heading and optional actions above a filled group. Put labels and descriptions on the left and controls on the right. Separate related rows with spacing. Nested sections use a distinct neutral fill. Let controls wrap beneath their labels on narrow screens.
 
 Character settings has Profile and State & activity views. Reuse `CompanionStateSummary.svelte` in the character page, mood popup, and overlay so labels, values, and mode-specific visibility stay consistent.
+
+## Docs
+
+The docs shell mirrors settings: header and sidebar on the sidebar fill, content on the canvas in a 12px-radius panel, sidebar rows with the settings row states, and the shared field recipe for search. Body copy is 15px with a 1.7 line height, the one place above 14px, because docs are long-form reading. Headings are 28, 20, and 16px at weight 600. Code blocks and callouts are nested panels with 8px corners; callouts add a 3px accent bar on the left. Inline code uses the control fill with 4px corners. Border tokens are transparent, so table rows and rules divide with neutral fills. The docs follow the shared color mode, so switching themes there also switches the app and overlay.
 
 ## Chat and overlay
 

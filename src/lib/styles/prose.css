@@ -1,3 +1,4 @@
+/* Blog and legal pages (.docs wrapper, site tokens). Docs pages are below. */
 .docs .prose {
 	color: var(--docs-text);
 	line-height: 1.75;
@@ -79,7 +80,7 @@
 		0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-.copy-btn {
+.docs .copy-btn {
 	position: absolute;
 	top: 0.75rem;
 	right: 0.75rem;
@@ -103,7 +104,7 @@
 	opacity: 1;
 }
 
-.copy-btn:hover {
+.docs .copy-btn:hover {
 	background: var(--docs-surface-solid);
 	color: var(--docs-accent);
 	border-color: var(--docs-accent);
@@ -128,14 +129,8 @@
 	background-color: transparent !important;
 }
 
-[data-docs-theme='dark'] .shiki span {
+html.dark .shiki span {
 	color: var(--shiki-dark) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-	html:not([data-docs-theme='light']) .shiki span {
-		color: var(--shiki-dark) !important;
-	}
 }
 
 .docs .prose ul,
@@ -274,4 +269,222 @@
 
 .docs .prose tr:hover td {
 	background: var(--docs-surface);
+}
+
+/* Docs pages (.docs-site wrapper, app tokens). Body copy runs at 15px, the one
+   place above the app's 14px, because these pages are long-form reading.
+   App border tokens are transparent, so dividers use neutral fills instead. */
+.docs-site .prose {
+	color: var(--text-primary);
+	font-size: 15px;
+	line-height: 1.7;
+}
+
+.docs-site .prose :is(h1, h2, h3, h4) {
+	color: var(--text-primary);
+	font-weight: 600;
+}
+
+.docs-site .prose h1 {
+	margin: 0 0 12px;
+	font-size: 28px;
+	line-height: 36px;
+	letter-spacing: -0.02em;
+}
+
+.docs-site .prose h1 + p {
+	color: var(--text-secondary);
+}
+
+.docs-site .prose h2 {
+	margin: 40px 0 12px;
+	font-size: 20px;
+	line-height: 28px;
+	letter-spacing: -0.01em;
+}
+
+.docs-site .prose h3 {
+	margin: 28px 0 8px;
+	font-size: 16px;
+	line-height: 24px;
+	letter-spacing: normal;
+}
+
+.docs-site .prose h4 {
+	margin: 24px 0 8px;
+	font-size: 15px;
+	letter-spacing: normal;
+}
+
+.docs-site .prose p {
+	margin: 0 0 16px;
+}
+
+.docs-site .prose a {
+	color: var(--accent);
+	text-decoration: none;
+	border-radius: 2px;
+}
+
+.docs-site .prose a:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.docs-site .prose strong {
+	font-weight: 600;
+}
+
+.docs-site .prose code {
+	padding: 2px 5px;
+	border-radius: var(--radius-xs);
+	background: var(--control-bg);
+	color: var(--text-primary);
+	font-family: var(--font-mono);
+	font-size: 0.867em;
+}
+
+.docs-site .prose pre {
+	position: relative;
+	margin: 20px 0;
+	padding: 16px 20px;
+	overflow-x: auto;
+	border-radius: var(--control-radius);
+	background: var(--bg-secondary);
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+.docs-site .prose pre.shiki {
+	background-color: var(--bg-secondary) !important;
+}
+
+.docs-site .prose pre code {
+	padding: 0;
+	background: none;
+	font-size: inherit;
+}
+
+.docs-site .prose .copy-btn {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--control-radius);
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 150ms, background 150ms, color 150ms;
+}
+
+.docs-site .prose pre:hover .copy-btn,
+.docs-site .prose .copy-btn:focus-visible {
+	opacity: 1;
+}
+
+.docs-site .prose .copy-btn:hover {
+	background: var(--control-hover);
+	color: var(--text-primary);
+}
+
+@media (hover: none) {
+	.docs-site .prose .copy-btn {
+		opacity: 1;
+	}
+}
+
+.docs-site .prose :is(ul, ol) {
+	margin: 0 0 16px;
+	padding-left: 24px;
+}
+
+.docs-site .prose ul {
+	list-style: disc;
+}
+
+.docs-site .prose ol {
+	list-style: decimal;
+}
+
+.docs-site .prose ul ul {
+	list-style: circle;
+}
+
+.docs-site .prose li {
+	margin-bottom: 6px;
+}
+
+.docs-site .prose li::marker {
+	color: var(--text-secondary);
+}
+
+.docs-site .prose li > :is(ul, ol) {
+	margin: 6px 0 0;
+}
+
+.docs-site .prose blockquote {
+	margin: 20px 0;
+	padding: 12px 16px;
+	border-left: 3px solid var(--accent);
+	border-radius: var(--control-radius);
+	background: var(--bg-secondary);
+}
+
+.docs-site .prose blockquote > :last-child {
+	margin-bottom: 0;
+}
+
+.docs-site .prose img {
+	max-width: 100%;
+	height: auto;
+	margin: 20px 0;
+	border-radius: var(--control-radius);
+}
+
+.docs-site .prose hr {
+	margin: 32px 0;
+	border: 0;
+	border-top: 1px solid var(--control-bg);
+}
+
+.docs-site .prose table {
+	display: block;
+	width: 100%;
+	max-width: max-content;
+	margin: 20px 0;
+	overflow-x: auto;
+	border-collapse: collapse;
+	border-radius: var(--control-radius);
+	background: var(--bg-secondary);
+	font-size: 14px;
+	line-height: 20px;
+}
+
+.docs-site .prose :is(th, td) {
+	padding: 8px 12px;
+	text-align: left;
+	vertical-align: top;
+	border-bottom: 1px solid var(--bg-page);
+}
+
+.docs-site .prose th {
+	color: var(--text-secondary);
+	font-size: 13px;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.docs-site .prose tr:last-child td {
+	border-bottom: 0;
+}
+
+.docs-site .prose tbody tr:hover td {
+	background: var(--control-hover);
 }

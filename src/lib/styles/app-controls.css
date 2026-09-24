@@ -1,15 +1,15 @@
 /* T3 Code input, select, and dropdown recipes translated from its Base UI controls. */
-html:has(.app, .overlay-app) {
+html:has(.app, .overlay-app, .docs-site) {
 	--popup-blur: 12px;
 	--popup-saturation: 1.14;
 	--popup-shadow: 0 16px 40px -18px rgb(0 0 0 / 55%);
 }
-html.dark:has(.app, .overlay-app) {
+html.dark:has(.app, .overlay-app, .docs-site) {
 	--popup-blur: 16px;
 	--popup-saturation: 1.08;
 	--popup-shadow: 0 18px 44px -18px rgb(0 0 0 / 80%);
 }
-html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ob-textarea) {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ob-textarea) {
 	min-width: 0;
 	min-height: 32px;
 	padding: 5px 11px;
@@ -24,18 +24,18 @@ html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-d
 	box-shadow: none;
 	transition: color 150ms, background 150ms, border-color 150ms, box-shadow 150ms;
 }
-html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger) {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger) {
 	display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; cursor: pointer;
 }
 .ui-select-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger):hover:not(:disabled) { background: var(--control-hover); }
-html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ob-textarea):focus-visible {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger):hover:not(:disabled) { background: var(--control-hover); }
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ob-textarea):focus-visible {
 	outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
 }
-html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger)[data-state='open'] { background: var(--control-hover); box-shadow: none; border-color: transparent; }
-html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ob-textarea):disabled { opacity: 0.64; cursor: not-allowed; box-shadow: none; }
-html:has(.app, .overlay-app) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea):is(.error, [aria-invalid='true']) { border-color: color-mix(in srgb, var(--color-error) 36%, transparent); }
-html:has(.app, .overlay-app) :is(.ui-select-content, .dropdown-content, .model-dropdown-content) {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger)[data-state='open'] { background: var(--control-hover); box-shadow: none; border-color: transparent; }
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ob-textarea):disabled { opacity: 0.64; cursor: not-allowed; box-shadow: none; }
+html:has(.app, .overlay-app, .docs-site) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea):is(.error, [aria-invalid='true']) { border-color: color-mix(in srgb, var(--color-error) 36%, transparent); }
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-content, .dropdown-content, .model-dropdown-content) {
 	z-index: 1300;
 	min-width: min(200px, calc(100vw - 16px));
 	max-width: min(400px, calc(100vw - 16px));
@@ -49,45 +49,45 @@ html:has(.app, .overlay-app) :is(.ui-select-content, .dropdown-content, .model-d
 	box-shadow: var(--popup-shadow);
 	outline: none;
 }
-html:has(.app, .overlay-app) :is(.dropdown-content, .model-dropdown-content) {
+html:has(.app, .overlay-app, .docs-site) :is(.dropdown-content, .model-dropdown-content) {
 	width: var(--bits-dropdown-menu-anchor-width);
 	max-height: var(--bits-dropdown-menu-content-available-height);
 	display: flex; flex-direction: column; overflow: hidden;
 }
-html:has(.app, .overlay-app) :is(.dropdown-scroll, .model-dropdown-scroll) { min-height: 0; }
-html:has(.app, .overlay-app) .ui-select-content {
+html:has(.app, .overlay-app, .docs-site) :is(.dropdown-scroll, .model-dropdown-scroll) { min-height: 0; }
+html:has(.app, .overlay-app, .docs-site) .ui-select-content {
 	width: var(--bits-select-anchor-width);
 	min-width: min(var(--bits-select-anchor-width), calc(100vw - 16px));
 	max-height: min(360px, var(--bits-select-content-available-height));
 	overflow-y: auto;
 }
-html:has(.app, .overlay-app) :is(.ui-select-item, .provider-item, .model-item) {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-item, .provider-item, .model-item) {
 	display: flex; align-items: center; gap: 8px; min-height: 28px; width: 100%; padding: 4px 8px;
 	border-radius: 4px; font-size: 14px; font-weight: 400; line-height: 20px; cursor: pointer;
 	color: var(--text-primary); outline: none; overflow-wrap: anywhere;
 }
-html:has(.app, .overlay-app) :is(.ui-select-item, .provider-item, .model-item):is([data-selected], .selected) { background: var(--control-selected); }
-html:has(.app, .overlay-app) :is(.ui-select-item, .provider-item, .model-item):is(:hover, [data-highlighted]) { background: var(--control-hover); color: var(--text-primary); }
-html:has(.app, .overlay-app) .ui-select-item[data-disabled] { pointer-events: none; opacity: 0.64; }
-html:has(.app, .overlay-app) :is(.provider-name, .model-name) { font-size: 14px; font-weight: 400; }
-html:has(.app, .overlay-app) .category-label { padding: 6px 8px; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: normal; }
-html:has(.app, .overlay-app) .provider-icon { width: 16px; height: 16px; }
-html:has(.app, .overlay-app) .check-icon { color: var(--text-primary); }
-html:has(.app, .overlay-app) .search-row { min-height: 32px; padding: 4px 8px; border-radius: 4px; background: transparent; border-bottom: 1px solid var(--border-light); }
-html:has(.app, .overlay-app) .search-input { min-width: 0; font-size: 14px; }
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-item, .provider-item, .model-item):is([data-selected], .selected) { background: var(--control-selected); }
+html:has(.app, .overlay-app, .docs-site) :is(.ui-select-item, .provider-item, .model-item):is(:hover, [data-highlighted]) { background: var(--control-hover); color: var(--text-primary); }
+html:has(.app, .overlay-app, .docs-site) .ui-select-item[data-disabled] { pointer-events: none; opacity: 0.64; }
+html:has(.app, .overlay-app, .docs-site) :is(.provider-name, .model-name) { font-size: 14px; font-weight: 400; }
+html:has(.app, .overlay-app, .docs-site) .category-label { padding: 6px 8px; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: normal; }
+html:has(.app, .overlay-app, .docs-site) .provider-icon { width: 16px; height: 16px; }
+html:has(.app, .overlay-app, .docs-site) .check-icon { color: var(--text-primary); }
+html:has(.app, .overlay-app, .docs-site) .search-row { min-height: 32px; padding: 4px 8px; border-radius: 4px; background: transparent; border-bottom: 1px solid var(--border-light); }
+html:has(.app, .overlay-app, .docs-site) .search-input { min-width: 0; font-size: 14px; }
 @media (pointer: coarse) {
-	html:has(.app, .overlay-app) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ui-select-item, .provider-item, .model-item) { min-height: 44px; }
-	html:has(.app, .overlay-app) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea, .search-input) { font-size: 16px; }
+	html:has(.app, .overlay-app, .docs-site) :is(.ui-select-trigger, .dropdown-trigger, .model-dropdown-trigger, .settings-field, .api-key-input, .ob-input, .ui-select-item, .provider-item, .model-item) { min-height: 44px; }
+	html:has(.app, .overlay-app, .docs-site) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea, .search-input) { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-	html:has(.app, .overlay-app) :is(.ui-select-content, .dropdown-content, .model-dropdown-content) { animation: none; }
+	html:has(.app, .overlay-app, .docs-site) :is(.ui-select-content, .dropdown-content, .model-dropdown-content) { animation: none; }
 }
 @supports not (backdrop-filter: blur(1px)) {
-	html:has(.app, .overlay-app) :is(.ui-select-content, .dropdown-content, .model-dropdown-content) { background: var(--bg-primary); }
+	html:has(.app, .overlay-app, .docs-site) :is(.ui-select-content, .dropdown-content, .model-dropdown-content) { background: var(--bg-primary); }
 }
 
 /* Slider recipe from T3 Code index.css. */
-  html:has(.app, .overlay-app) input[type="range"] {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"] {
     --settings-slider-progress: 0%;
     --settings-slider-fill-offset: 0.5rem;
     --settings-slider-fill-position: calc(
@@ -99,7 +99,7 @@ html:has(.app, .overlay-app) .search-input { min-width: 0; font-size: 14px; }
     cursor: pointer;
   }
 
-  html:has(.app, .overlay-app) input[type="range"]::-webkit-slider-runnable-track {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]::-webkit-slider-runnable-track {
     height: 0.375rem;
     border-radius: 9999px;
     background: linear-gradient(
@@ -111,20 +111,20 @@ html:has(.app, .overlay-app) .search-input { min-width: 0; font-size: 14px; }
     box-shadow: none;
   }
 
-  html:has(.app, .overlay-app) input[type="range"]::-moz-range-track {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]::-moz-range-track {
     height: 0.375rem;
     border-radius: 9999px;
     background: color-mix(in srgb, var(--text-secondary) 22%, transparent);
     box-shadow: none;
   }
 
-  html:has(.app, .overlay-app) input[type="range"]::-moz-range-progress {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]::-moz-range-progress {
     height: 0.375rem;
     border-radius: 9999px;
     background: var(--accent);
   }
 
-  html:has(.app, .overlay-app) input[type="range"]::-webkit-slider-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]::-webkit-slider-thumb {
     appearance: none;
     width: 1rem;
     height: 1rem;
@@ -138,7 +138,7 @@ html:has(.app, .overlay-app) .search-input { min-width: 0; font-size: 14px; }
       box-shadow 120ms ease;
   }
 
-  html:has(.app, .overlay-app) input[type="range"]::-moz-range-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]::-moz-range-thumb {
     width: 1rem;
     height: 1rem;
     border: 2px solid var(--accent);
@@ -150,90 +150,90 @@ html:has(.app, .overlay-app) .search-input { min-width: 0; font-size: 14px; }
       box-shadow 120ms ease;
   }
 
-  html:has(.app, .overlay-app) input[type="range"]:hover::-webkit-slider-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]:hover::-webkit-slider-thumb {
     transform: scale(1.08);
     box-shadow: 0 1px 3px color-mix(in srgb, var(--text-primary) 20%, transparent);
   }
 
-  html:has(.app, .overlay-app) input[type="range"]:hover::-moz-range-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]:hover::-moz-range-thumb {
     transform: scale(1.08);
     box-shadow: 0 1px 3px color-mix(in srgb, var(--text-primary) 20%, transparent);
   }
 
-  html:has(.app, .overlay-app) input[type="range"]:active::-webkit-slider-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]:active::-webkit-slider-thumb {
     transform: scale(0.94);
   }
 
-  html:has(.app, .overlay-app) input[type="range"]:active::-moz-range-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]:active::-moz-range-thumb {
     transform: scale(0.94);
   }
 
-  html:has(.app, .overlay-app) input[type="range"]:focus-visible {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]:focus-visible {
     outline: none;
   }
 
-  html:has(.app, .overlay-app) input[type="range"]:focus-visible::-webkit-slider-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]:focus-visible::-webkit-slider-thumb {
     box-shadow:
       0 0 0 3px var(--bg-page),
       0 0 0 5px var(--accent);
   }
 
-  html:has(.app, .overlay-app) input[type="range"]:focus-visible::-moz-range-thumb {
+  html:has(.app, .overlay-app, .docs-site) input[type="range"]:focus-visible::-moz-range-thumb {
     box-shadow:
       0 0 0 3px var(--bg-page),
       0 0 0 5px var(--accent);
   }
 
   @media (forced-colors: active) {
-    html:has(.app, .overlay-app) input[type="range"] {
+    html:has(.app, .overlay-app, .docs-site) input[type="range"] {
       appearance: auto;
       accent-color: Highlight;
     }
 
-    html:has(.app, .overlay-app) input[type="range"]::-webkit-slider-runnable-track,
-    html:has(.app, .overlay-app) input[type="range"]::-webkit-slider-thumb {
+    html:has(.app, .overlay-app, .docs-site) input[type="range"]::-webkit-slider-runnable-track,
+    html:has(.app, .overlay-app, .docs-site) input[type="range"]::-webkit-slider-thumb {
       all: revert;
     }
 
-    html:has(.app, .overlay-app) input[type="range"]::-moz-range-track,
-    html:has(.app, .overlay-app) input[type="range"]::-moz-range-progress,
-    html:has(.app, .overlay-app) input[type="range"]::-moz-range-thumb {
+    html:has(.app, .overlay-app, .docs-site) input[type="range"]::-moz-range-track,
+    html:has(.app, .overlay-app, .docs-site) input[type="range"]::-moz-range-progress,
+    html:has(.app, .overlay-app, .docs-site) input[type="range"]::-moz-range-thumb {
       all: revert;
     }
   }
 
 /* Keep native form semantics while reproducing T3's checkbox and radio geometry. */
-html:has(.app, .overlay-app) input:is([type='checkbox'], [type='radio']) {
+html:has(.app, .overlay-app, .docs-site) input:is([type='checkbox'], [type='radio']) {
 	appearance: none; -webkit-appearance: none; flex: 0 0 16px; width: 16px; height: 16px; margin: 0;
 	border: 1px solid transparent; border-radius: 4px; background: var(--control-bg);
 	box-shadow: none; cursor: pointer; vertical-align: middle;
 }
-html:has(.app, .overlay-app) input[type='radio'] { border-radius: 50%; }
-html:has(.app, .overlay-app) input:is([type='checkbox'], [type='radio']):checked { background-color: var(--accent); border-color: var(--accent); box-shadow: none; }
-html:has(.app, .overlay-app) input[type='checkbox']:checked {
+html:has(.app, .overlay-app, .docs-site) input[type='radio'] { border-radius: 50%; }
+html:has(.app, .overlay-app, .docs-site) input:is([type='checkbox'], [type='radio']):checked { background-color: var(--accent); border-color: var(--accent); box-shadow: none; }
+html:has(.app, .overlay-app, .docs-site) input[type='checkbox']:checked {
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.252 12.7 10.2 18.63 18.748 5.37'/%3E%3C/svg%3E");
 	background-size: 12px; background-position: center; background-repeat: no-repeat;
 }
-html:has(.app, .overlay-app) input[type='radio']:checked { background-image: radial-gradient(circle, var(--accent-contrast) 0 3px, transparent 3.5px); }
-html:has(.app, .overlay-app) input:is([type='checkbox'], [type='radio']):disabled { opacity: 0.64; cursor: not-allowed; }
+html:has(.app, .overlay-app, .docs-site) input[type='radio']:checked { background-image: radial-gradient(circle, var(--accent-contrast) 0 3px, transparent 3.5px); }
+html:has(.app, .overlay-app, .docs-site) input:is([type='checkbox'], [type='radio']):disabled { opacity: 0.64; cursor: not-allowed; }
 
 /* T3's dialog and popover surfaces, shared by every app entry point. */
-html:has(.app, .overlay-app) :is(.ui-dialog-backdrop, .modal-overlay, .omnivoice-modal-backdrop, .confirm-modal) {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-dialog-backdrop, .modal-overlay, .omnivoice-modal-backdrop, .confirm-modal) {
 	background: color-mix(in srgb, var(--bg-page) 60%, transparent);
 	backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
-html.dark:has(.app, .overlay-app) :is(.ui-dialog-backdrop, .modal-overlay, .omnivoice-modal-backdrop, .confirm-modal) { background: color-mix(in srgb, var(--bg-page) 64%, transparent); }
-html:has(.app, .overlay-app) :is(.ui-dialog, .modal-container, .omnivoice-modal-card, .ar-modal, .upload-content, .confirm-content) {
+html.dark:has(.app, .overlay-app, .docs-site) :is(.ui-dialog-backdrop, .modal-overlay, .omnivoice-modal-backdrop, .confirm-modal) { background: color-mix(in srgb, var(--bg-page) 64%, transparent); }
+html:has(.app, .overlay-app, .docs-site) :is(.ui-dialog, .modal-container, .omnivoice-modal-card, .ar-modal, .upload-content, .confirm-content) {
 	border: 1px solid transparent; border-radius: 18px;
 	background: color-mix(in srgb, var(--t3-surface-overlay) 96%, transparent);
 	backdrop-filter: blur(var(--popup-blur)) saturate(var(--popup-saturation));
 	-webkit-backdrop-filter: blur(var(--popup-blur)) saturate(var(--popup-saturation));
 	box-shadow: 0 24px 64px -24px rgb(0 0 0 / 65%);
 }
-html.dark:has(.app, .overlay-app) :is(.ui-dialog, .modal-container, .omnivoice-modal-card, .ar-modal, .upload-content, .confirm-content) {
+html.dark:has(.app, .overlay-app, .docs-site) :is(.ui-dialog, .modal-container, .omnivoice-modal-card, .ar-modal, .upload-content, .confirm-content) {
 	box-shadow: 0 24px 72px -20px rgb(0 0 0 / 90%);
 }
-html:has(.app, .overlay-app) :is(.camera-panel, .photo-panel, .reminder-dropdown, .companion-stats-popover) {
+html:has(.app, .overlay-app, .docs-site) :is(.camera-panel, .photo-panel, .reminder-dropdown, .companion-stats-popover) {
 	background: color-mix(in srgb, var(--t3-surface-overlay) 96%, transparent);
 	border: 1px solid transparent; border-radius: 8px;
 	backdrop-filter: blur(var(--popup-blur)) saturate(var(--popup-saturation));
@@ -241,49 +241,49 @@ html:has(.app, .overlay-app) :is(.camera-panel, .photo-panel, .reminder-dropdown
 	box-shadow: var(--popup-shadow);
 }
 @media (pointer: coarse) {
-	html:has(.app, .overlay-app) input:is([type='checkbox'], [type='radio']) { width: 18px; height: 18px; flex-basis: 18px; }
-	html:has(.app, .overlay-app) label:has(input:is([type='checkbox'], [type='radio'])) { min-height: 44px; }
-	html:has(.app, .overlay-app) input[type='range'] { min-height: 44px; }
+	html:has(.app, .overlay-app, .docs-site) input:is([type='checkbox'], [type='radio']) { width: 18px; height: 18px; flex-basis: 18px; }
+	html:has(.app, .overlay-app, .docs-site) label:has(input:is([type='checkbox'], [type='radio'])) { min-height: 44px; }
+	html:has(.app, .overlay-app, .docs-site) input[type='range'] { min-height: 44px; }
 }
 
-html:has(.app, .overlay-app) :is(.dropdown-trigger, .model-dropdown-trigger) .trigger-label { font-weight: 400; }
-html:has(.app, .overlay-app) .search-input:focus-visible { outline: none; box-shadow: none; }
-html:has(.app, .overlay-app) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea):is(.error, [aria-invalid='true']):focus-visible {
+html:has(.app, .overlay-app, .docs-site) :is(.dropdown-trigger, .model-dropdown-trigger) .trigger-label { font-weight: 400; }
+html:has(.app, .overlay-app, .docs-site) .search-input:focus-visible { outline: none; box-shadow: none; }
+html:has(.app, .overlay-app, .docs-site) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea):is(.error, [aria-invalid='true']):focus-visible {
 	border-color: color-mix(in srgb, var(--color-error) 64%, transparent);
 	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 16%, transparent);
 }
-html.dark:has(.app, .overlay-app) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea):is(.error, [aria-invalid='true']):focus-visible {
+html.dark:has(.app, .overlay-app, .docs-site) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea):is(.error, [aria-invalid='true']):focus-visible {
 	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 24%, transparent);
 }
 @media (pointer: coarse) {
-	html:has(.app, .overlay-app) .photo-panel .tab { min-height: 44px; }
+	html:has(.app, .overlay-app, .docs-site) .photo-panel .tab { min-height: 44px; }
 }
 
-html:has(.app, .overlay-app) .btn-icon { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; }
-html:has(.app, .overlay-app) .ui-badge {
+html:has(.app, .overlay-app, .docs-site) .btn-icon { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; }
+html:has(.app, .overlay-app, .docs-site) .ui-badge {
  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
  min-height: 18px; padding: 0 4px; border: 1px solid transparent; border-radius: 4px;
  background: var(--control-bg); color: var(--text-secondary); font-size: 12px; font-weight: 500; line-height: 16px;
 }
-html:has(.app, .overlay-app) .settings-file { padding: 0 8px 0 0; }
-html:has(.app, .overlay-app) .settings-file::file-selector-button {
+html:has(.app, .overlay-app, .docs-site) .settings-file { padding: 0 8px 0 0; }
+html:has(.app, .overlay-app, .docs-site) .settings-file::file-selector-button {
  min-height: 30px; margin-right: 8px; padding: 0 11px; border: 0; border-right: 1px solid transparent;
  background: var(--bg-secondary); color: var(--text-primary); font: inherit; cursor: pointer;
 }
 @media (pointer: coarse) {
- html:has(.app, .overlay-app) .btn-icon { width: 44px; height: 44px; }
- html:has(.app, .overlay-app) .settings-file::file-selector-button { min-height: 42px; }
+ html:has(.app, .overlay-app, .docs-site) .btn-icon { width: 44px; height: 44px; }
+ html:has(.app, .overlay-app, .docs-site) .settings-file::file-selector-button { min-height: 42px; }
 }
 
-html:has(.app, .overlay-app) .ui-dialog-backdrop { position: fixed; inset: 0; z-index: 1000; }
-html:has(.app, .overlay-app) .ui-dialog {
+html:has(.app, .overlay-app, .docs-site) .ui-dialog-backdrop { position: fixed; inset: 0; z-index: 1000; }
+html:has(.app, .overlay-app, .docs-site) .ui-dialog {
  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001;
  width: min(var(--dialog-width, 440px), calc(100vw - 32px)); max-height: calc(100dvh - 48px);
  overflow-y: auto; outline: none;
 }
 
 /* Filled toggle state, shared by photo options and timers. */
-html:has(.app, .overlay-app) .btn-secondary:is([aria-pressed="true"], [aria-expanded="true"]) {
+html:has(.app, .overlay-app, .docs-site) .btn-secondary:is([aria-pressed="true"], [aria-expanded="true"]) {
 	background: var(--control-selected);
 	color: var(--text-primary);
 	box-shadow: none;

@@ -139,23 +139,21 @@
 </script>
 
 <div class="search-container" bind:this={containerEl}>
-	<div class="search-input-wrapper">
-		<Icon name="search" size={14} />
+	<div class="settings-field settings-search search-field">
+		<Icon name="search" size={16} />
 		<input
 			bind:this={inputEl}
 			{id}
 			type="text"
-			placeholder="Search docs..."
+			placeholder="Search docs"
+			aria-label="Search docs"
 			value={query}
 			oninput={handleInput}
 			onfocus={handleFocus}
 			onkeydown={handleKeydown}
 			autocomplete="off"
 		/>
-		<kbd class="shortcut">
-			<span class="shortcut-key">{browser && navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</span>
-			<span class="shortcut-key">K</span>
-		</kbd>
+		<kbd class="ui-badge shortcut">{browser && navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K</kbd>
 	</div>
 
 	{#if showDropdown}
@@ -193,81 +191,60 @@
 		width: 100%;
 	}
 
-	.search-input-wrapper {
+	/* settings-field supplies the fill and geometry; focus shows on the whole field. */
+	.search-field {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0.75rem;
-		background: var(--bg-secondary);
-		border: none;
-		border-radius: var(--radius-lg);
+		gap: 8px;
 		color: var(--text-secondary);
-		transition: background 0.15s ease, box-shadow 0.15s ease;
 	}
 
-	.search-input-wrapper:focus-within {
-		background: var(--bg-primary);
-		box-shadow: 0 0 0 3px var(--accent-muted);
+	.search-field:focus-within {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
 	}
 
 	input {
 		flex: 1;
 		min-width: 0;
+		padding: 0;
+		border: 0;
 		background: none;
-		border: none;
 		outline: none;
-		font-size: 0.8125rem;
-		color: var(--docs-text);
+		color: var(--text-primary);
+		font: inherit;
 	}
 
 	input::placeholder {
-		color: var(--docs-text-muted);
-		opacity: 0.7;
+		color: var(--text-secondary);
 	}
 
 	.shortcut {
-		display: flex;
-		align-items: center;
-		gap: 0.125rem;
-	}
-
-	.shortcut-key {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 1.25rem;
-		height: 1.25rem;
-		padding: 0 0.25rem;
-		background: var(--bg-tertiary);
-		border: none;
-		border-radius: 0.25rem;
-		font-size: 0.625rem;
-		font-weight: 500;
-		color: var(--text-secondary);
+		font-family: inherit;
 	}
 
 	.search-dropdown {
 		position: absolute;
-		top: calc(100% + 0.5rem);
+		top: calc(100% + 4px);
 		left: 0;
 		right: 0;
-		background: var(--bg-primary);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		overflow: hidden;
 		z-index: 100;
+		padding: 4px;
+		border-radius: var(--control-radius);
+		background: var(--t3-surface-overlay);
+		box-shadow: var(--popup-shadow);
 	}
 
 	.search-message {
-		padding: 1rem;
+		padding: 12px;
 		text-align: center;
-		font-size: 0.8125rem;
-		color: var(--docs-text-muted);
+		font-size: 13px;
+		color: var(--text-secondary);
 	}
 
 	.search-results {
 		list-style: none;
-		padding: 0.375rem;
+		padding: 0;
 		margin: 0;
 		max-height: 400px;
 		overflow-y: auto;
@@ -276,56 +253,47 @@
 	.search-result {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 2px;
 		width: 100%;
-		padding: 0.625rem 0.75rem;
+		padding: 6px 8px;
+		border: 0;
+		border-radius: var(--radius-xs);
 		background: none;
-		border: none;
-		border-radius: var(--radius-md);
 		text-align: left;
+		font: inherit;
 		cursor: pointer;
-		transition: background 0.15s ease;
 	}
 
-	.search-result:hover {
-		background: var(--bg-secondary);
-	}
-
+	.search-result:hover,
 	.search-result.selected {
-		background: var(--accent-muted);
+		background: var(--control-hover);
 	}
 
 	.result-title {
-		font-size: 0.875rem;
+		font-size: 14px;
 		font-weight: 500;
-		color: var(--docs-text);
+		color: var(--text-primary);
 	}
 
 	.result-excerpt {
-		font-size: 0.75rem;
-		color: var(--docs-text-muted);
+		font-size: 13px;
+		color: var(--text-secondary);
 		line-height: 1.4;
 		overflow: hidden;
-		text-overflow: ellipsis;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 	}
 
-	:global(.search-result mark) {
+	.result-excerpt :global(mark) {
 		background: var(--accent-muted);
-		color: var(--accent);
-		border-radius: 0.125rem;
-		padding: 0 0.125rem;
+		color: var(--text-primary);
+		border-radius: 2px;
 	}
 
 	@media (max-width: 768px) {
-		.search-container {
-			max-width: 100%;
-		}
-
-		.shortcut {
+		.search-field .shortcut {
 			display: none;
 		}
 	}
