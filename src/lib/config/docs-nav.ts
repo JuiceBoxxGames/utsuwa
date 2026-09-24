@@ -21,6 +21,12 @@ export const docsNav: DocsNavSection[] = [
 		items: [
 			{ title: 'Web Guide', slug: 'guides/web-guide' },
 			{ title: 'Desktop Guide', slug: 'guides/desktop-guide' },
+			{ title: 'Settings Reference', slug: 'guides/settings-reference' },
+			{ title: 'Voice Providers', slug: 'guides/voice-providers' },
+			{ title: 'Animations', slug: 'guides/animations' },
+			{ title: 'Expressions and Moments', slug: 'guides/expressions-and-moments' },
+			{ title: 'Scene and Photo Mode', slug: 'guides/scene-and-photo-mode' },
+			{ title: 'Memory', slug: 'guides/memory' },
 			{ title: 'Local LLM Setup', slug: 'guides/local-llm-setup' },
 			{ title: 'Local TTS Setup', slug: 'guides/local-tts-setup' },
 			{ title: 'OmniVoice Setup', slug: 'guides/omnivoice' },
