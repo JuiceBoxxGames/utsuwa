@@ -225,7 +225,7 @@ On your first launch after this update, Utsuwa downloads the new multilingual me
 ## [0.7.2] - 2026-07-04
 
 ### Changed
-- **Viewer scene overhaul**: a clean, minimal stage for your companion — single white key light with tone mapping disabled so MToon models render with their authored colors, pure-white (light) / near-black (dark) backdrop with a soft studio floor, and free orbit controls with unrestricted pan and zoom.
+- **Viewer scene overhaul**: a clean, minimal stage for your companion, with a single white key light with tone mapping disabled so MToon models render with their authored colors, pure-white (light) / near-black (dark) backdrop with a soft studio floor, and free orbit controls with unrestricted pan and zoom.
 - **New default avatars**: Tsuki, Yuki, and Momo (VRoid Project sample models) replace the previous bundled model. Each model's license is documented in `static/models/README.md`.
 
 ### Fixed

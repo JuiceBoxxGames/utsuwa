@@ -844,15 +844,6 @@
 				// Pre-load the talking animation
 				loadTalkingAnimation(loadedVrm, newMixer);
 
-				// Debug: Log available expressions
-				// if (loadedVrm.expressionManager) {
-				// 	const expressions = loadedVrm.expressionManager.expressions;
-				// 	console.log(
-				// 		'Available expressions:',
-				// 		expressions.map((e) => e.expressionName)
-				// 	);
-				// }
-
 				// Extract thumbnail from VRM metadata (supports both 0.x and 1.0)
 				let thumbnailImage: HTMLImageElement | undefined;
 

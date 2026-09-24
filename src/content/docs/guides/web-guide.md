@@ -33,7 +33,7 @@ The app will be available at `http://localhost:5173`.
 Your companion needs an LLM to generate responses.
 
 1. Open the **Controls** panel (sliders icon, top right) and click the **Settings** (gear) button
-2. Navigate to the **Character** tab and open the **AI Services** section
+2. Open the **LLM Model** page
 3. Enable the Chat (LLM) toggle, then select a provider from the dropdown and enter your API key
 4. Alternatively, use a local server like Ollama or LM Studio (no API key needed)
 
@@ -50,7 +50,7 @@ Utsuwa comes with a default avatar, but you can load your own:
 
 To have your companion speak responses aloud:
 
-1. Go to **Settings > Character** and open the **AI Services** section
+1. Go to **Settings > TTS**
 2. Enable the Speech (TTS) toggle, then select a provider (ElevenLabs, OpenAI TTS, Fish Audio, or Local TTS)
 3. Enter your API key (cloud providers) and configure voice settings
 
@@ -64,7 +64,7 @@ If TTS is enabled, the avatar will speak the response with lip-synced animation.
 
 Click the microphone button in the chat bar to use speech-to-text. Three options are available:
 
-- **Local Whisper server** — Self-hosted, OpenAI-compatible transcription (Speaches, faster-whisper-server, whisper.cpp) via the `/v1/audio/transcriptions` endpoint. Audio never leaves your machine. Configure it in **Settings > Character** under Voice Input (STT) with a base URL (default `http://localhost:8000/v1/`) and a model name.
+- **Local Whisper server**: Self-hosted, OpenAI-compatible transcription (Speaches, faster-whisper-server, whisper.cpp) via the `/v1/audio/transcriptions` endpoint. Audio never leaves your machine. Configure it in **Settings > STT** under Local server with a base URL (default `http://localhost:8000/v1/`) and a model name.
 - **Groq or OpenAI Whisper** — Higher-quality cloud transcription via Groq's or OpenAI's Whisper API. Requires the respective API key, added in the same Voice Input (STT) section.
 - **Web Speech API** — Built into your browser (Chrome, Edge, Safari). No API key required. The default in the browser when nothing else is configured.
 

@@ -31,7 +31,7 @@
 			</span>
 			<span class="opt-text">
 				<span class="opt-title">Dating sim</span>
-				<span class="opt-desc">A relationship that grows over time — moods, events, and eight stages.</span>
+				<span class="opt-desc">A relationship that grows over time: moods, events, and eight stages.</span>
 			</span>
 		</button>
 

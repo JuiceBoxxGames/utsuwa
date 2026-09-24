@@ -13,7 +13,7 @@
 	<title>Documentation - Utsuwa</title>
 	<meta
 		name="description"
-		content="Guides, setup, and architecture docs for Utsuwa — the open-source AI companion with 3D VRM avatars, voice, and semantic memory."
+		content="Guides, setup, and architecture docs for Utsuwa, the open-source AI companion with 3D VRM avatars, voice, and semantic memory."
 	/>
 	<link rel="canonical" href={DOCS_URL} />
 	<meta property="og:title" content="Utsuwa Documentation" />

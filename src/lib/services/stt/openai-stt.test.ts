@@ -71,5 +71,5 @@ test('sttTimeoutMessage names the provider and the timeout in seconds', () => {
 	const msg = sttTimeoutMessage('the local STT server', 90_000);
 	assert.match(msg, /^The local STT server/);
 	assert.match(msg, /90 seconds/);
-	assert.match(msg, /Settings > Voice Input/);
+	assert.match(msg, /Settings > STT/);
 });

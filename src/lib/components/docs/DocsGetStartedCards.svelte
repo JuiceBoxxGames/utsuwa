@@ -11,7 +11,7 @@
 		</div>
 		<h3 class="card-title">Web</h3>
 		<p class="card-desc">
-			No installation required. Runs entirely in your browser — works on desktop and mobile.
+			No installation required. Runs entirely in your browser, on desktop and mobile.
 		</p>
 		<div class="card-actions">
 			<a href={sectionUrl('app')} class="card-btn primary">

@@ -3,14 +3,14 @@
 </script>
 
 <svelte:head>
-	<title>Privacy Policy — Utsuwa</title>
+	<title>Privacy Policy - Utsuwa</title>
 	<meta
 		name="description"
 		content="How Utsuwa handles your data: no accounts, no analytics, no tracking. Your conversations, memories, and settings live on your device."
 	/>
 	<link rel="canonical" href={`${SITE_URL}/privacy`} />
 	<meta property="og:type" content="website" />
-	<meta property="og:title" content="Privacy Policy — Utsuwa" />
+	<meta property="og:title" content="Privacy Policy - Utsuwa" />
 	<meta
 		property="og:description"
 		content="How Utsuwa handles your data: no accounts, no analytics, no tracking."

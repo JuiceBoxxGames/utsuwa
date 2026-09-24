@@ -223,7 +223,7 @@ export async function sendCompanionMessage(
 	if ((!content.trim() && images.length === 0) || chatStore.isLoading) return;
 
 	if (!modulesStore.isModuleEnabled('consciousness')) {
-		chatStore.setError('Chat is disabled. Enable it in Settings > Character > AI Services.');
+		chatStore.setError('Chat is disabled. Enable it in Settings > LLM Model.');
 		return;
 	}
 
@@ -263,7 +263,7 @@ export async function sendCompanionMessage(
 		const provider = consciousnessSettings.activeProvider as string;
 		const model = consciousnessSettings.activeModel as string;
 		if (!provider) {
-			throw new Error('Please configure a provider in Settings > Modules > Consciousness');
+			throw new Error('Please configure a provider in Settings > LLM Model');
 		}
 
 		const contextSize = (consciousnessSettings.contextSize as number | undefined) || undefined;
@@ -271,7 +271,7 @@ export async function sendCompanionMessage(
 		const apiKey = providerConfig.apiKey;
 		const providerMeta = getLLMProvider(provider);
 		if (providerMeta?.requiresApiKey && !apiKey) {
-			throw new Error(`Please configure API key for ${providerMeta.name} in Settings > Providers`);
+			throw new Error(`Please configure API key for ${providerMeta.name} in Settings > LLM Model`);
 		}
 
 		let systemPrompt = await buildCompanionPrompt(

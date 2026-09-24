@@ -38,7 +38,7 @@ If the model download is slow or you hit rate limits, set a `HF_TOKEN` environme
 ## Connect Utsuwa
 
 1. Start the proxy.
-2. Open Utsuwa and go to **Settings > Speech (TTS)**.
+2. Open Utsuwa and go to **Settings > TTS**.
 3. Enable **Speech** and select **OmniVoice**.
 4. Set the base URL. The compose file publishes the proxy on all interfaces by default, so use:
    - `http://localhost:8881/v1/` from the same machine
@@ -49,7 +49,7 @@ The proxy sends permissive CORS headers, so a hosted site can reach it as long a
 
 ## Configure your voice
 
-After selecting OmniVoice in **Settings > Speech (TTS)**:
+After selecting OmniVoice in **Settings > TTS**:
 
 - **Language**: Primary language for synthesis. OmniVoice supports many languages; pick the one your companion speaks most of the time.
 - **Preset Voice**: One of the built-in OmniVoice voices (for example `alloy`, `onyx`, or `nova`). Each preset has a fixed gender/age/pitch/accent profile that Utsuwa turns into an instructions string for the model.

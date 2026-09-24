@@ -25,7 +25,7 @@
 			case 'downloading':
 				return `Downloading… ${updaterStore.progress}%`;
 			case 'ready':
-				return 'Update installed — restarting…';
+				return 'Update installed. Restarting…';
 			case 'error':
 				return updaterStore.errorMessage ?? 'Update check failed';
 			default:

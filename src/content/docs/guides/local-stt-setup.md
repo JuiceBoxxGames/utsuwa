@@ -28,11 +28,10 @@ This serves the API at `http://localhost:8000/v1`.
 ### Connecting to Utsuwa
 
 1. Open **Settings** (gear icon)
-2. Navigate to the **Character** tab
-3. Open **AI Services** and scroll to **Voice Input (STT)**
-4. Under **Local server**, enter the base URL — leave it as `http://localhost:8000/v1/` unless you changed the port
-5. Set the **Model** field to a model your server exposes (e.g. `Systran/faster-whisper-large-v3`)
-6. Click the microphone button in the chat bar and speak
+2. Open the **STT** page
+3. Under **Local server**, enter the base URL. Leave it as `http://localhost:8000/v1/` unless you changed the port
+4. Set the **Model** field to a model your server exposes (e.g. `Systran/faster-whisper-large-v3`)
+5. Click the microphone button in the chat bar and speak
 
 A configured local server takes priority over Groq, OpenAI, and the browser's Web Speech API automatically — there's no separate toggle.
 

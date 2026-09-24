@@ -83,7 +83,7 @@ jobs:
             Desktop builds for macOS, Windows, and Linux.
 
             **Downloads**
-            - macOS: `.dmg` (universal — Apple Silicon + Intel)
+            - macOS: `.dmg` (universal: Apple Silicon + Intel)
             - Windows: `.exe` installer
             - Linux: `.AppImage`, `.deb`, or `.rpm`
 

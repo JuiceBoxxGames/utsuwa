@@ -3,14 +3,14 @@
 </script>
 
 <svelte:head>
-	<title>Terms of Use — Utsuwa</title>
+	<title>Terms of Use - Utsuwa</title>
 	<meta
 		name="description"
 		content="The terms that govern the Utsuwa website, hosted web app, and desktop app."
 	/>
 	<link rel="canonical" href={`${SITE_URL}/terms`} />
 	<meta property="og:type" content="website" />
-	<meta property="og:title" content="Terms of Use — Utsuwa" />
+	<meta property="og:title" content="Terms of Use - Utsuwa" />
 	<meta
 		property="og:description"
 		content="The terms that govern the Utsuwa website, hosted web app, and desktop app."

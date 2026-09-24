@@ -171,9 +171,9 @@ function createSttStore() {
 
 	function showUnsupportedError() {
 		if (isTauri()) {
-			setError('Add a Groq key or a local STT server in Settings → Persona for voice input on desktop.');
+			setError('Add a Groq key or a local STT server in Settings > STT for voice input on desktop.');
 		} else {
-			setError('Voice input is not supported in this browser. Add a Groq key or a local STT server in Settings → Persona, or try Chrome/Edge.');
+			setError('Voice input is not supported in this browser. Add a Groq key or a local STT server in Settings > STT, or try Chrome/Edge.');
 		}
 	}
 

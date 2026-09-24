@@ -475,82 +475,12 @@ h1, h2, h3, h4, h5, h6 {
 	border-color: var(--color-ring);
 }
 
-/* Chat container glass effect */
-.chat-container {
-	background: var(--glass-bg);
-	border: 1px solid var(--color-border);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-	border-radius: 1rem;
-}
-
-/* Transitions */
-.fade-enter-active,
-.fade-leave-active {
-	transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-	opacity: 0;
-}
-
-/* Animation utilities (bits-ui compatible) */
-.animate-in {
-	animation-duration: 150ms;
-	animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-	animation-fill-mode: both;
-}
-
-.fade-in-0 {
-	animation-name: fadeIn;
-}
-
-.zoom-in-95 {
-	animation-name: zoomIn;
-}
-
-.slide-in-from-top-2 {
-	animation-name: slideInFromTop;
-}
-
-.slide-in-from-bottom-2 {
-	animation-name: slideInFromBottom;
-}
-
 @keyframes fadeIn {
 	from {
 		opacity: 0;
 	}
 	to {
 		opacity: 1;
-	}
-}
-
-@keyframes zoomIn {
-	from {
-		transform: scale(0.95);
-	}
-	to {
-		transform: scale(1);
-	}
-}
-
-@keyframes slideInFromTop {
-	from {
-		transform: translateY(-0.5rem);
-	}
-	to {
-		transform: translateY(0);
-	}
-}
-
-@keyframes slideInFromBottom {
-	from {
-		transform: translateY(0.5rem);
-	}
-	to {
-		transform: translateY(0);
 	}
 }
 
