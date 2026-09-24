@@ -7,17 +7,26 @@ export interface AnimationEntry {
 	url: string;
 	description: string;
 	llmEnabled: boolean;
-	custom: boolean;
+	// Idle clips loop and are never offered to the model
+	kind: 'emote' | 'idle' | 'custom';
 	createdAt?: number;
 	durationSec?: number;
 }
 
 export type BuiltinOverride = { description?: string; llmEnabled?: boolean };
-export type StoredCustomAnimation = Omit<AnimationEntry, 'url' | 'custom'>;
+export type StoredCustomAnimation = Omit<AnimationEntry, 'url' | 'kind'>;
+
+// Ids are checked against the library at read time, so a deleted clip just
+// drops out of the pool
+export interface BaseBehavior {
+	idlePool: string[];
+	thinkingId: string | null;
+}
 
 export interface StoredAnimationMetadata {
 	overrides: Record<string, BuiltinOverride>;
 	custom: StoredCustomAnimation[];
+	base: BaseBehavior;
 }
 
 // Same rule the response parser applies to "action", so every stored id is one
@@ -41,10 +50,21 @@ export const BUILTIN_ANIMATIONS: readonly AnimationEntry[] = [
 	description,
 	url: `/animations/${id.toUpperCase()}.vrma`,
 	llmEnabled: true,
-	custom: false
+	kind: 'emote' as const
 }));
 
-const BUILTIN_IDS = new Set(BUILTIN_ANIMATIONS.map((a) => a.id));
+export const BUILTIN_IDLES: readonly AnimationEntry[] = ['idle', 'idle_2', 'idle_3', 'idle_4', 'idle_5'].map(
+	(file, i) => ({
+		id: `idle_${i + 1}`,
+		name: `Idle ${i + 1}`,
+		description: 'Built-in idle loop',
+		url: `/animations/${file}.vrma`,
+		llmEnabled: false,
+		kind: 'idle' as const
+	})
+);
+
+const BUILTIN_IDS = new Set([...BUILTIN_ANIMATIONS, ...BUILTIN_IDLES].map((a) => a.id));
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
 	typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -78,8 +98,17 @@ function parseCustom(raw: unknown): StoredCustomAnimation | null {
 	return entry;
 }
 
+function parseBase(raw: unknown): BaseBehavior {
+	if (!isRecord(raw)) return { idlePool: [], thinkingId: null };
+	const pool = Array.isArray(raw.idlePool) ? raw.idlePool.filter((id): id is string => typeof id === 'string') : [];
+	return {
+		idlePool: [...new Set(pool)],
+		thinkingId: typeof raw.thinkingId === 'string' ? raw.thinkingId : null
+	};
+}
+
 export function parseAnimationMetadata(raw: string | null): StoredAnimationMetadata {
-	const empty: StoredAnimationMetadata = { overrides: {}, custom: [] };
+	const empty: StoredAnimationMetadata = { overrides: {}, custom: [], base: parseBase(null) };
 	if (!raw) return empty;
 	let data: unknown;
 	try {
@@ -105,9 +134,19 @@ export function parseAnimationMetadata(raw: string | null): StoredAnimationMetad
 			if (parsed && !custom.some((c) => c.id === parsed.id)) custom.push(parsed);
 		}
 	}
-	return { overrides, custom };
+	return { overrides, custom, base: parseBase(data.base) };
 }
 
 export function applyBuiltinOverrides(overrides: Record<string, BuiltinOverride>): AnimationEntry[] {
-	return BUILTIN_ANIMATIONS.map((a) => ({ ...a, ...overrides[a.id] }));
+	return [...BUILTIN_ANIMATIONS, ...BUILTIN_IDLES].map((a) => ({ ...a, ...overrides[a.id] }));
+}
+
+/** URLs the idle cycle picks from: the chosen clips that still exist, else the fallback. */
+export function resolveIdlePool(
+	base: BaseBehavior,
+	candidates: readonly AnimationEntry[],
+	fallbackUrls: readonly string[]
+): string[] {
+	const urls = base.idlePool.flatMap((id) => candidates.find((c) => c.id === id)?.url ?? []);
+	return urls.length > 0 ? urls : [...fallbackUrls];
 }
