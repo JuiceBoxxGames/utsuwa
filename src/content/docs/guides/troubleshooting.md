@@ -1,33 +1,22 @@
 ---
 title: Troubleshooting
-description: Common issues and solutions for Utsuwa.
+description: Fixes for common problems with setup, API keys, avatars, voice, animations, expressions, the desktop app, and memory.
 ---
 
 # Troubleshooting
 
-This guide covers common issues you might encounter when using Utsuwa and how to resolve them.
+Find your symptom below. Quoted messages are the exact text the app shows, with the parts that change written in angle brackets.
 
 ## Node.js Version Issues
 
-### "Unsupported engine" error
+### pnpm refuses to install
 
-Utsuwa requires Node.js 22 or higher. If you see an error like:
+Self-hosting needs Node.js 22 or newer. With an older version, `pnpm install` stops with an unsupported engine error.
 
-```bash
-npm error engine Unsupported engine
-npm error notsup Required: {"node":">=22.0.0"}
-```
-
-You need to update your Node.js version. If you're using nvm:
+With nvm, install and switch to Node 22. The repository's `.nvmrc` pins it, so `nvm use` inside the project picks the right version:
 
 ```bash
 nvm install 22
-nvm use 22
-```
-
-Or with the project's `.nvmrc`:
-
-```bash
 nvm use
 ```
 
@@ -37,64 +26,11 @@ nvm use
 node --version
 ```
 
-Should output `v22.0.0` or higher.
-
-## API Key Configuration
-
-### "Invalid API key" error
-
-This usually means your API key is incorrect or expired. Double-check:
-
-1. The key is entered correctly (no extra spaces)
-2. The key hasn't been revoked
-3. You're using the right key for the provider (OpenAI key for OpenAI, etc.)
-
-### API key not being saved
-
-All API keys are stored locally on your device. If keys aren't persisting:
-
-1. Check if you're in private/incognito mode (web only — incognito can clear storage on close)
-2. Clear site data and re-enter the key
-3. On the desktop app, try restarting the application
-
-### Rate limiting
-
-If you're getting rate limit errors, you may need to:
-
-1. Wait a few minutes before retrying
-2. Check your API provider's usage dashboard
-3. Upgrade your API plan if needed
-
-## VRM Model Issues
-
-### Model not loading
-
-If your VRM model won't load:
-
-1. **Check file size** - Large models (>50MB) may take longer to load
-2. **Verify the format** - Ensure it's a valid `.vrm` file
-3. **Try another model** - Test with a different VRM to isolate the issue
-4. **Check the console** - Open DevTools (F12 in browser or desktop app) and look for errors
-
-### Model displays incorrectly
-
-If the model appears distorted or wrong:
-
-1. **VRM version** - Some older VRM 0.x models may have compatibility issues
-2. **Bone structure** - Models need standard VRM bone configurations
-3. **Materials** - Some custom shaders may not render correctly
-
-### Animations not playing
-
-If the idle animation or expressions aren't working:
-
-1. **Wait for load** - Animations load after the model
-2. **Check VRMA support** - Ensure your model supports VRM animations
-3. **Refresh the page** - Sometimes a reload fixes animation issues
+It should print `v22` or higher.
 
 ### Local dev page loads but the scene or controls are stuck
 
-If you are developing locally and the `/app` page renders but the model never appears, controls do not respond, or the console shows `Outdated Optimize Dep` or failed dynamic imports, clear Vite's local caches and restart the dev server:
+If the `/app` page renders in development but the model never appears, controls do not respond, or the browser console shows Vite's `Outdated Optimize Dep` error or failed dynamic imports, clear Vite's caches and restart:
 
 ```bash
 rm -rf node_modules/.vite .svelte-kit
@@ -102,181 +38,304 @@ pnpm exec svelte-kit sync
 pnpm exec vite dev --force --host localhost --port 5173
 ```
 
-After the page reloads, complete or dismiss the first-run onboarding modal before testing the Settings, Info, or stats controls. The onboarding modal intentionally sits above the scene until setup is finished.
+The first-run setup wizard sits above the scene until you finish it. Complete it before testing other controls.
+
+## API Key Configuration
+
+### The provider rejects my key
+
+The error you see comes from the provider itself. Check that:
+
+1. The key has no extra spaces
+2. The key has not been revoked or run out of credit
+3. The key belongs to that provider. Each settings page has its own key fields: the chat key in Settings > LLM Model does not cover TTS or voice input.
+
+### "Enter API key first"
+
+The model dropdown stays disabled until the provider has a key. Paste the key, click outside the field, and the model list loads.
+
+### "API key required"
+
+Chat was sent to a cloud provider with no key saved. Add the key in Settings > LLM Model.
+
+### API key not being saved
+
+Keys are stored in this browser on this device.
+
+1. **Private windows** can clear storage when they close. Use a normal window.
+2. **Another browser or device** has its own storage. Enter the key there too.
+3. **The desktop app** keeps its own storage, separate from the website.
+
+### Rate limiting
+
+Rate limit errors come from the provider. Wait a few minutes, check the provider's usage dashboard, or raise your plan's limits.
+
+## VRM Model Issues
+
+### Uploading a model does nothing
+
+The uploader only accepts files whose name ends in lowercase `.vrm`. A file named `Model.VRM` is ignored without a message. Rename it to end in `.vrm` and upload again.
+
+### Model not loading
+
+If you see "Failed to load VRM model":
+
+1. **Check the file.** It must be a valid VRM model, not a plain glTF or FBX.
+2. **Give it time.** Large models take longer to load.
+3. **Try another model** to see whether the problem follows the file.
+4. **Check the console.** Open the developer tools (F12) and look for errors.
+
+### "WebGL is unavailable on this device or browser."
+
+Utsuwa needs WebGL to draw your companion. Turn on hardware acceleration in your browser settings, update your graphics drivers, or try another browser. The info button (top right) shows whether 3D graphics are supported.
+
+### Model displays incorrectly
+
+1. **Shaders.** Materials made for a specific engine's custom shaders may not look the same in Utsuwa.
+2. **Bones.** Animations need the standard VRM humanoid bones. A model with missing bones can move oddly.
+3. **Compare.** Load the model with **Upload VRM** in Settings > Developer to test it without saving it.
+
+### Removing uploaded models
+
+The avatar gallery has no delete button. Settings > Developer > **Clear VRM Storage** removes every uploaded model at once, without asking.
+
+## Expressions and Animations
+
+### Mood expressions not showing
+
+Her face may stay neutral for several reasons:
+
+1. **The switch is off.** Check Settings > Display > **Mood expressions**.
+2. **Her mood is neutral, or mild.** Neutral has no expression, and a low-intensity mood shows only a faint one.
+3. **Your model lacks the expression names.** Mood faces look for standard names such as `happy`, `relaxed`, `sad`, `angry`, and `surprised`, or the older `joy`, `fun`, and `sorrow`. Open Settings > Developer and check **Available Expressions**. See [what your model needs](/docs/guides/expressions-and-moments#what-your-model-needs).
+4. **Something else owns her face.** Photo mode and a playing emote both pause the mood face.
+
+Brief reactions follow the same switch and the same names. They also depend on the model choosing to react, which it does rarely by design.
+
+### Animation upload rejected
+
+The reason shows under **Your animations** in Settings > Animations.
+
+| Message | Fix |
+|---|---|
+| "That file is not a .vrma animation." | Pick a `.vrma` file. |
+| "That file is empty." | Export the animation again. |
+| "That animation is over 25 MB." | Shorten or re-export the clip. |
+| "That file couldn't be read as a VRM animation." | The file is not a valid VRM animation. Re-export it as VRMA. |
+| "Animations can run up to 60 seconds. Trim it and try again." | Trim the clip to 60 seconds or less. |
+| "Couldn't save that animation. Your browser storage may be full." | Free up space, or delete uploads you no longer use. |
+
+### She never uses my animation
+
+1. **Companion can use** starts off for uploads. Turn it on for the row.
+2. **Write a description.** She picks motions by their description. A bare file name tells her little.
+3. **Cooldowns.** She will not repeat a motion within 20 seconds, or start any emote within 8 seconds of the last one.
+4. **One at a time.** A new emote is skipped while another plays, and every emote is skipped in photo mode.
+5. **Her choice.** She picks at most one per reply, and only when it fits. Use **Play** to check that the motion itself works.
+
+See [Animations](/docs/guides/animations).
+
+## Event Moments
+
+### Scenes play the built-in text
+
+With **Personalized moments** on, she writes each event scene herself. The built-in scene plays instead when:
+
+1. **The switch is off.** Check Settings > Display > **Personalized moments**.
+2. **Chat is not ready.** Chat must be on, with a provider, a model, and a key if the provider needs one.
+3. **The model is too slow.** She gets 15 seconds. Slow local models often run past it.
+4. **The reply is unusable.** Her answer must keep the scene's shape: every part the scene has, reasonable lengths, and the same number of choices. Small models often miss this.
+
+Nothing is lost when this happens. What you choose and how it affects your relationship always come from the built-in scene.
+
+### A moment is in the wrong language
+
+She writes in the language of your most recent messages, or English when there are none yet. Send a message in your language and the next moment follows it.
 
 ## Text-to-Speech Issues
 
 ### No audio output
 
-If TTS isn't producing sound:
+1. **Speech (TTS)** must be on in Settings > TTS, with a provider and, for cloud providers, a key.
+2. **Check the tab and system volume.** Make sure the browser tab is not muted.
+3. **Send a message by tapping.** Browsers only start audio after you interact. Utsuwa unlocks audio when you tap Send or the mic.
+4. **iPhone and iPad.** The ring/silent switch mutes her voice even when other media plays. Flip it to ring.
+5. **Settings are per device.** A phone where you never set up a TTS provider stays silent.
 
-1. **Check audio** - Make sure the tab isn't muted (web) or system audio is enabled (desktop)
-2. **Verify permissions** - Your browser or OS may need to grant audio autoplay permission
-3. **Check API key** - Verify your ElevenLabs, OpenAI TTS, or Fish Audio API key is valid
-4. **Check provider status** - The TTS provider may be experiencing issues
+### An error appears above the chat bar
 
-### Lip-sync not working
-
-If the avatar's mouth isn't moving:
-
-1. **Audio is required** - Lip-sync only works when TTS audio plays
-2. **Volume level** - Very quiet audio may not trigger lip-sync
-3. **Browser support** - Web Audio API must be supported
-
-### Voice sounds wrong
-
-1. **Check voice settings** - ElevenLabs, OpenAI TTS, and Fish Audio have different available voices
-2. **Custom voice ID** - If using an ElevenLabs or Fish Audio custom voice, verify the voice ID is correct. For Fish Audio you can also paste the voice's fish.audio link
+TTS errors show above the chat bar for a few seconds, in the form "`<Provider>` error `<status>`" followed by the provider's own explanation. For example, a 401 means the key was rejected, and ElevenLabs reports problems like an unknown voice in its own words.
 
 ### Fish Audio error 402
 
-Fish Audio returns 402 when the account has no API credits for the selected model. Pick **S2.1 Pro Free** in the model list, or add credits in your Fish Audio account.
+Fish Audio returns 402 when your account has no API credits for the chosen model. Pick **S2.1 Pro Free** in the model list, which works without credits, or add credits to your Fish Audio account.
+
+### Lip sync not working
+
+1. **Audio is required.** Her mouth only moves while TTS audio plays. With TTS off, she plays her talking motion without mouth movement.
+2. **Mouth shapes.** Your model needs mouth expressions such as `aa`, `ih`, `ou`, `ee`, and `oh`, or the older `a`, `i`, `u`, `e`, and `o`.
+3. **Very quiet audio** can fall below the level that moves her mouth.
+
+### Voice sounds wrong
+
+1. **Voice IDs belong to one provider.** Switching providers resets the voice to that provider's first voice.
+2. **ElevenLabs and Fish Audio** take a voice id in **Voice ID**. For Fish Audio you can paste the voice's fish.audio link.
+3. **OpenAI TTS** always uses the Alloy voice.
+4. **Speed** is set in the OmniVoice panel and carries over to other providers. Set it back to 1 if another voice sounds too fast or slow.
 
 ### Local TTS not speaking
 
-If you selected **Local TTS** but hear nothing:
+If you picked **Local TTS** and hear nothing:
 
-1. **Server running** - Confirm your TTS server is up, e.g. `curl http://localhost:8880/v1/audio/voices`
-2. **Voice is set** - The voice field must hold a name your server knows (e.g. `af_bella` for Kokoro)
-3. **Base URL** - It should point at the server's `/v1`; Utsuwa normalizes the trailing slash for you
-4. **Desktop app** - Just needs the server running on `localhost`; no origin or CORS setup is required
-5. **Hosted site** (`https://app.utsuwa.ai`) - The server must be on `localhost` (one on another machine is blocked as mixed content), must allow the `app.utsuwa.ai` origin (Kokoro-FastAPI does by default), and your browser may prompt to allow local-network access. Allow it if asked
+1. **Is the server running?** For example: `curl http://localhost:8880/v1/audio/voices`
+2. **Is the voice valid?** The **Voice** field must hold a name your server knows, such as `af_bella` for Kokoro.
+3. **Is the base URL right?** It should point at the server's `/v1`. Utsuwa fixes a missing or extra trailing slash.
 
-See [Local TTS Setup](/docs/guides/local-tts-setup#desktop-app-vs-hosted-website) for the hosted vs desktop details.
+The messages tell you which case you are in:
+
+- "Could not reach a local TTS server at `<url>`..." means the request never got through: the server is off, the address is wrong, or the server blocked this site's origin.
+- "Local TTS server returned `<status>` at `<url>`. Check the model and voice are valid for this server." means the server answered but rejected the request.
+
+On the hosted website, the server must run on `localhost` (one on another machine is blocked as mixed content) and must allow the `https://app.utsuwa.ai` origin. Your browser may ask to allow access to your local network. Allow it. See [Local TTS Setup](/docs/guides/local-tts-setup).
+
+### Local TTS blocked on a self-hosted web build
+
+If your own Utsuwa server runs next to your TTS engine and the browser still cannot reach the engine, let the server relay speech. Set this on the Utsuwa server and restart it:
+
+```bash
+ALLOW_LOCAL_PROVIDER_HOSTS=true
+```
+
+When the browser's direct request fails, the app then retries once through the server. This works for Local TTS and OmniVoice. The engine only has to be reachable from the Utsuwa server.
+
+If the relay also fails, you see "The Utsuwa server could not reach the local TTS server at `<url>` (could not connect)." or "(timed out)". Check that the engine is running and reachable from the machine that runs Utsuwa. Without the variable, you keep seeing the "Could not reach a local TTS server" message.
 
 ## Voice Input Issues
 
-### Mic button not responding (desktop)
+### Mic button does nothing on desktop
 
-The desktop app uses Tauri's webview, which does not support the browser's Web Speech API. Configure a local Whisper server or Groq for voice input on desktop:
+The desktop app has no built-in speech recognition. The mic shows "Add a Groq key or a local STT server in Settings > STT for voice input on desktop."
 
-1. Go to **Settings > STT**
-2. Either point **Local server** at your Whisper server's base URL (default `http://localhost:8000/v1/`) or enter your Groq API key
+1. Open Settings > STT.
+2. Enter a **Server URL** for a local Whisper server, a **Groq API key**, or an **OpenAI API key (Whisper)**.
 
-### Mic button not responding (web)
+### Mic button shows an error in the browser
 
-If the mic button shows an error in the browser:
+"Voice input is not supported in this browser. Add a Groq key or a local STT server in Settings > STT, or try Chrome/Edge." means your browser has no Web Speech API. Firefox is a common case. Use Chrome, Edge, or Safari, or set up a local server, Groq, or OpenAI in Settings > STT.
 
-1. **Check browser support** - Web Speech API works in Chrome, Edge, and Safari. Firefox has limited support.
-2. **Allow microphone access** - Your browser may be blocking the microphone permission.
-3. **Use a local Whisper server or Groq** - For better quality or broader browser support, configure Local STT (a self-hosted OpenAI-compatible Whisper server) or add a Groq API key in **Settings > STT**. A configured local server takes top priority, then Groq, then OpenAI, then Web Speech API.
+Web Speech only listens for US English. For other languages, use a local server, Groq, or OpenAI.
 
 ### "Microphone access denied"
 
-Your browser or OS is blocking microphone access:
+Your browser or system is blocking the microphone. You may also see "Microphone access denied. Check system permissions."
 
-1. **Browser permissions** - Click the lock icon in the address bar and allow microphone access
-2. **System permissions** - On macOS, go to System Settings > Privacy & Security > Microphone and enable access for your browser or Utsuwa
+1. **Browser**: click the site controls in the address bar and allow the microphone.
+2. **macOS**: open System Settings > Privacy & Security > Microphone and turn it on for your browser or Utsuwa.
+
+Related messages: "No microphone found. Please connect a microphone." and "Microphone is busy or in use by another app."
+
+### Transcription times out
+
+A local server that takes too long shows "The local STT server did not respond within `<seconds>` seconds. Raise the transcription timeout in Settings > STT if your server is slow."
+
+Open Settings > STT and raise **Transcription timeout (seconds)**, up to 600. CPU-only machines and large models need more time. The setting only applies to the local server; Groq and OpenAI always wait 30 seconds.
+
+### "Could not reach a local STT server"
+
+The full message names the address and the `/v1/audio/transcriptions` endpoint it tried. Check that the server is running, that **Server URL** is right, and that the server allows this site's origin. See [Local STT Setup](/docs/guides/local-stt-setup).
 
 ## Desktop App
 
 ### App won't open
 
-The desktop app is in beta and currently **unsigned**, so your OS warns you the first time you open it. This is expected, not a broken download.
+The desktop builds are unsigned during the beta, so your system warns you the first time. This is expected.
 
-1. **macOS** - Right-click the app → **Open** → **Open**, or run `xattr -dr com.apple.quarantine /Applications/Utsuwa.app` once
-2. **Windows** - On the SmartScreen prompt, click **More info** → **Run anyway**
-3. **Linux** - Give the AppImage the executable bit: `chmod +x Utsuwa.AppImage`
+1. **macOS**: right-click the app, choose **Open**, then **Open**. If macOS only offers the Trash, use System Settings > Privacy & Security > **Open Anyway**. Or run `xattr -dr com.apple.quarantine /Applications/Utsuwa.app` once.
+2. **Windows**: on the SmartScreen prompt, click **More info**, then **Run anyway**.
+3. **Linux**: make the AppImage executable with `chmod +x Utsuwa.AppImage`.
 
-See the [Desktop Guide](/docs/guides/desktop-guide) for the full install walkthrough.
+If you built from source and it will not start, check that Rust is installed with `rustc --version`. See the [Desktop Guide](/docs/guides/desktop-guide).
 
-### Local LLM or TTS won't connect (desktop)
+### Local LLM or TTS will not connect on desktop
 
-On the desktop app, most local providers need only that the server is running. The one exception is **Ollama on Windows and Linux**: the desktop app's origin is `http://tauri.localhost`, which Ollama does not allow by default, so it rejects every request with a `403`. macOS is fine out of the box, and LM Studio and the common local TTS/STT servers (Kokoro-FastAPI, openedai-speech) allow all origins by default.
+The desktop app calls local servers directly, so the server only needs to be running and allow the app's origin.
 
-1. **Ollama (macOS)** - Start it with `ollama serve` and pull a model (`ollama pull <model>`)
-2. **Ollama (Windows/Linux)** - Same, plus allow the app's origin: `setx OLLAMA_ORIGINS "http://tauri.localhost"` on Windows (then restart Ollama from the tray), or `OLLAMA_ORIGINS=http://tauri.localhost ollama serve` on Linux. Full steps: [Local LLM Setup](/docs/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama)
-3. **LM Studio** - Load a model and click Start Server
-4. **Local TTS** - Start your TTS server (e.g. Kokoro-FastAPI on `http://localhost:8880`)
-5. **Base URL** - Confirm the port in **Settings > LLM Model** or **Settings > TTS** matches the port your server is using
+1. **Ollama**: start it with `ollama serve` and pull a model. If Ollama rejects the app, the error reads "Could not reach Ollama at `<url>`. Make sure it's running with "ollama serve" and allow this origin: `OLLAMA_ORIGINS="<origin>" ollama serve`." Use the origin it shows. Full steps: [Local LLM Setup](/docs/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama).
+2. **LM Studio**: load a model and click Start Server. The error reads "Could not reach LM Studio at `<url>`. Open it, load a model, and click Start Server."
+3. **Local TTS**: start your TTS server, for example Kokoro-FastAPI on `http://localhost:8880`.
+4. **Ports**: the port in Settings > LLM Model or Settings > TTS must match the port your server uses.
 
-### No sound (desktop)
+### No sound on desktop
 
-1. **System audio** - Check your OS volume and that Utsuwa isn't muted in the system mixer
-2. **TTS configured** - Confirm a TTS provider is set up and a voice is selected (see Text-to-Speech Issues above)
-3. **Microphone/voice input** - The desktop webview has no Web Speech API, so the mic needs a Groq or OpenAI key; see [Mic button not responding (desktop)](#mic-button-not-responding-desktop)
+1. **System audio**: check your volume, and that Utsuwa is not muted in the system mixer.
+2. **TTS**: a provider must be set up with a voice. See [Text-to-Speech Issues](#text-to-speech-issues).
+
+### The overlay disappeared
+
+`Ctrl+Shift+U` shows or hides the overlay. Press it to bring the overlay back, then use **Back to app** (top right of the overlay) to return to the main window.
+
+If the overlay shows "The main window is unavailable. Your companion is still here.", the main window was closed. Quit and reopen the app.
 
 ### Updates not installing
 
-Auto-updates work for the macOS `.dmg`, Windows `.exe`, and Linux `.AppImage`. If you installed via `.deb` or `.rpm`, update through your package manager instead. Restarting the app re-checks for an update.
+In-app updates work for the macOS `.dmg`, the Windows `.exe`, and the Linux `.AppImage`. With a `.deb` or `.rpm`, install the newer package with your package manager. The app checks on each launch. To check by hand, use **Check for updates** in the info dialog.
 
 ## Memory & Performance
 
+### Memory search or the graph seems empty
+
+Semantic search and the memory graph need a small embedding model that the app downloads from Hugging Face on first start. Until it loads, memory falls back to keyword search and the graph shows "No connected memories yet". Check your connection, then reload. Your facts are still listed in Settings > Memory > **Facts**. See [Memory](/docs/guides/memory#semantic-search).
+
 ### App running slowly
 
-Performance issues can stem from:
-
-1. **Semantic memory model** - The embedding model (~23MB) loads on first use
-2. **Large conversation history** - Long sessions accumulate data
-3. **VRM model size** - Complex models use more GPU resources
-
-Solutions:
-
-1. Give the embedding model time to load initially
-2. Clear old sessions in Settings > Data
-3. Use simpler VRM models if performance is an issue
+1. **The avatar.** Complex models with many materials and spring bones use more graphics power. Try a simpler model.
+2. **First start.** The embedding model loads in the background and indexes existing memories.
+3. **Other apps.** Close other programs that use the GPU.
 
 ### Storage errors
 
-If you see IndexedDB or storage errors:
-
-1. **Check available space** - Storage on your device may be full
-2. **Clear site data** - Reset the app's storage (web: clear site data, desktop: reinstall)
-3. **Disable private mode** - Some storage features don't work in incognito (web only)
+1. **Free up space.** Your device may be low on storage.
+2. **Leave private browsing.** Some storage does not work in private windows.
+3. **Remove large uploads.** Uploaded avatars and animations take the most space.
 
 ### Memory usage is high
 
-The app uses memory for:
-
-1. Three.js 3D rendering
-2. VRM model geometry and textures
-3. Conversation history
-4. Embedding model for semantic search
-
-If memory is a concern, refresh the page periodically to clear accumulated data.
+Rendering, the avatar's textures, and the embedding model all use memory. Reloading the page releases what a long session built up. Your data is kept.
 
 ## Common Errors
 
-### "Failed to fetch" errors
+### Network errors
 
-These usually indicate network problems:
+A "Failed to fetch" message comes from the browser and points to a network problem:
 
-1. **Check internet connection**
-2. **Verify API endpoint** - Some providers may be down
-3. **CORS issues** - If self-hosting, check CORS configuration
-4. **Firewall/proxy** - Corporate networks may block API calls
+1. **Check your internet connection.**
+2. **Check the provider.** It may be down.
+3. **Check firewalls and proxies.** Company networks can block API calls.
 
-For local LLMs, the browser connects directly to your local server:
+For local models on the web, the browser connects straight to your local server:
 
-1. **Ollama running** - Start it with `ollama serve`
-2. **LM Studio running** - Load a model and click Start Server
-3. **Correct base URL** - Use `http://localhost:11434` for Ollama or `http://localhost:1234/v1` for LM Studio
-4. **Ollama origin (CORS)** - Ollama rejects origins it doesn't allow with a `403` on `/api/tags`. On the **hosted website** (the app runs at `app.utsuwa.ai`) allow that origin: `OLLAMA_ORIGINS=https://app.utsuwa.ai ollama serve` (for a Vercel preview use the exact origin from the address bar). On the **Windows or Linux desktop app** allow `OLLAMA_ORIGINS=http://tauri.localhost`; the macOS desktop app needs nothing. Full per-platform steps: [Local LLM Setup](/docs/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama). Background: Ollama's [additional web origins FAQ](https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama).
-5. **Installed model** - If you see `model not found`, run `ollama list`, pull or load a model, refresh the dropdown, and select an installed model
+1. **Ollama**: start it with `ollama serve`.
+2. **LM Studio**: load a model and click Start Server.
+3. **Base URL**: `http://localhost:11434` for Ollama, `http://localhost:1234/v1` for LM Studio.
+4. **Ollama origin**: Ollama rejects origins it does not allow. On the hosted website, run `OLLAMA_ORIGINS=https://app.utsuwa.ai ollama serve`. For any other address, use the origin the error message shows. See [Local LLM Setup](/docs/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama) and Ollama's [FAQ on web origins](https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama).
+5. **Installed model**: if Ollama says the model is not found, run `ollama list`, pull a model, refresh the dropdown, and pick an installed one.
 
-### "Page not found" after deployment
+### The endpoint returned a web page
 
-If routes work locally but not in production:
+The message reads "The endpoint at `<url>` returned a web page instead of an API response. Double-check the base URL (for OpenAI it's `https://api.openai.com/v1/`)." The address points at a website, not an API. Check **Base URL** in Settings > LLM Model. OpenAI-style APIs usually end in `/v1/`.
 
-1. **Check adapter settings** - Ensure the SvelteKit adapter is configured correctly
-2. **Verify build output** - Check the deployment logs
-3. **Case sensitivity** - Some hosts are case-sensitive for file paths
+### "Request timed out"
 
-### Console shows "Cannot read property of undefined"
-
-This often means something loaded out of order:
-
-1. **Refresh the page**
-2. **Clear cache** - Hard refresh (Ctrl+Shift+R) on web, or restart the desktop app
-3. **Check for updates** - Pull latest code if self-hosting, or restart the desktop app
+The model list took too long to load. Check the provider and your connection, then use the refresh button next to the model dropdown.
 
 ## Getting More Help
 
-If your issue isn't covered here:
+If your issue is not covered here:
 
-1. Check the [GitHub Issues](https://github.com/JuiceBoxxGames/utsuwa/issues) for similar problems
+1. Search [GitHub Issues](https://github.com/JuiceBoxxGames/utsuwa/issues) for similar problems.
 2. Open a new issue with:
-   - App version (web or desktop) and browser if web
+   - Web or desktop, and your browser or OS
+   - The app version from the info button
    - Steps to reproduce
    - Any console errors
-   - Screenshots if relevant
+   - Screenshots if they help
