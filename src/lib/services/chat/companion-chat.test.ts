@@ -20,6 +20,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	let spoken: SpeechSegment[] = [];
 	const turns: ReturnType<typeof parseResponse>[] = [];
 	let latest = '';
+	const thinking: boolean[] = [];
 	let speechEnabled = true;
 	let speechStarted = false;
 	const messages: { role: string; content: string }[] = [];
@@ -40,7 +41,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			getModuleState: () => ({ enabled: speechEnabled }),
 			getModuleSettings: (id: string) => id === 'speech' ? speech : { activeProvider: llmProvider, activeModel: 'test-model', contextSize }
 		},
-		vrmStore: { startTalking: () => {} },
+		vrmStore: { startTalking: () => {}, setThinking: (value: boolean) => { thinking.push(value); } },
 		animationLibraryStore: { enabledForLlm: [] },
 		reminderStore: { upcoming: [] },
 		ttsStore: {
@@ -111,7 +112,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			for (const stateFirst of [true, false]) {
 				await t.test(`${transport}, state ${stateFirst ? 'before' : 'after'} native calls`, async (t) => {
 					direct = transport === 'direct';
-					messages.length = 0; spoken = []; turns.length = 0;
+					messages.length = 0; spoken = []; turns.length = 0; thinking.length = 0;
 					const textEvents = [...state].map((content) => ({ choices: [{ delta: { content } }] }));
 					const toolEvents = ['Let me know how your interview goes.', 'Hola, buenos días.'].flatMap((text, index) => {
 						const args = JSON.stringify({ text, language: index ? 'es' : 'en' });
@@ -134,6 +135,9 @@ test('companion chat preserves native speech across direct and hosted state bloc
 					});
 					await sendCompanionMessage('Hello', [], hooks);
 					assert.equal(chatStore.error, null);
+					// Thinking covers the wait for the first text, then clears
+					assert.equal(thinking[0], true);
+					assert.equal(thinking.at(-1), false);
 					assert.deepEqual(spoken.map((s) => [s.text, s.language]), [
 						['Let me know how your interview goes.', 'en'], ['Hola, buenos días.', 'es']
 					]);

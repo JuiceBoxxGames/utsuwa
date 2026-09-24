@@ -30,7 +30,7 @@
 
 <div class="anim-row">
 	<div class="anim-head">
-		{#if entry.custom}
+		{#if entry.kind === 'custom'}
 			<input
 				class="settings-field anim-name"
 				aria-label="Animation name"
@@ -46,7 +46,7 @@
 			<Button variant="secondary" size="sm" onclick={play} aria-label="Play {entry.name}">
 				<Icon name="play" size={14} />Play
 			</Button>
-			{#if entry.custom}
+			{#if entry.kind === 'custom'}
 				<Button variant="ghost" size="sm" onclick={remove} aria-label="Delete {entry.name}">
 					<Icon name="trash" size={14} />Delete
 				</Button>

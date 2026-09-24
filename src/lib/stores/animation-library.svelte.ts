@@ -3,9 +3,12 @@ import localforage from 'localforage';
 import {
 	applyBuiltinOverrides,
 	parseAnimationMetadata,
+	resolveIdlePool,
+	BUILTIN_IDLES,
 	MAX_DESCRIPTION_LENGTH,
 	MAX_NAME_LENGTH,
 	type AnimationEntry,
+	type BaseBehavior,
 	type BuiltinOverride,
 	type StoredCustomAnimation
 } from './animation-library-parser';
@@ -27,7 +30,12 @@ function createAnimationLibraryStore() {
 	let overrides = $state<Record<string, BuiltinOverride>>({});
 	let custom = $state<AnimationEntry[]>([]);
 	const entries = $derived([...applyBuiltinOverrides(overrides), ...custom]);
-	const enabledForLlm = $derived(entries.filter((e) => e.llmEnabled));
+	const enabledForLlm = $derived(entries.filter((e) => e.llmEnabled && e.kind !== 'idle'));
+	const playable = $derived(entries.filter((e) => e.kind !== 'idle'));
+	const idleCandidates = $derived(entries.filter((e) => e.kind !== 'emote'));
+	let base = $state<BaseBehavior>({ idlePool: [], thinkingId: null });
+	const idlePoolUrls = $derived(resolveIdlePool(base, idleCandidates, BUILTIN_IDLES.map((e) => e.url)));
+	const thinkingUrl = $derived(base.thinkingId ? (entries.find((e) => e.id === base.thinkingId)?.url ?? null) : null);
 
 	let readyResolve: () => void = () => {};
 	const ready = new Promise<void>((resolve) => (readyResolve = resolve));
@@ -44,7 +52,7 @@ function createAnimationLibraryStore() {
 		for (const meta of stored) {
 			const existing = current.get(meta.id);
 			if (existing) {
-				next.push({ ...meta, url: existing.url, custom: true });
+				next.push({ ...meta, url: existing.url, kind: 'custom' });
 				current.delete(meta.id);
 				continue;
 			}
@@ -53,7 +61,7 @@ function createAnimationLibraryStore() {
 				console.debug(`[animations] dropping ${meta.id}: its file is missing`);
 				continue;
 			}
-			next.push({ ...meta, url: URL.createObjectURL(blob), custom: true });
+			next.push({ ...meta, url: URL.createObjectURL(blob), kind: 'custom' });
 		}
 		// Anything left was deleted elsewhere
 		for (const gone of current.values()) releaseUrl(gone.url);
@@ -64,6 +72,7 @@ function createAnimationLibraryStore() {
 		syncChain = syncChain.then(async () => {
 			const meta = parseAnimationMetadata(raw);
 			overrides = meta.overrides;
+			base = meta.base;
 			await restoreCustom(meta.custom);
 		});
 		return syncChain;
@@ -71,8 +80,11 @@ function createAnimationLibraryStore() {
 
 	function save() {
 		if (!browser || !restored) return;
-		const stored: StoredCustomAnimation[] = custom.map(({ url: _url, custom: _custom, ...rest }) => rest);
-		localStorage.setItem(STORAGE_KEY, JSON.stringify({ overrides: $state.snapshot(overrides), custom: stored }));
+		const stored: StoredCustomAnimation[] = custom.map(({ url: _url, kind: _kind, ...rest }) => rest);
+		localStorage.setItem(
+			STORAGE_KEY,
+			JSON.stringify({ overrides: $state.snapshot(overrides), custom: stored, base: $state.snapshot(base) })
+		);
 	}
 
 	function releaseUrl(url: string) {
@@ -114,7 +126,7 @@ function createAnimationLibraryStore() {
 			url,
 			description: '',
 			llmEnabled: false,
-			custom: true,
+			kind: 'custom',
 			createdAt: Date.now(),
 			durationSec
 		};
@@ -154,15 +166,39 @@ function createAnimationLibraryStore() {
 		await blobStorage?.removeItem(blobKey(id));
 	}
 
+	function setIdlePool(ids: string[]) {
+		base = { ...base, idlePool: [...new Set(ids)] };
+		save();
+	}
+
+	function setThinkingId(id: string | null) {
+		base = { ...base, thinkingId: id };
+		save();
+	}
+
 	return {
 		get entries(): readonly AnimationEntry[] {
 			return entries;
 		},
-		// What the emote player may run. Same list today; #168 builds idle and
-		// thinking pools on top of it.
+		// One-shot emotes: built-ins plus uploads, never the idle loops
 		get playable(): readonly AnimationEntry[] {
-			return entries;
+			return playable;
 		},
+		// Uploads count too; whether one loops well is the user's call
+		get idleCandidates(): readonly AnimationEntry[] {
+			return idleCandidates;
+		},
+		get base(): Readonly<BaseBehavior> {
+			return base;
+		},
+		get idlePoolUrls(): readonly string[] {
+			return idlePoolUrls;
+		},
+		get thinkingUrl(): string | null {
+			return thinkingUrl;
+		},
+		setIdlePool,
+		setThinkingId,
 		get enabledForLlm(): readonly AnimationEntry[] {
 			return enabledForLlm;
 		},
