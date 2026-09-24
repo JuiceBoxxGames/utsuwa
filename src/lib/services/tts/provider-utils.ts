@@ -65,3 +65,14 @@ function extractDetail(body: unknown): string {
 
 	return '';
 }
+
+// A local engine that rejects the page origin fails as a thrown fetch, same as
+// a refused connection. Web builds get one retry through /api/tts/local; the
+// desktop build has no server routes, and an abort is not a failure to retry.
+export function shouldProxyLocalTts(opts: {
+	isLocal: boolean;
+	isTauri: boolean;
+	directFailedAtNetwork: boolean;
+}): boolean {
+	return opts.isLocal && !opts.isTauri && opts.directFailedAtNetwork;
+}

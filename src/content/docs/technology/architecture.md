@@ -154,7 +154,7 @@ Text-to-speech converts LLM responses to audio with lip-sync.
 - **ElevenLabs** (cloud, high quality, requires API key)
 - **OpenAI TTS** (cloud, requires API key)
 - **Fish Audio** (cloud, requires API key). Its TTS endpoint has no CORS support, so the web build sends requests through the `/api/tts/fish-audio` pass-through route and the desktop build uses the Tauri HTTP plugin
-- **Local TTS** — any OpenAI-compatible TTS server exposing `/v1/audio/speech` (e.g. Kokoro-FastAPI, openedai-speech). No key; defaults to `http://localhost:8880/v1`, and reuses the OpenAI TTS client pointed at the local base URL
+- **Local TTS** — any OpenAI-compatible TTS server exposing `/v1/audio/speech` (e.g. Kokoro-FastAPI, openedai-speech). No key; defaults to `http://localhost:8880/v1`, and reuses the OpenAI TTS client pointed at the local base URL. When the browser's direct request fails (usually an engine that rejects the page origin), web builds retry once through `/api/tts/local`, which only proxies when the server sets `ALLOW_LOCAL_PROVIDER_HOSTS=true`
 
 **Flow:**
 1. LLM response text is sent to TTS provider
