@@ -282,7 +282,6 @@ After your reply, ALWAYS end with a JSON block, even when little changed:
 \`\`\`json
 {
   "mood_change": { "emotion": "emotion_name", "intensity_delta": number },
-  "energy_delta": number,
   "new_memory": null | "something specific worth remembering about them"${actionField(ctx)},
   "expression": null | "emotion_name"
 }
@@ -297,7 +296,7 @@ Examples of good new_memory values:
 
 Use expression only for a visible reaction on your face right now, separate from your mood: they asked you to smile, something surprised you, a line made you laugh, or the moment is sad. Same emotion names as mood_change. Use null most of the time.
 
-In Companion Mode, only mood and energy change. Do NOT suggest affection, trust, intimacy, comfort, or respect changes - these relationship stats are disabled.
+In Companion Mode, only mood changes. Energy is tracked by the app. Do NOT suggest affection, trust, intimacy, comfort, or respect changes; these relationship stats are disabled.
 </instructions>`);
 
 	const ovLayer = buildOmniVoiceLayer(ctx);

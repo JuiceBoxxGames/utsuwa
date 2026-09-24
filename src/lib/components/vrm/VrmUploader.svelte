@@ -29,7 +29,7 @@
 					isDragging = false;
 				} else if (event.payload.type === 'drop') {
 					isDragging = false;
-					const vrmPath = event.payload.paths.find((p) => p.endsWith('.vrm'));
+					const vrmPath = event.payload.paths.find((p) => /\.vrm$/i.test(p));
 					if (!vrmPath) return;
 
 					const { readFile } = await import('@tauri-apps/plugin-fs');
@@ -61,7 +61,7 @@
 		isDragging = false;
 
 		const file = e.dataTransfer?.files[0];
-		if (file && file.name.endsWith('.vrm')) {
+		if (file && /\.vrm$/i.test(file.name)) {
 			onUpload(file);
 		}
 	}
@@ -69,7 +69,7 @@
 	function handleFileSelect(e: Event) {
 		const input = e.target as HTMLInputElement;
 		const file = input.files?.[0];
-		if (file && file.name.endsWith('.vrm')) {
+		if (file && /\.vrm$/i.test(file.name)) {
 			onUpload(file);
 		}
 		// Reset input

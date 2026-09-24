@@ -212,6 +212,8 @@ test('companion mode drops relationship mechanics entirely', () => {
 	assert.ok(prompt.includes('helpful AI companion'));
 	assert.ok(!prompt.includes('dating sim'));
 	assert.ok(!prompt.includes('affection_delta'));
+	// The engine owns energy in both modes, so the block never asks for it
+	assert.ok(!prompt.includes('energy_delta'));
 	assert.ok(prompt.includes('these relationship stats are disabled'));
 });
 
