@@ -5,8 +5,9 @@
 // sees behind her is exactly what a photo bakes.
 
 export interface SceneBackground {
-	type: 'default' | 'transparent' | 'solid' | 'gradient' | 'pattern';
-	// solid: CSS color; gradient: "colorA,colorB" top to bottom; pattern: tile id
+	type: 'default' | 'transparent' | 'solid' | 'gradient' | 'pattern' | 'image';
+	// solid: CSS color; gradient: "colorA,colorB" top to bottom; pattern: tile id;
+	// image: stored image id (see storage/scene-background-images.ts)
 	value?: string;
 }
 
@@ -202,8 +203,23 @@ export function presetSwatch(preset: BackgroundPreset): string {
 	return preset.swatch;
 }
 
+// Source rect that covers the destination like CSS background-size: cover, centered
+export function coverCrop(
+	srcW: number,
+	srcH: number,
+	dstW: number,
+	dstH: number
+): { sx: number; sy: number; sw: number; sh: number } {
+	if (srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return { sx: 0, sy: 0, sw: srcW, sh: srcH };
+	const scale = Math.max(dstW / srcW, dstH / srcH);
+	const sw = dstW / scale;
+	const sh = dstH / scale;
+	return { sx: (srcW - sw) / 2, sy: (srcH - sh) / 2, sw, sh };
+}
+
 // CSS for the live preview layer behind the transparent GL canvas
-export function backgroundToCss(bg: SceneBackground): string | undefined {
+export function backgroundToCss(bg: SceneBackground, imageUrl?: string | null): string | undefined {
+	if (bg.type === 'image') return imageUrl ? `url("${imageUrl}") center / cover no-repeat` : undefined;
 	if (bg.type === 'solid' && bg.value) return bg.value;
 	if (bg.type === 'gradient' && bg.value) return `linear-gradient(180deg, ${bg.value})`;
 	if (bg.type === 'pattern' && bg.value) {
@@ -223,9 +239,14 @@ export function drawSceneBackground(
 	width: number,
 	height: number,
 	bg: SceneBackground,
-	pixelScale = 1
+	pixelScale = 1,
+	image?: CanvasImageSource & { width: number; height: number }
 ): void {
-	if (bg.type === 'solid' && bg.value) {
+	if (bg.type === 'image') {
+		if (!image) return;
+		const { sx, sy, sw, sh } = coverCrop(image.width, image.height, width, height);
+		ctx.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
+	} else if (bg.type === 'solid' && bg.value) {
 		ctx.fillStyle = bg.value;
 		ctx.fillRect(0, 0, width, height);
 	} else if (bg.type === 'gradient' && bg.value) {
@@ -257,6 +278,8 @@ export function sanitizeSceneBackground(raw: unknown): SceneBackground {
 			return { type: 'gradient', value: bg.value };
 		if (bg.type === 'pattern' && typeof bg.value === 'string' && TILE_PAINTERS[bg.value])
 			return { type: 'pattern', value: bg.value };
+		if (bg.type === 'image' && typeof bg.value === 'string' && bg.value)
+			return { type: 'image', value: bg.value };
 	}
 	return { type: 'default' };
 }

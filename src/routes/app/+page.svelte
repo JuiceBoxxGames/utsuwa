@@ -328,7 +328,7 @@
 				<div
 					class="photo-bg-layer"
 					style:filter={photoFilterCss}
-					style:background={backgroundToCss(effectiveBackdrop)}
+					style:background={backgroundToCss(effectiveBackdrop, displayStore.activeBackgroundImage?.url)}
 				></div>
 			{/if}
 
