@@ -9,7 +9,5 @@
 		<p>Configure speech-to-text providers and microphone sensitivity.</p>
 	</header>
 
-	<section class="section">
-		<SttSettings />
-	</section>
+	<SttSettings />
 </div>

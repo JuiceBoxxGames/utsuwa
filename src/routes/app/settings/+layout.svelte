@@ -16,7 +16,7 @@
 		{ href: localPath('app', '/settings/display'), label: 'Display', icon: 'monitor', keywords: 'appearance theme light dark chat typing screen awake layout' },
 		{ href: localPath('app', '/settings/llm'), label: 'LLM Model', icon: 'brain', keywords: 'ai provider api model language context' },
 		{ href: localPath('app', '/settings/tts'), label: 'TTS', icon: 'volume', keywords: 'speech voice audio omnivoice elevenlabs fish audio' },
-		{ href: localPath('app', '/settings/stt'), label: 'STT', icon: 'mic', keywords: 'microphone transcription speech recognition' },
+		{ href: localPath('app', '/settings/stt'), label: 'STT', icon: 'mic', keywords: 'microphone transcription speech recognition timeout whisper' },
 		...(mcpStore.capability === 'none' ? [] : [{ href: localPath('app', '/settings/mcp'), label: 'MCP', icon: 'modules', keywords: 'servers tools integrations' }]),
 		{ href: localPath('app', '/settings/memory'), label: 'Memory', icon: 'brain', keywords: 'facts relationship memories graph' },
 		{ href: localPath('app', '/settings/data'), label: 'Data', icon: 'database', keywords: 'export import backup save' },
