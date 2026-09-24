@@ -1,17 +1,17 @@
 {
-  "/blog/blog-thumbnail.png": {
+  "/blog/blog-thumbnail.jpg": {
     "src": "/optimized/blog/blog-thumbnail-1536.webp",
     "srcset": "/optimized/blog/blog-thumbnail-96.webp 96w, /optimized/blog/blog-thumbnail-480.webp 480w, /optimized/blog/blog-thumbnail-960.webp 960w, /optimized/blog/blog-thumbnail-1536.webp 1536w",
     "width": 1536,
     "height": 1024
   },
-  "/blog/dev-log-2026-5-29.png": {
+  "/blog/dev-log-2026-5-29.jpg": {
     "src": "/optimized/blog/dev-log-2026-5-29-1536.webp",
     "srcset": "/optimized/blog/dev-log-2026-5-29-96.webp 96w, /optimized/blog/dev-log-2026-5-29-480.webp 480w, /optimized/blog/dev-log-2026-5-29-960.webp 960w, /optimized/blog/dev-log-2026-5-29-1536.webp 1536w",
     "width": 1536,
     "height": 1024
   },
-  "/blog/dev-log-2026-7-3.png": {
+  "/blog/dev-log-2026-7-3.jpg": {
     "src": "/optimized/blog/dev-log-2026-7-3-1536.webp",
     "srcset": "/optimized/blog/dev-log-2026-7-3-96.webp 96w, /optimized/blog/dev-log-2026-7-3-480.webp 480w, /optimized/blog/dev-log-2026-7-3-960.webp 960w, /optimized/blog/dev-log-2026-7-3-1536.webp 1536w",
     "width": 1536,
@@ -81,42 +81,6 @@
     "width": 861,
     "height": 557
   },
-  "/landing-page/hero-character-1.webp": {
-    "src": "/landing-page/hero-character-1.webp",
-    "srcset": "/optimized/landing-page/hero-character-1-640.webp 640w, /landing-page/hero-character-1.webp 1151w",
-    "width": 1151,
-    "height": 1488
-  },
-  "/landing-page/hero-character-2.webp": {
-    "src": "/landing-page/hero-character-2.webp",
-    "srcset": "/optimized/landing-page/hero-character-2-640.webp 640w, /landing-page/hero-character-2.webp 1055w",
-    "width": 1055,
-    "height": 1536
-  },
-  "/landing-page/hero-character-3.webp": {
-    "src": "/landing-page/hero-character-3.webp",
-    "srcset": "/optimized/landing-page/hero-character-3-640.webp 640w, /landing-page/hero-character-3.webp 1037w",
-    "width": 1037,
-    "height": 1536
-  },
-  "/marketing/ar-dark.webp": {
-    "src": "/marketing/ar-dark.webp",
-    "srcset": "/optimized/marketing/ar-dark-768.webp 768w, /optimized/marketing/ar-dark-1156.webp 1156w",
-    "width": 1156,
-    "height": 867
-  },
-  "/marketing/ar-light.webp": {
-    "src": "/marketing/ar-light.webp",
-    "srcset": "/optimized/marketing/ar-light-768.webp 768w, /optimized/marketing/ar-light-1156.webp 1156w",
-    "width": 1156,
-    "height": 867
-  },
-  "/marketing/companion-dark.webp": {
-    "src": "/marketing/companion-dark.webp",
-    "srcset": "/optimized/marketing/companion-dark-768.webp 768w, /optimized/marketing/companion-dark-1440.webp 1440w, /marketing/companion-dark.webp 2880w",
-    "width": 2880,
-    "height": 1800
-  },
   "/marketing/companion-light.webp": {
     "src": "/marketing/companion-light.webp",
     "srcset": "/optimized/marketing/companion-light-768.webp 768w, /optimized/marketing/companion-light-1440.webp 1440w, /marketing/companion-light.webp 2880w",
@@ -128,29 +92,5 @@
     "srcset": "/optimized/marketing/desktop-app-767.webp 767w, /optimized/marketing/desktop-app-1440.webp 1440w, /marketing/desktop-app.webp 1829w",
     "width": 1829,
     "height": 1168
-  },
-  "/marketing/memory-dark.webp": {
-    "src": "/marketing/memory-dark.webp",
-    "srcset": "/optimized/marketing/memory-dark-768.webp 768w, /optimized/marketing/memory-dark-1440.webp 1440w, /marketing/memory-dark.webp 2880w",
-    "width": 2880,
-    "height": 1800
-  },
-  "/marketing/memory-light.webp": {
-    "src": "/marketing/memory-light.webp",
-    "srcset": "/optimized/marketing/memory-light-768.webp 768w, /optimized/marketing/memory-light-1440.webp 1440w, /marketing/memory-light.webp 2880w",
-    "width": 2880,
-    "height": 1800
-  },
-  "/marketing/settings-dark.webp": {
-    "src": "/marketing/settings-dark.webp",
-    "srcset": "/optimized/marketing/settings-dark-768.webp 768w, /optimized/marketing/settings-dark-1440.webp 1440w, /marketing/settings-dark.webp 2880w",
-    "width": 2880,
-    "height": 1800
-  },
-  "/marketing/settings-light.webp": {
-    "src": "/marketing/settings-light.webp",
-    "srcset": "/optimized/marketing/settings-light-768.webp 768w, /optimized/marketing/settings-light-1440.webp 1440w, /marketing/settings-light.webp 2880w",
-    "width": 2880,
-    "height": 1800
   }
 }

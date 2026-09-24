@@ -65,6 +65,15 @@ LLM, TTS, and STT providers follow an established pattern. If you're adding or e
 - Web builds route cloud calls through the SvelteKit server routes; desktop and local providers call directly. Your change usually needs both paths, and they must behave identically (including auth headers when there is no API key).
 - Fixed cloud providers always use their official endpoint. User-supplied base URLs are for local and custom providers only.
 
+## Adding Strings (Translations)
+
+Utsuwa uses [Paraglide JS](https://paraglidejs.com) for translations. Only the landing page is localized so far (English at `/`, Japanese at `/ja`); the app, docs, and blog are still English-only.
+
+- Messages live in `messages/en.json` (the source of truth) and `messages/ja.json`. Add every new key to both files; a missing or renamed key fails `pnpm check`.
+- Use them in components as `m.key_name()` from `$lib/paraglide/messages`, with named parameters like `m.stories_show({ title })`.
+- The code in `src/lib/paraglide/` is generated and ignored by git. `pnpm check` and `pnpm build` regenerate it, and `pnpm dev` compiles it on startup. A running dev server may not notice message edits, so run `pnpm check` (or restart the server) after changing them.
+- Which URLs get a locale prefix is set in `project.inlang/paraglide.config.js`. Both the Vite plugin and `pnpm check` read it, so change routing there rather than in `vite.config.ts`.
+
 ## Scope and Content Decisions
 
 Some changes are product decisions, not code decisions: anything that changes what Utsuwa ships in its prompts, how the project positions itself, or what the hosted deployment transmits. Open an issue to discuss before writing code, it saves everyone time.

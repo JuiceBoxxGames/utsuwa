@@ -1,4 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { readFileSync } from 'fs';
@@ -6,7 +7,12 @@ import { readFileSync } from 'fs';
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
-	plugins: [sveltekit(), tailwindcss()],
+	plugins: [
+		sveltekit(),
+		tailwindcss(),
+		// Routing lives in project.inlang/paraglide.config.js
+		paraglideVitePlugin({ project: './project.inlang', outdir: './src/lib/paraglide' })
+	],
 	define: {
 		'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
 		// True only when the frontend is built by the Tauri CLI (which sets

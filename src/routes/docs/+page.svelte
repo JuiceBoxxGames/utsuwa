@@ -2,7 +2,7 @@
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import DocsSearch from '$lib/components/docs/DocsSearch.svelte';
 	import DocsGetStartedCards from '$lib/components/docs/DocsGetStartedCards.svelte';
-	import { DOCS_URL } from '$lib/config/site';
+	import { DOCS_URL, SITE_URL } from '$lib/config/site';
 	import { localPath } from '$lib/config/links';
 	import type { PageData } from './$types';
 
@@ -19,6 +19,11 @@
 	<meta property="og:title" content="Utsuwa Documentation" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content={DOCS_URL} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
 </svelte:head>
 
 <div class="docs-home" data-pagefind-ignore>

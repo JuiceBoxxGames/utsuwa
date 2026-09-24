@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageLoad, EntryGenerator } from './$types';
+import { getSortedPosts } from '$lib/utils/blog-posts';
 
 const modules = import.meta.glob('/src/content/blog/*.md');
 
@@ -27,6 +28,9 @@ export const load: PageLoad = async ({ params }) => {
 	return {
 		content: module.default,
 		metadata: module.metadata,
-		slug: params.slug
+		slug: params.slug,
+		more: getSortedPosts()
+			.filter((post) => post.slug !== params.slug)
+			.slice(0, 3)
 	};
 };

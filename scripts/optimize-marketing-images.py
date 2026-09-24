@@ -10,7 +10,6 @@ static = root / 'static'
 sources = [
     *static.joinpath('blog').glob('*'),
     *static.joinpath('marketing').glob('*.webp'),
-    *static.joinpath('landing-page').glob('hero-character-*.webp'),
 ]
 manifest = {}
 
@@ -23,7 +22,6 @@ for source in sorted(sources):
         destination = static / 'optimized' / group
         destination.mkdir(parents=True, exist_ok=True)
         widths = {
-            'landing-page': [640],
             'marketing': [768, 1440],
             'blog': [96, 480, 960, 1920],
         }[group]
@@ -45,7 +43,7 @@ for source in sorted(sources):
             'height': original.height,
         }
         # The existing WebP originals retain detail on large, dense displays.
-        if group in ('marketing', 'landing-page'):
+        if group == 'marketing':
             entry['src'] = url
             if original.width > variants[-1][0]:
                 entry['srcset'] += f', {url} {original.width}w'
