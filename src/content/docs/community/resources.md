@@ -1,11 +1,11 @@
 ---
 title: Resources
-description: Tools and marketplaces to enhance your Utsuwa experience.
+description: Tools and marketplaces for making or finding VRM avatars.
 ---
 
 # Resources
 
-A collection of tools and marketplaces that pair well with Utsuwa. Whether you want to create your own avatar from scratch or find the perfect accessories, these resources have you covered.
+Tools and marketplaces that pair well with Utsuwa, for building your own avatar or finding one ready to use.
 
 ---
 
@@ -13,17 +13,13 @@ A collection of tools and marketplaces that pair well with Utsuwa. Whether you w
 
 [![VRoid Studio interface](https://vroid.com/_next/static/images/ui-en-440896a487deee363c9dc61d01a14f37.jpg)](https://vroid.com/en/studio)
 
-[VRoid Studio](https://vroid.com/en/studio) is a free 3D character creation tool by Pixiv. It makes building custom VRM avatars as intuitive as drawing — no 3D modeling experience required.
+[VRoid Studio](https://vroid.com/en/studio) is a free 3D character maker from Pixiv. You shape hair, face, and clothing by drawing, with no 3D modeling experience needed.
 
-**Why it's useful:**
+- Build a custom VRM model from scratch
+- Export straight to `.vrm`, ready to load into Utsuwa
+- Free to use
 
-- Create fully custom VRM models from scratch
-- Intuitive drawing-based workflow for hair, face, and clothing
-- Export directly to `.vrm` format, ready to load into Utsuwa
-- Available on Windows, macOS, and iPad
-- Completely free to use
-
-VRoid Studio is the easiest way to go from zero to a personalized avatar. Design your character, export the VRM file, and drop it into Utsuwa.
+Design your character, export the VRM file, and load it in Utsuwa.
 
 [Get VRoid Studio &rarr;](https://vroid.com/en/studio)
 
@@ -33,15 +29,12 @@ VRoid Studio is the easiest way to go from zero to a personalized avatar. Design
 
 [![BOOTH marketplace](https://cdn-1.webcatalog.io/catalog/booth-pm/booth-pm-social-preview.png?v=1714781303794)](https://booth.pm/)
 
-[BOOTH](https://booth.pm/) is a Japanese indie marketplace run by Pixiv, popular in the VRM and VTuber community. It's the go-to place for avatar assets.
+[BOOTH](https://booth.pm/) is a Japanese creator marketplace run by Pixiv and popular with the VRM and VTuber community.
 
-**What you can find:**
+- Complete VRM models
+- Outfits, hairstyles, and accessories for VRoid models
+- Free and paid items from independent creators
 
-- Complete VRM avatar models ready to use
-- Clothing, hairstyles, and accessories for VRoid-based models
-- Props, textures, and custom items
-- Both free and paid items from independent creators
-
-Many creators sell VRoid-compatible outfits and accessories on BOOTH that you can import into VRoid Studio, customize, and then export as a VRM for use in Utsuwa.
+Many VRoid outfits on BOOTH can be imported into VRoid Studio, adjusted, and exported as a VRM for Utsuwa.
 
 [Browse BOOTH &rarr;](https://booth.pm/)

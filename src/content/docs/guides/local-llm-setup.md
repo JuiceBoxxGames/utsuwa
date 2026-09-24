@@ -145,12 +145,18 @@ Start with **Llama 3.2 (3B)** if you're unsure. It runs well on most hardware an
 
 ## Custom Base URL
 
-If you're running the LLM server on a different machine or non-default port, enter the full URL in the provider settings. For example:
+If you're running the LLM server on a different machine or non-default port, enter the full URL in the **Base URL** field. For example:
 
-- Remote machine: `http://192.168.1.50:11434`
+- Remote machine: `http://192.168.1.50:11434` (desktop app only, see below)
 - Custom port: `http://localhost:8080`
 
-For Ollama, either `http://localhost:11434` or `http://localhost:11434/v1` works. Utsuwa uses `/api/tags` for model discovery and `/v1/chat/completions` for chat.
+For Ollama, either `http://localhost:11434` or `http://localhost:11434/v1` works. Utsuwa uses `/api/tags` for model discovery and `/v1/chat/completions` for chat. For LM Studio, Utsuwa adds `/v1` if you leave it off.
+
+Ollama and LM Studio are always called straight from your browser or the desktop app, never through a server. On the hosted website that means a server on another machine over plain `http://` is blocked as mixed content; only `localhost` and `127.0.0.1` work there. The desktop app has no such limit.
+
+### Other OpenAI-compatible servers
+
+For servers like vLLM or llama.cpp's server, pick **OpenAI-Compatible** as the provider and enter its base URL. Utsuwa adds `/v1` if it is missing. The desktop app calls it directly. The web app sends this provider through its own server, which refuses private addresses (`localhost`, `192.168.x.x`, and similar) unless the operator sets `ALLOW_LOCAL_PROVIDER_HOSTS=true`; without it you see "Provider URL host is not allowed". That only matters if you self-host Utsuwa; on the hosted site, use a public URL or the desktop app.
 
 ## Troubleshooting
 
@@ -162,6 +168,10 @@ The LLM server may not be running, or it may not be allowing Utsuwa's origin. St
 - LM Studio: Go to the Server tab and click Start Server
 
 If the server is running but the list is still empty, it's almost always an origin problem. Ollama's log will show `403` on `/api/tags`. Allow Utsuwa's origin as described in [Allowing Utsuwa to reach Ollama](#allowing-utsuwa-to-reach-ollama): on the **Windows or Linux desktop app** that means `OLLAMA_ORIGINS=http://tauri.localhost`; on the **hosted website** it's `OLLAMA_ORIGINS=https://app.utsuwa.ai`. The macOS desktop app needs nothing. Restart Ollama after changing it, then click the refresh icon in Utsuwa's model dropdown.
+
+### "Could not reach Ollama at ..." or "Could not reach LM Studio at ..."
+
+Utsuwa shows this when a chat request can't connect at all. The server isn't running, the port is wrong, or the origin isn't allowed. The message includes the URL it tried. For Ollama it also suggests the exact `OLLAMA_ORIGINS` value for the page you're on.
 
 ### "model not found"
 

@@ -43,7 +43,7 @@ A short list, learned from real PRs. Following it is the difference between one 
 
 **No fork-local configuration upstream.** Personal ignore rules, editor and tool files, and fork housekeeping belong in your fork (or `.git/info/exclude`), not in upstream `.gitignore`.
 
-**Both provider surfaces, or neither.** Provider configuration currently renders in two places: onboarding (`ServicesStep`) and settings (`AiServicesSection`). Until they share components, a provider UI change should keep the two consistent. Say so in the PR if you deliberately did only one.
+**Both provider surfaces, or neither.** Provider configuration currently renders in two places: onboarding (`ServicesStep`) and settings (`LlmSettings`, `TtsSettings`, `SttSettings`). Until they share components, a provider UI change should keep the two consistent. Say so in the PR if you deliberately did only one.
 
 **Match the code around you.** TypeScript everywhere, Svelte 5 runes (`$state`, `$derived`, `$effect`), design tokens instead of hardcoded colors (`var(--accent)`, not hex), and minimal comments that explain why, not what.
 
