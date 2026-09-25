@@ -1,10 +1,12 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import type { VRM } from '@pixiv/three-vrm';
 import localforage from 'localforage';
 import { isTauri } from '$lib/services/platform/platform';
 import { createTempVrmStoreIntegration } from '$lib/utils/temp-vrm-store';
 import type { TouchZone } from '$lib/engine/photo-reactions';
 import { animationLibraryStore } from './animation-library.svelte';
+import { isQuotaError, STORAGE_FULL_MESSAGE } from '$lib/services/storage/quota';
 import type { Emotion } from '$lib/types/character';
 
 export interface VrmModel {
@@ -50,10 +52,7 @@ const PREVIEW_KEY_PREFIX = 'model-preview-v2-';
 
 // Configure localforage for VRM storage
 const vrmStorage = browser
-	? localforage.createInstance({
-			name: 'utsuwa-vrm',
-			storeName: 'models'
-		})
+	? localforage.createInstance({ ...STORAGE_INVENTORY.localforage.vrm })
 	: null;
 
 function createVrmStore() {
@@ -154,6 +153,7 @@ function createVrmStore() {
 
 	// Guard against saveToStorage running before init completes
 	let storageReady = false;
+	let saveBlockedDuringInit = false;
 	// Lets consumers wait for init so they don't act on pre-restore state
 	let readyResolve: (() => void) | null = null;
 	const ready = new Promise<void>((resolve) => {
@@ -252,11 +252,13 @@ function createVrmStore() {
 		}
 		storageReady = true;
 		readyResolve?.();
-		// Flush any saves that were blocked during init
-		await saveToStorage();
+		// Flush any saves that were blocked during init. Skipped otherwise so a
+		// fresh or just-cleared device doesn't write defaults on every boot.
+		if (saveBlockedDuringInit) await saveToStorage();
 	}
 
 	async function saveToStorage() {
+		if (!storageReady) saveBlockedDuringInit = true;
 		if (!vrmStorage || !storageReady || !tempVrm.canSave(tempState)) return;
 		try {
 			// Save custom models (not defaults) — strip blob URLs since they're ephemeral
@@ -432,7 +434,11 @@ function createVrmStore() {
 
 		// Store the file blob
 		const blob = new Blob([await file.arrayBuffer()], { type: 'model/vrm' });
-		await vrmStorage?.setItem(`model-blob-${id}`, blob);
+		try {
+			await vrmStorage?.setItem(`model-blob-${id}`, blob);
+		} catch (e) {
+			throw isQuotaError(e) ? new Error(STORAGE_FULL_MESSAGE, { cause: e }) : e;
+		}
 
 		// Create blob URL for immediate use
 		const url = URL.createObjectURL(blob);

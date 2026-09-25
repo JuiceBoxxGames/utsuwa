@@ -1,6 +1,8 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
+import { isQuotaError, STORAGE_FULL_MESSAGE } from '$lib/services/storage/quota';
 
-const PRIVACY_ACK_KEY = 'utsuwa-image-privacy-ack';
+const PRIVACY_ACK_KEY = STORAGE_INVENTORY.localStorage.imagePrivacyAck;
 
 /**
  * Transient chat toasts (image hints, TTS errors) plus the one-time photo
@@ -16,6 +18,13 @@ function createChatHintStore() {
 		hint = message;
 		if (hintTimer) clearTimeout(hintTimer);
 		hintTimer = setTimeout(() => (hint = null), 6000);
+	}
+
+	/** Raises the storage-full hint for quota errors; false for anything else. */
+	function reportStorageError(e: unknown): boolean {
+		if (!isQuotaError(e)) return false;
+		showHint(STORAGE_FULL_MESSAGE);
+		return true;
 	}
 
 	/** Shown once, the first time a photo is attached, then remembered. */
@@ -41,6 +50,7 @@ function createChatHintStore() {
 			return showPrivacy;
 		},
 		showHint,
+		reportStorageError,
 		requestPrivacyNotice,
 		ackPrivacy,
 		destroy

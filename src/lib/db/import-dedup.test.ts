@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { partitionNewRecords, factKey, sessionKey, turnKey, eventKey } from './import-dedup.ts';
+import {
+	partitionNewRecords,
+	factKey,
+	sessionKey,
+	turnKey,
+	eventKey,
+	importSessions,
+	remapSessionIds
+} from './import-dedup.ts';
 
 // --- key functions ---
 
@@ -75,4 +83,42 @@ test('mixed present-and-new: only the new records are added', () => {
 		['new']
 	);
 	assert.equal(skipped, 1);
+});
+
+// --- session id mapping ---
+
+test('importSessions maps exported session ids to the ids the database assigns', async () => {
+	let next = 40;
+	const added: unknown[] = [];
+	const result = await importSessions(
+		[
+			{ id: 1, startedAt: '2026-07-01T00:00:00Z' },
+			{ id: 2, startedAt: '2026-07-02T00:00:00Z' },
+			{ id: 3, startedAt: '2026-07-01T00:00:00Z' }
+		],
+		[{ id: 9, startedAt: new Date('2026-07-02T00:00:00Z') }],
+		async (record) => {
+			added.push(record);
+			return next++;
+		}
+	);
+	assert.deepEqual([...result.idMap], [[1, 40], [2, 9], [3, 40]]);
+	assert.equal(result.added, 1);
+	assert.equal(result.skipped, 2);
+	assert.deepEqual(added, [{ startedAt: '2026-07-01T00:00:00Z' }], 'the old id is never written');
+});
+
+test('remapSessionIds points turns at the new sessions and drops unknown ids', () => {
+	const turns = [{ sessionId: 1 }, { sessionId: 2 }, { sessionId: 77 }, {}];
+	assert.deepEqual(remapSessionIds(turns, new Map([[1, 40], [2, 9]])), [
+		{ sessionId: 40 },
+		{ sessionId: 9 },
+		{ sessionId: undefined },
+		{}
+	]);
+});
+
+test('remapSessionIds leaves older saves without session ids alone', () => {
+	const turns = [{ sessionId: 3 }];
+	assert.equal(remapSessionIds(turns, new Map()), turns);
 });

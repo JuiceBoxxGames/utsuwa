@@ -1,7 +1,8 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import type { ModuleDefinition, ModuleState, ModuleMetadata, ModuleWithState } from '$lib/types/module';
 
-const STORAGE_PREFIX = 'utsuwa-module-';
+const STORAGE_PREFIX = STORAGE_INVENTORY.localStorageModulePrefix;
 
 function createModulesStore() {
 	let registry = $state<Map<string, ModuleDefinition>>(new Map());

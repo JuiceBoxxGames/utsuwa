@@ -9,12 +9,14 @@ import {
 	MOOD_INFO
 } from '$lib/types/character';
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import {
 	getCharacterState,
 	saveCharacterState,
 	deleteCharacterState
 } from '$lib/services/storage/character';
 import { statChangesStore } from './statChanges.svelte';
+import { chatHintStore } from './chat-hint.svelte';
 import { resolveTimeDecayOnLoad } from '$lib/engine/state-updates';
 import { reconcileLegacyMarkers } from '$lib/engine/event-completion';
 import { calculateStage, STAGE_ORDER } from '$lib/engine/stages';
@@ -38,6 +40,11 @@ let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let syncChannel: BroadcastChannel | null = null;
 // Prevents a sync-triggered rehydrate from broadcasting back and ping-ponging
 let isSyncing = false;
+// Set while Clear All Data runs in any window; nothing may write after it
+let savesHalted = false;
+
+export const STORAGE_CLEARING = 'storage-clearing';
+export const STORAGE_CLEARED = 'storage-cleared';
 
 // Create the store object
 function createCharacterStore() {
@@ -90,7 +97,7 @@ function createCharacterStore() {
 				needsSave = true;
 			}
 
-			if (needsSave) {
+			if (needsSave && !savesHalted) {
 				// Save the patched state (use $state.snapshot to strip Proxy)
 				const plainState = $state.snapshot(state);
 				await saveCharacterState({ ...plainState, updatedAt: new Date() });
@@ -108,7 +115,7 @@ function createCharacterStore() {
 
 	// Save state to IndexedDB (debounced)
 	async function save(immediate = false): Promise<void> {
-		if (!browser) return;
+		if (!browser || savesHalted) return;
 
 		// Clear existing timeout
 		if (saveTimeout) {
@@ -126,7 +133,7 @@ function createCharacterStore() {
 				});
 				notifyOtherWindows();
 			} catch (e) {
-				console.error('Failed to save character state:', e);
+				if (!chatHintStore.reportStorageError(e)) console.error('Failed to save character state:', e);
 			}
 		};
 
@@ -367,6 +374,14 @@ function createCharacterStore() {
 		}
 	}
 
+	function haltSaves(): void {
+		savesHalted = true;
+		if (saveTimeout) {
+			clearTimeout(saveTimeout);
+			saveTimeout = null;
+		}
+	}
+
 	// Mark onboarding as complete (prevents re-showing on refresh)
 	function markOnboardingComplete(): Promise<void> {
 		state = {
@@ -395,8 +410,11 @@ function createCharacterStore() {
 		// Listen before the initial load so a boot-time patch save in another
 		// window is never missed.
 		if (typeof BroadcastChannel !== 'undefined') {
-			syncChannel = new BroadcastChannel('utsuwa-character-state');
-			syncChannel.onmessage = async () => {
+			syncChannel = new BroadcastChannel(STORAGE_INVENTORY.broadcast.character);
+			syncChannel.onmessage = async (event) => {
+				if (event.data === STORAGE_CLEARING) return haltSaves();
+				if (event.data === STORAGE_CLEARED) return window.location.reload();
+				if (savesHalted) return;
 				// Still booting: loadState is about to read fresh data anyway
 				if (isLoading) return;
 				// Flush a pending local save first so its changes go through the
@@ -413,7 +431,7 @@ function createCharacterStore() {
 		// Flush pending saves before the page unloads to prevent data loss.
 		// IndexedDB transactions started in beforeunload typically complete before teardown.
 		window.addEventListener('beforeunload', () => {
-			if (saveTimeout) {
+			if (saveTimeout && !savesHalted) {
 				clearTimeout(saveTimeout);
 				saveTimeout = null;
 				const plainState = $state.snapshot(state);
@@ -472,7 +490,8 @@ function createCharacterStore() {
 		updateStreak,
 		updateDaysKnown,
 		markOnboardingComplete,
-		resetState
+		resetState,
+		haltSaves
 	};
 }
 

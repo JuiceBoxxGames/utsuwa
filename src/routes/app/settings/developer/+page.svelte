@@ -7,6 +7,7 @@
 	import { Icon } from '$lib/components/ui';
 	import * as THREE from 'three';
 	import localforage from 'localforage';
+	import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 	import { debugEventsStore, testEvents } from '$lib/stores/debugEvents.svelte';
 	import { goto } from '$app/navigation';
 	import { localPath } from '$lib/config/links';
@@ -256,10 +257,7 @@
 	async function clearVrmStorage() {
 		clearingStorage = true;
 		try {
-			const vrmStorage = localforage.createInstance({
-				name: 'utsuwa-vrm',
-				storeName: 'models'
-			});
+			const vrmStorage = localforage.createInstance({ ...STORAGE_INVENTORY.localforage.vrm });
 			await vrmStorage.clear();
 			// Reload to reset state
 			window.location.reload();
@@ -279,7 +277,7 @@
 	// Clear all character data
 	async function clearCharacterData() {
 		try {
-			indexedDB.deleteDatabase('utsuwa-db');
+			indexedDB.deleteDatabase(STORAGE_INVENTORY.indexedDb);
 			window.location.reload();
 		} catch (e) {
 			console.error('Failed to clear character data:', e);

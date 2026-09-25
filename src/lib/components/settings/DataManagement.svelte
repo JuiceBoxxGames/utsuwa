@@ -135,12 +135,8 @@
 
 		isClearing = true;
 		try {
+			// Reloads the page when it finishes
 			await clearAllData();
-			showClearConfirm = false;
-			// Refresh to reset stores
-			setTimeout(() => {
-				window.location.reload();
-			}, 500);
 		} catch (e) {
 			console.error('Clear failed:', e);
 		} finally {
@@ -275,12 +271,12 @@
 		</SettingsSection>
 
 		<!-- Clear Data -->
-		<SettingsSection title="Clear All Data" description="Permanently delete all saved data. This cannot be undone. Consider exporting first.">
+		<SettingsSection title="Clear All Data" description="Permanently delete everything Utsuwa stores on this device: saves, memories, conversations, reminders, photos, custom models and animations, backgrounds, provider keys, MCP servers, and settings. This cannot be undone. An export only holds your save, memories, and conversations.">
 
 			{#if showClearConfirm}
 				<div class="confirm-message" transition:pop={{ duration: 200, y: 6 }}>
 					<Icon name="warning" size={16} />
-					Are you sure? This will delete all your data permanently.
+					Are you sure? Saves, memories, conversations, reminders, photos, custom models and animations, backgrounds, provider keys, MCP servers, and settings will all be deleted.
 				</div>
 				<div class="confirm-actions">
 					<Button variant="secondary" onclick={() => (showClearConfirm = false)}>

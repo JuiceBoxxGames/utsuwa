@@ -1,7 +1,17 @@
 import { db } from '$lib/db';
 import { saveToDownloads } from '$lib/utils/save-to-downloads';
-import { characterStore } from '$lib/stores/character.svelte';
-import { partitionNewRecords, factKey, sessionKey, turnKey, eventKey } from './import-dedup';
+import { characterStore, STORAGE_CLEARING, STORAGE_CLEARED } from '$lib/stores/character.svelte';
+import localforage from 'localforage';
+import {
+	partitionNewRecords,
+	factKey,
+	turnKey,
+	eventKey,
+	importSessions,
+	remapSessionIds
+} from './import-dedup';
+import { listClearTargets, STORAGE_INVENTORY } from './storage-inventory';
+import { clampCharacterStats } from '$lib/engine/state-updates';
 import type {
 	CharacterState,
 	MoodState,
@@ -72,10 +82,11 @@ export async function exportSave(): Promise<SaveFile> {
 	// way the file itself is serialised.
 	const characterState = characterStates[0] || JSON.parse(JSON.stringify(characterStore.state));
 
-	// Remove IndexedDB auto-increment ids and derived data (embeddings) from export
+	// Remove IndexedDB auto-increment ids and derived data (embeddings) from export.
+	// Session ids stay: turns reference them, and import remaps both together.
 	const { id: _charId, ...cleanCharacter } = characterState as CharacterState & { id?: number };
 	const cleanFacts = facts.map(({ id: _id, embedding: _embedding, ...rest }) => rest) as Fact[];
-	const cleanSessions = sessions.map(({ id: _id, ...rest }) => rest) as SessionSummary[];
+	const cleanSessions = sessions as SessionSummary[];
 	const cleanTurns = conversationTurns.map(({ id: _id, ...rest }) => rest) as ConversationTurn[];
 	const cleanEvents = completedEvents.map(
 		({ id: _id, ...rest }) => rest
@@ -126,6 +137,20 @@ export async function importSave(
 		skipped += dupes;
 	}
 
+	// Sessions land on fresh auto-increment ids (clear() doesn't reset the
+	// counter, and merge mode can't reuse ids anyway), so turns are remapped to
+	// the new ids instead of trying to preserve the old ones.
+	async function importSessionsAndTurns(
+		sessions: SessionSummary[],
+		turns: ConversationTurn[]
+	): Promise<void> {
+		const existing = mode === 'merge' ? await db.sessions.toArray() : [];
+		const result = await importSessions(sessions, existing, (s) => db.sessions.add(s) as Promise<number>);
+		imported += result.added;
+		skipped += result.skipped;
+		await importCollection(db.conversationTurns, remapSessionIds(turns, result.idMap), turnKey);
+	}
+
 	// Wrap the whole import in one transaction so a mid-import failure rolls back
 	// instead of leaving cleared tables with partially-written data.
 	await db.transaction(
@@ -147,14 +172,15 @@ export async function importSave(
 				// V2 format - single character
 				const v2File = saveFile as SaveFile;
 
+				const { id: _id, ...character } = clampCharacterStats(v2File.data.character);
 				if (mode === 'replace') {
-					await db.characterStates.add(v2File.data.character);
+					await db.characterStates.add(character);
 					imported++;
 				} else {
 					// Merge mode - skip character if one exists
 					const existing = await db.characterStates.toCollection().first();
 					if (!existing) {
-						await db.characterStates.add(v2File.data.character);
+						await db.characterStates.add(character);
 						imported++;
 					} else {
 						skipped++;
@@ -162,8 +188,7 @@ export async function importSave(
 				}
 
 				await importCollection(db.facts, v2File.data.facts, factKey);
-				await importCollection(db.sessions, v2File.data.sessions, sessionKey);
-				await importCollection(db.conversationTurns, v2File.data.conversationTurns, turnKey);
+				await importSessionsAndTurns(v2File.data.sessions, v2File.data.conversationTurns);
 				await importCollection(db.completedEvents, v2File.data.completedEvents, eventKey);
 			} else {
 				// V1 format - migrate to single character
@@ -219,7 +244,7 @@ export async function importSave(
 					createdAt: (firstCharState?.createdAt as Date) || new Date(),
 					updatedAt: new Date()
 				};
-				await db.characterStates.add(mergedState);
+				await db.characterStates.add(clampCharacterStats(mergedState as CharacterState));
 				imported++;
 			} else {
 				skipped++;
@@ -228,15 +253,9 @@ export async function importSave(
 
 				// Import facts/sessions/turns/events (cast from legacy format)
 				await importCollection(db.facts, v1File.data.facts as unknown as Fact[], factKey);
-				await importCollection(
-					db.sessions,
+				await importSessionsAndTurns(
 					v1File.data.sessions as unknown as SessionSummary[],
-					sessionKey
-				);
-				await importCollection(
-					db.conversationTurns,
-					v1File.data.conversationTurns as unknown as ConversationTurn[],
-					turnKey
+					v1File.data.conversationTurns as unknown as ConversationTurn[]
 				);
 				await importCollection(
 					db.completedEvents,
@@ -325,11 +344,21 @@ export async function downloadSaveFile(
 }
 
 export async function clearAllData(): Promise<void> {
-	await Promise.all([
-		db.characterStates.clear(),
-		db.facts.clear(),
-		db.sessions.clear(),
-		db.conversationTurns.clear(),
-		db.completedEvents.clear()
-	]);
+	// Other windows (the desktop overlay, extra tabs) stop saving first so they
+	// can't write their in-memory state back over the wipe, then reload after it.
+	const channel =
+		typeof BroadcastChannel !== 'undefined'
+			? new BroadcastChannel(STORAGE_INVENTORY.broadcast.character)
+			: null;
+	characterStore.haltSaves();
+	channel?.postMessage(STORAGE_CLEARING);
+
+	const targets = listClearTargets(Object.keys(localStorage));
+	await db.transaction('rw', db.tables, () => Promise.all(db.tables.map((t) => t.clear())));
+	await Promise.all(targets.localforage.map((store) => localforage.createInstance(store).clear()));
+	for (const key of targets.localStorage) localStorage.removeItem(key);
+
+	channel?.postMessage(STORAGE_CLEARED);
+	channel?.close();
+	window.location.reload();
 }

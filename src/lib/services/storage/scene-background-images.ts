@@ -1,11 +1,13 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import localforage from 'localforage';
 import { computeScaledDimensions } from '$lib/services/chat/image-scaling';
+import { isQuotaError, STORAGE_FULL_MESSAGE } from './quota';
 
 // The user's own scene background. Stored locally only, like the VRM blobs in
 // stores/vrm.svelte.ts.
 const backgroundStorage = browser
-	? localforage.createInstance({ name: 'utsuwa-backgrounds', storeName: 'images' })
+	? localforage.createInstance({ ...STORAGE_INVENTORY.localforage.backgrounds })
 	: null;
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -65,7 +67,11 @@ export async function saveBackgroundImage(file: File): Promise<string> {
 	// ponytail: single slot, a new upload wipes the old one. A gallery of
 	// saved backgrounds is the upgrade path if people ask for it.
 	await backgroundStorage.clear();
-	await backgroundStorage.setItem(`bg-${id}`, blob);
+	try {
+		await backgroundStorage.setItem(`bg-${id}`, blob);
+	} catch (e) {
+		throw isQuotaError(e) ? new Error(STORAGE_FULL_MESSAGE, { cause: e }) : e;
+	}
 	return id;
 }
 

@@ -272,7 +272,8 @@ function convertLLMOutput(output: LLMStateOutput): Partial<StateUpdates> {
 
 	// Pass through memory and event suggestions
 	if (output.new_memory && typeof output.new_memory === 'string') {
-		updates.newMemory = output.new_memory.trim();
+		const memory = sanitizeMemoryText(output.new_memory);
+		if (memory) updates.newMemory = memory;
 	}
 
 	if (output.triggered_event && typeof output.triggered_event === 'string') {
@@ -288,6 +289,18 @@ function convertLLMOutput(output: LLMStateOutput): Partial<StateUpdates> {
 	}
 
 	return updates;
+}
+
+export const MAX_MEMORY_LENGTH = 240;
+
+// Memories land verbatim in the system prompt's <memory> block, so a reply (or a
+// tool result it echoed) must not be able to write tags or a wall of text there.
+export function stripAngleBrackets(text: string): string {
+	return text.replace(/[<>]/g, '');
+}
+
+export function sanitizeMemoryText(text: string): string {
+	return stripAngleBrackets(text).replace(/\s+/g, ' ').trim().slice(0, MAX_MEMORY_LENGTH).trim();
 }
 
 // Clamp a delta value
@@ -425,7 +438,8 @@ export function validateStateUpdates(updates: Partial<StateUpdates>): {
 
 	// Pass through strings
 	if (updates.newMemory) {
-		sanitized.newMemory = updates.newMemory;
+		const memory = sanitizeMemoryText(updates.newMemory);
+		if (memory) sanitized.newMemory = memory;
 	}
 
 	if (updates.triggeredEvent) {

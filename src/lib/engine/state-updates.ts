@@ -6,6 +6,38 @@ function clamp(value: number, min: number, max: number): number {
 	return Math.max(min, Math.min(max, value));
 }
 
+function clampNumber(value: unknown, min: number, max: number, fallback = min): number {
+	return typeof value === 'number' && Number.isFinite(value) ? clamp(value, min, max) : fallback;
+}
+
+function clampCount(value: unknown): number {
+	return Math.floor(clampNumber(value, 0, Number.MAX_SAFE_INTEGER));
+}
+
+// Save files are user-editable JSON; pull every stat back into the range the
+// engine assumes before it lands in IndexedDB.
+export function clampCharacterStats<T extends CharacterState>(state: T): T {
+	const personality: Record<string, unknown> = { ...state.personality };
+	for (const [key, value] of Object.entries(personality)) {
+		if (key !== 'romanticStyle') personality[key] = clampNumber(value, -100, 100, 0);
+	}
+	return {
+		...state,
+		energy: clampNumber(state.energy, 0, 100, 100),
+		affection: clampNumber(state.affection, 0, 1000),
+		trust: clampNumber(state.trust, 0, 100),
+		intimacy: clampNumber(state.intimacy, 0, 100),
+		comfort: clampNumber(state.comfort, 0, 100),
+		respect: clampNumber(state.respect, 0, 100),
+		mood: { ...state.mood, intensity: clampNumber(state.mood?.intensity, 0, 100, 50) },
+		personality: personality as unknown as CharacterState['personality'],
+		daysKnown: clampCount(state.daysKnown),
+		totalInteractions: clampCount(state.totalInteractions),
+		currentStreak: clampCount(state.currentStreak),
+		longestStreak: clampCount(state.longestStreak)
+	};
+}
+
 // Check and apply stage transition if needed. Promotion is immediate; demotion
 // is damped by the hysteresis band in resolveStageTransition and flagged as
 // `strained` so callers can acknowledge it in dialogue instead of letting the

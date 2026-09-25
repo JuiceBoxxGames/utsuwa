@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { STORAGE_INVENTORY } from './storage-inventory';
 import type { CharacterState } from '$lib/types/character';
 import type { Fact, SessionSummary, ConversationTurn, Reminder } from '$lib/types/memory';
 import type { CompletedEventRecord } from '$lib/types/events';
@@ -29,8 +30,8 @@ export interface DBReminder extends Omit<Reminder, 'id'> {
 }
 
 // Legacy persona storage keys (for migration)
-const LEGACY_PERSONA_CARDS_KEY = 'utsuwa-persona-cards';
-const LEGACY_PERSONA_ACTIVE_KEY = 'utsuwa-persona-active-id';
+const LEGACY_PERSONA_CARDS_KEY = STORAGE_INVENTORY.localStorage.legacyPersonaCards;
+const LEGACY_PERSONA_ACTIVE_KEY = STORAGE_INVENTORY.localStorage.legacyPersonaActiveId;
 
 class UtsuwaDatabase extends Dexie {
 	characterStates!: EntityTable<DBCharacterState, 'id'>;
@@ -41,7 +42,7 @@ class UtsuwaDatabase extends Dexie {
 	reminders!: EntityTable<DBReminder, 'id'>;
 
 	constructor() {
-		super('utsuwa-db');
+		super(STORAGE_INVENTORY.indexedDb);
 
 		// Version 1: Original multi-persona schema (legacy)
 		this.version(1).stores({
