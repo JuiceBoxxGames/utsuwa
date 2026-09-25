@@ -1,5 +1,4 @@
 import { browser } from '$app/environment';
-import { getXRSupportState, toggleXRSession } from '@threlte/xr';
 
 // WebXR immersive-ar is available on Android Chrome and headset browsers.
 // Desktop and iOS Safari report unsupported, so the AR button stays hidden there.
@@ -7,14 +6,18 @@ function createArStore() {
 	let supported = $state(false);
 	let active = $state(false);
 
+	// Native check instead of @threlte/xr's getXRSupportState (same logic): a static
+	// threlte import here would drag three.js into every page with the top bar.
 	if (browser) {
-		getXRSupportState('immersive-ar')
-			.then((state) => (supported = state === 'supported'))
+		navigator.xr
+			?.isSessionSupported('immersive-ar')
+			.then((ok) => (supported = ok))
 			.catch(() => (supported = false));
 	}
 
 	async function enter() {
 		try {
+			const { toggleXRSession } = await import('@threlte/xr');
 			await toggleXRSession(
 				'immersive-ar',
 				{
@@ -31,6 +34,7 @@ function createArStore() {
 
 	async function exit() {
 		try {
+			const { toggleXRSession } = await import('@threlte/xr');
 			await toggleXRSession('immersive-ar', undefined, 'exit');
 		} catch (e) {
 			console.error('Failed to end AR session:', e);
