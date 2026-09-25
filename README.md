@@ -387,7 +387,7 @@ Utsuwa is built on the shoulders of these excellent projects:
 - **[SvelteKit](https://github.com/sveltejs/kit)** - Web application framework
 - **[Tauri](https://github.com/tauri-apps/tauri)** - Desktop application framework
 - **[Tailwind CSS](https://github.com/tailwindlabs/tailwindcss)** - Utility-first CSS framework
-- **[Transformers.js](https://github.com/xenova/transformers.js)** - In-browser ML for semantic memory embeddings
+- **[Transformers.js](https://github.com/huggingface/transformers.js)** - In-browser ML for semantic memory embeddings
 
 ### UI & Data
 

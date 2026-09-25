@@ -1,12 +1,13 @@
 import { browser } from '$app/environment';
 import type { Fact } from '$lib/types/memory';
 import { EMBEDDING_MODEL_ID } from '$lib/engine/embedding-version';
+import type { FeatureExtractionPipeline } from '@huggingface/transformers';
 
 // Model config (single source of truth in engine/embedding-version.ts)
 const MODEL_NAME = EMBEDDING_MODEL_ID;
 
 // State
-let pipeline: unknown = null;
+let pipeline: FeatureExtractionPipeline | null = null;
 let isLoading = false;
 let isReady = false;
 let loadError: string | null = null;
@@ -53,16 +54,29 @@ export async function initEmbeddingModel(): Promise<boolean> {
 
 	try {
 		// Dynamic import to avoid SSR issues
-		const { pipeline: createPipeline, env } = await import('@xenova/transformers');
+		const { pipeline: createPipeline, env } = await import('@huggingface/transformers');
+		// The generic pipeline() return type is a union too big for tsc to resolve
+		const createFeatureExtractor = createPipeline as (
+			task: 'feature-extraction',
+			model: string,
+			options: { dtype: 'q8' }
+		) => Promise<FeatureExtractionPipeline>;
 
 		// Ensure models load from Hugging Face CDN, not local path
 		env.allowLocalModels = false;
+		// transformers points ORT at jsdelivr, which makes it import() its JS glue from
+		// there: a remote script the desktop CSP blocks. Unset, ORT uses the glue it
+		// bundles and the .wasm Vite emits next to it. The dev server has no emitted
+		// asset, so point it at the package files it already serves.
+		if (env.backends.onnx.wasm) {
+			env.backends.onnx.wasm.wasmPaths = import.meta.env.DEV
+				? '/node_modules/@huggingface/transformers/dist/'
+				: undefined;
+		}
 
-		pipeline = await createPipeline('feature-extraction', MODEL_NAME, {
-			progress_callback: (progress: { status: string }) => {
-				// Could emit progress events here if needed
-			}
-		});
+		// q8 is the quantized ONNX file @xenova/transformers loaded by default, so
+		// vectors already in the database stay comparable.
+		pipeline = await createFeatureExtractor('feature-extraction', MODEL_NAME, { dtype: 'q8' });
 
 		isReady = true;
 		isLoading = false;
@@ -83,8 +97,7 @@ export async function embedText(text: string): Promise<number[] | null> {
 	}
 
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const output = await (pipeline as any)(text, {
+		const output = await pipeline(text, {
 			pooling: 'mean',
 			normalize: true
 		});

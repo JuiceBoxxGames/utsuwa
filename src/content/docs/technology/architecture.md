@@ -189,7 +189,7 @@ The active provider is chosen automatically: a configured local server first, th
 - `src/lib/services/storage/memory.ts`: fact, session, and turn storage, including write-side dedup
 - `src/lib/types/memory.ts`: types and the context-window memory budget
 
-Embeddings come from `Xenova/paraphrase-multilingual-MiniLM-L12-v2` running in the browser through `@xenova/transformers`. Vectors have 384 dimensions. Retrieval scores up to 500 of the most important facts. See [Companion System](/docs/technology/companion-system#memory-system) and [Memory Graph](/docs/technology/memory-graph).
+Embeddings come from `Xenova/paraphrase-multilingual-MiniLM-L12-v2` running in the browser through `@huggingface/transformers`. Vectors have 384 dimensions. Retrieval scores up to 500 of the most important facts. See [Companion System](/docs/technology/companion-system#memory-system) and [Memory Graph](/docs/technology/memory-graph).
 
 ### State Management
 
