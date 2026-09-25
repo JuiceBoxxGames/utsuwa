@@ -1,12 +1,14 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import localforage from 'localforage';
 import { computeScaledDimensions } from '$lib/services/chat/image-scaling';
+import { chatHintStore } from '$lib/stores/chat-hint.svelte';
 
 // "Traces of life": the images you've shown her. Stored locally only. The blob
 // never leaves the device; only the single vision inference does. Mirrors the
 // VRM blob store in stores/vrm.svelte.ts.
 const keepsakeStorage = browser
-	? localforage.createInstance({ name: 'utsuwa-keepsakes', storeName: 'images' })
+	? localforage.createInstance({ ...STORAGE_INVENTORY.localforage.keepsakes })
 	: null;
 
 export interface PreparedImage {
@@ -141,8 +143,23 @@ async function makeThumbnail(blob: Blob, size = 220): Promise<string | undefined
 	}
 }
 
-/** Persist a shown image as a keepsake (blob + photo-memory record with thumbnail). */
+/**
+ * Persist a shown image as a keepsake (blob + photo-memory record with thumbnail).
+ * A full disk raises the storage hint instead of failing the chat turn.
+ */
 export async function keepImage(
+	id: string,
+	blob: Blob,
+	meta?: { mimeType?: string; note?: string; kind?: 'shown' | 'photo' }
+): Promise<void> {
+	try {
+		await writeKeepsake(id, blob, meta);
+	} catch (e) {
+		if (!chatHintStore.reportStorageError(e)) throw e;
+	}
+}
+
+async function writeKeepsake(
 	id: string,
 	blob: Blob,
 	meta?: { mimeType?: string; note?: string; kind?: 'shown' | 'photo' }

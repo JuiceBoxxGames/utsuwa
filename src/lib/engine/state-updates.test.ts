@@ -5,7 +5,8 @@ import {
 	applyTimeDecay,
 	mergeUpdates,
 	checkAndApplyStageTransition,
-	resolveTimeDecayOnLoad
+	resolveTimeDecayOnLoad,
+	clampCharacterStats
 } from './state-updates.ts';
 import { STAGE_ORDER } from './stages.ts';
 import type { CharacterState, StateUpdates } from '$lib/types/character';
@@ -343,4 +344,47 @@ test('trustLLMDeltas keeps baseline values for fields the LLM omitted', () => {
 test('mergeUpdates passes the action through', () => {
 	assert.equal(mergeUpdates({ affectionDelta: 1 }, { action: 'vrma_02' }).action, 'vrma_02');
 	assert.equal(mergeUpdates({}, {}).action, undefined);
+});
+
+test('clampCharacterStats pulls imported stats back into range', () => {
+	const wild = makeState({
+		energy: 500,
+		affection: -40,
+		trust: 1e9,
+		intimacy: Number.NaN,
+		comfort: -1,
+		respect: 101,
+		mood: { primary: 'happy', intensity: 250, causes: [] },
+		daysKnown: -3,
+		totalInteractions: 7.6,
+		currentStreak: Infinity,
+		longestStreak: 4
+	});
+	(wild as unknown as { personality: Record<string, unknown> }).personality = {
+		openness: 900,
+		warmth: -900,
+		playfulness: 'lots',
+		romanticStyle: 'shy'
+	};
+	const clamped = clampCharacterStats(wild);
+	assert.equal(clamped.energy, 100);
+	assert.equal(clamped.affection, 0);
+	assert.equal(clamped.trust, 100);
+	assert.equal(clamped.intimacy, 0);
+	assert.equal(clamped.comfort, 0);
+	assert.equal(clamped.respect, 100);
+	assert.equal(clamped.mood.intensity, 100);
+	assert.equal(clamped.daysKnown, 0);
+	assert.equal(clamped.totalInteractions, 7);
+	assert.equal(clamped.currentStreak, 0);
+	assert.equal(clamped.longestStreak, 4);
+	assert.equal(clamped.personality.openness, 100);
+	assert.equal(clamped.personality.warmth, -100);
+	assert.equal(clamped.personality.playfulness, 0);
+	assert.equal(clamped.personality.romanticStyle, 'shy');
+});
+
+test('clampCharacterStats leaves an in-range state untouched', () => {
+	const state = makeState();
+	assert.deepEqual(clampCharacterStats(state), state);
 });

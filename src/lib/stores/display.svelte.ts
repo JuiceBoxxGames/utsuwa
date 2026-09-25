@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import { clampPhysicsIntensity, PHYSICS_INTENSITY_DEFAULT } from '../engine/spring-physics.ts';
 import {
 	CAMERA_DEFAULTS,
@@ -35,7 +36,7 @@ import {
 	type LoadedBackgroundImage
 } from '../services/storage/scene-background-images.ts';
 
-const STORAGE_KEY = 'utsuwa-display';
+const STORAGE_KEY = STORAGE_INVENTORY.localStorage.display;
 
 export type { CameraSettings, CameraProfile, ChatDisplayMode, SidebarPosition, TextRevealSpeed, ChatBarAlignment };
 export {

@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 
 export interface OverlayPosition {
 	x: number;
@@ -13,7 +14,7 @@ function createOverlayStore() {
 
 	// Load persisted position on init
 	if (browser) {
-		const saved = localStorage.getItem('utsuwa-overlay-position');
+		const saved = localStorage.getItem(STORAGE_INVENTORY.localStorage.overlayPosition);
 		if (saved) {
 			try {
 				position = JSON.parse(saved);
@@ -45,7 +46,7 @@ function createOverlayStore() {
 	function setPosition(newPosition: OverlayPosition) {
 		position = newPosition;
 		if (browser) {
-			localStorage.setItem('utsuwa-overlay-position', JSON.stringify(position));
+			localStorage.setItem(STORAGE_INVENTORY.localStorage.overlayPosition, JSON.stringify(position));
 		}
 	}
 

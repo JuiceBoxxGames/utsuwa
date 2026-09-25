@@ -43,6 +43,7 @@
 	} from '$lib/engine/memory';
 	import { initEmbeddingModel } from '$lib/services/embeddings';
 	import { debugEventsStore } from '$lib/stores/debugEvents.svelte';
+	import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 
 	let latestResponse = $state('');
 	let isTyping = $state(false);
@@ -71,8 +72,8 @@
 	const chatExpanded = $derived(overlayStore.chatExpanded);
 
 	// --- Overlay window sizing & lock ---
-	const SIZE_KEY = 'utsuwa-overlay-size';
-	const LOCK_KEY = 'utsuwa-overlay-locked';
+	const SIZE_KEY = STORAGE_INVENTORY.localStorage.overlaySize;
+	const LOCK_KEY = STORAGE_INVENTORY.localStorage.overlayLocked;
 
 	// Restore lock preference and last window size
 	$effect(() => {

@@ -8,6 +8,12 @@
 	let { children } = $props();
 	let viewportHeight = $state<number>();
 	onMount(() => {
+		// Asks the browser not to evict saves under storage pressure (Safari drops
+		// site data after a week without a visit otherwise)
+		navigator.storage?.persist?.().then(
+			(granted) => console.debug('[storage] persistent:', granted),
+			() => {}
+		);
 		const viewport = window.visualViewport;
 		const resize = () => { viewportHeight = viewport?.height ?? window.innerHeight; };
 		resize();

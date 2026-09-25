@@ -3,6 +3,7 @@ import type { Fact, SessionSummary, RelevantContext, MemoryBudget } from '../typ
 import { getMemoryBudget } from '../types/memory.ts';
 import type { PersonaCard } from '$lib/stores/persona.svelte';
 // Relative import keeps this module runnable under the node test runner
+import { stripAngleBrackets } from './response-parser.ts';
 import { STAGE_BEHAVIORS, STAGE_INSTRUCTIONS } from '../engine/stages.ts';
 
 // Prompt context for building
@@ -256,7 +257,7 @@ Energy: ${energyDesc} (${ctx.state.energy}/100)
 	}
 	if (mem.relevantFacts.length > 0) {
 		const factLimit = memoryBudget?.relevantFacts ?? 5;
-		const factsText = mem.relevantFacts.slice(0, factLimit).map((f) => `- ${f.content}`).join('\n');
+		const factsText = mem.relevantFacts.slice(0, factLimit).map((f) => `- ${stripAngleBrackets(f.content)}`).join('\n');
 		memorySections.push(`Things you know about them:\n${factsText}`);
 	}
 
@@ -400,13 +401,13 @@ function buildMemoryLayer(ctx: PromptContext): string {
 	// Relevant facts
 	if (mem.relevantFacts.length > 0) {
 		const factLimit = memoryBudget?.relevantFacts ?? 5;
-		const factsText = mem.relevantFacts.slice(0, factLimit).map((f) => `- ${f.content}`).join('\n');
+		const factsText = mem.relevantFacts.slice(0, factLimit).map((f) => `- ${stripAngleBrackets(f.content)}`).join('\n');
 		sections.push(`Things you know about them:\n${factsText}`);
 	}
 
 	// Triggered memories
 	if (mem.triggeredMemories.length > 0) {
-		const memoriesText = mem.triggeredMemories.slice(0, 3).map((m) => `- ${m.content}`).join('\n');
+		const memoriesText = mem.triggeredMemories.slice(0, 3).map((m) => `- ${stripAngleBrackets(m.content)}`).join('\n');
 		sections.push(`This reminds you of:\n${memoriesText}`);
 	}
 

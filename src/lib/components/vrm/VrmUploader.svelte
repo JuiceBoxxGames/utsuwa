@@ -3,11 +3,21 @@
 	import { isTauri } from '$lib/services/platform/platform';
 
 	interface Props {
-		onUpload: (file: File) => void;
+		onUpload: (file: File) => void | Promise<void>;
 	}
 
 	let { onUpload }: Props = $props();
 	let isDragging = $state(false);
+	let uploadError = $state('');
+
+	async function upload(file: File) {
+		uploadError = '';
+		try {
+			await onUpload(file);
+		} catch (e) {
+			uploadError = e instanceof Error ? e.message : "Couldn't add that model.";
+		}
+	}
 	let fileInput: HTMLInputElement;
 
 	// Tauri's webview intercepts native drag-and-drop, so dataTransfer.files
@@ -36,7 +46,7 @@
 					const contents = await readFile(vrmPath);
 					const fileName = vrmPath.split(/[/\\]/).pop() || 'model.vrm';
 					const file = new File([contents], fileName, { type: 'application/octet-stream' });
-					onUpload(file);
+					void upload(file);
 				}
 			});
 		})();
@@ -62,7 +72,7 @@
 
 		const file = e.dataTransfer?.files[0];
 		if (file && /\.vrm$/i.test(file.name)) {
-			onUpload(file);
+			void upload(file);
 		}
 	}
 
@@ -70,7 +80,7 @@
 		const input = e.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file && /\.vrm$/i.test(file.name)) {
-			onUpload(file);
+			void upload(file);
 		}
 		// Reset input
 		input.value = '';
@@ -104,7 +114,11 @@
 		<Icon name="upload" size={32} strokeWidth={1.5} />
 	</div>
 	<span class="label">Upload VRM</span>
-	<span class="hint">Drag & drop or click to browse</span>
+	{#if uploadError}
+		<span class="hint error" role="alert">{uploadError}</span>
+	{:else}
+		<span class="hint">Drag & drop or click to browse</span>
+	{/if}
 </div>
 
 <style>
@@ -163,8 +177,13 @@
 		transition: color 0.15s;
 	}
 
-	.uploader:hover .hint,
-	.uploader.dragging .hint {
+	.hint.error {
+		color: var(--color-error);
+		text-align: center;
+	}
+
+	.uploader:hover .hint:not(.error),
+	.uploader.dragging .hint:not(.error) {
 		color: var(--accent);
 	}
 </style>

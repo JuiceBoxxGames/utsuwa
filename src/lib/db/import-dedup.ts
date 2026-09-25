@@ -39,3 +39,43 @@ export function partitionNewRecords<T>(
 	}
 	return { toAdd, skipped };
 }
+
+// Sessions get fresh auto-increment ids on insert, so turns that reference the
+// exported id must be pointed at whatever id the session lands on (or the
+// existing duplicate it merged into).
+export async function importSessions<T extends { id?: number; startedAt?: unknown }>(
+	records: T[],
+	existing: { id?: number; startedAt?: unknown }[],
+	add: (record: Omit<T, 'id'>) => Promise<number>
+): Promise<{ idMap: Map<number, number>; added: number; skipped: number }> {
+	const idByKey = new Map<string, number>();
+	for (const s of existing) if (s.id !== undefined) idByKey.set(sessionKey(s), s.id);
+	const idMap = new Map<number, number>();
+	let added = 0;
+	let skipped = 0;
+	for (const { id: oldId, ...rest } of records) {
+		const key = sessionKey(rest);
+		let newId = idByKey.get(key);
+		if (newId === undefined) {
+			newId = await add(rest);
+			idByKey.set(key, newId);
+			added++;
+		} else {
+			skipped++;
+		}
+		if (typeof oldId === 'number') idMap.set(oldId, newId);
+	}
+	return { idMap, added, skipped };
+}
+
+// Saves exported before session ids were kept carry no mapping; their turns are
+// left as they were since there's nothing better to point them at.
+export function remapSessionIds<T extends { sessionId?: number }>(
+	records: T[],
+	idMap: Map<number, number>
+): T[] {
+	if (idMap.size === 0) return records;
+	return records.map((r) =>
+		r.sessionId === undefined ? r : { ...r, sessionId: idMap.get(r.sessionId) }
+	);
+}

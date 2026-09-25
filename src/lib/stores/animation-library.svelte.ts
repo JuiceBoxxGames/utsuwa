@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import localforage from 'localforage';
 import {
 	applyBuiltinOverrides,
@@ -13,6 +14,7 @@ import {
 	type StoredCustomAnimation
 } from './animation-library-parser';
 import { checkAnimationFile, parseAnimationBlob } from '$lib/services/storage/animations';
+import { isQuotaError, STORAGE_FULL_MESSAGE } from '$lib/services/storage/quota';
 import { evictVrmAnimation } from '$lib/services/vrm-animations';
 
 export type { AnimationEntry } from './animation-library-parser';
@@ -20,9 +22,9 @@ export type { AnimationEntry } from './animation-library-parser';
 // Metadata in localStorage so other windows get a storage event; blobs in
 // IndexedDB like the custom VRM models. Must not import the vrm store (it
 // imports this one).
-const STORAGE_KEY = 'utsuwa-animations';
+const STORAGE_KEY = STORAGE_INVENTORY.localStorage.animations;
 const blobStorage = browser
-	? localforage.createInstance({ name: 'utsuwa-animations', storeName: 'files' })
+	? localforage.createInstance({ ...STORAGE_INVENTORY.localforage.animations })
 	: null;
 const blobKey = (id: string) => `anim-blob-${id}`;
 
@@ -116,9 +118,9 @@ function createAnimationLibraryStore() {
 		const id = `anim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 		try {
 			await blobStorage.setItem(blobKey(id), blob);
-		} catch {
+		} catch (e) {
 			releaseUrl(url);
-			throw new Error("Couldn't save that animation. Your browser storage may be full.");
+			throw new Error(isQuotaError(e) ? STORAGE_FULL_MESSAGE : "Couldn't save that animation.", { cause: e });
 		}
 		const entry: AnimationEntry = {
 			id,

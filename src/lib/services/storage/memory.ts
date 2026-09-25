@@ -3,6 +3,16 @@ import type { Fact, SessionSummary, ConversationTurn, MemorySearchOptions, NewFa
 import { embedText, isEmbeddingReady } from '$lib/services/embeddings';
 import { findDuplicateFact } from '$lib/engine/fact-dedup';
 import { EMBEDDING_MODEL_ID, hasCurrentEmbedding, needsReembedding } from '$lib/engine/embedding-version';
+import { chatHintStore } from '$lib/stores/chat-hint.svelte';
+
+// Callers treat memory writes as best effort, so a full disk would otherwise
+// only ever reach the console.
+function hintOnQuota<T>(write: Promise<T>): Promise<T> {
+	return write.catch((e) => {
+		chatHintStore.reportStorageError(e);
+		throw e;
+	});
+}
 
 // Facts
 
@@ -70,11 +80,13 @@ export async function saveFact(fact: NewFact): Promise<number> {
 	);
 	const existing = findDuplicateFact({ content: fact.content, embedding }, candidates);
 	if (existing?.id !== undefined) {
-		await db.facts.update(existing.id, {
-			referenceCount: existing.referenceCount + 1,
-			importance: Math.min(100, Math.max(existing.importance, fact.importance ?? 50)),
-			lastAccessed: now
-		});
+		await hintOnQuota(
+			db.facts.update(existing.id, {
+				referenceCount: existing.referenceCount + 1,
+				importance: Math.min(100, Math.max(existing.importance, fact.importance ?? 50)),
+				lastAccessed: now
+			})
+		);
 		return existing.id;
 	}
 
@@ -90,7 +102,7 @@ export async function saveFact(fact: NewFact): Promise<number> {
 		embeddingModel: embedding ? EMBEDDING_MODEL_ID : undefined
 	};
 
-	const id = await db.facts.add(dbFact);
+	const id = await hintOnQuota(db.facts.add(dbFact));
 	return id as number;
 }
 
@@ -216,7 +228,7 @@ export async function saveConversationTurn(
 		createdAt: new Date(turn.createdAt)
 	};
 
-	const id = await db.conversationTurns.add(dbTurn);
+	const id = await hintOnQuota(db.conversationTurns.add(dbTurn));
 	return id as number;
 }
 

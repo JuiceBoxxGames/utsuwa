@@ -5,6 +5,7 @@
  * always available.
  */
 import { browser } from '$app/environment';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import type { McpServerConfig, McpServerError, McpTool } from '$lib/types/mcp';
 import { getMcpCapability, listTools } from '$lib/services/mcp/capability';
 import {
@@ -13,7 +14,7 @@ import {
 	type McpCapabilityState
 } from '$lib/services/mcp/protocol';
 
-const STORAGE_KEY = 'utsuwa-mcp-v1';
+const STORAGE_KEY = STORAGE_INVENTORY.localStorage.mcp;
 
 function loadSaved(): McpServerConfig[] {
 	if (!browser) return [];
