@@ -70,7 +70,7 @@
 			if (event.target instanceof Element && event.target.closest('[role="dialog"]:not(.camera-panel)')) return;
 			let target: string;
 			if (showCamera) { showCamera = false; target = '[aria-label="Camera settings"]'; }
-			else if (remindersOpen) { remindersOpen = false; target = '[aria-label="Open reminders"]'; }
+			else if (remindersOpen) { remindersOpen = false; target = '.reminder-trigger'; }
 			else if (clusterOpen) { clusterOpen = false; target = '.cluster-trigger'; }
 			else return;
 			event.preventDefault();
@@ -129,10 +129,10 @@
 	<div class="button-row">
 		<div class="reminder-wrapper">
 			<button
-				class="btn btn-secondary btn-icon"
+				class="btn btn-secondary btn-icon reminder-trigger"
 				aria-expanded={remindersOpen}
 				onclick={() => (remindersOpen = !remindersOpen)}
-				aria-label="Open reminders"
+				aria-label={upcomingReminders.length > 0 ? `Open reminders, ${upcomingReminders.length} open` : 'Open reminders'}
 				title="Open reminders"
 			>
 				<Icon name="bell" size={16} />

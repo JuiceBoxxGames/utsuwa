@@ -20,6 +20,12 @@
 		colorMode = getColorMode();
 	});
 
+	let asideEl = $state<HTMLElement | null>(null);
+
+	export function focusDrawer() {
+		asideEl?.focus();
+	}
+
 	export function focusSearch() {
 		searchComponent?.focus();
 	}
@@ -28,7 +34,7 @@
 	const label = $derived(colorMode === 'light' ? 'Light' : colorMode === 'dark' ? 'Dark' : 'System');
 </script>
 
-<aside class="sidebar" class:mobile-open={mobileOpen}>
+<aside id="docs-sidebar" class="sidebar" class:mobile-open={mobileOpen} aria-label="Documentation menu" tabindex="-1" bind:this={asideEl}>
 	<div class="sidebar-top">
 		<div class="sidebar-search">
 			<DocsSearch bind:this={searchComponent} id="sidebar-search" />
@@ -64,6 +70,10 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--t3-sidebar);
+	}
+
+	.sidebar:focus {
+		outline: none;
 	}
 
 	.sidebar-top {

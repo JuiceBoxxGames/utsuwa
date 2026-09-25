@@ -18,8 +18,10 @@
 		{#if onToggleSidebar}
 			<button
 				type="button"
+				id="docs-menu-toggle"
 				class="btn btn-ghost btn-icon hamburger"
 				onclick={onToggleSidebar}
+				aria-controls="docs-sidebar"
 				aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
 				aria-expanded={sidebarOpen}
 			>
