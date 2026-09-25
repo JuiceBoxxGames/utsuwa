@@ -1,5 +1,7 @@
 import type { ToolCall } from './speech-compiler.ts';
 import type { SpeechSettings } from '../modules/settings.ts';
+import type { OpenAiToolDefinition } from '../mcp/loop.ts';
+import { buildSpeechToolLanguages } from './tts-options.ts';
 
 /** Both the prompt and request must use the transport's supported speech format. */
 export function shouldUseSpeechTools(
@@ -13,6 +15,68 @@ export function shouldUseSpeechTools(
 		&& settings.activeProvider === 'omnivoice'
 		&& settings.enableAltLanguage === true
 		&& settings.enableToolCalling !== false;
+}
+
+/**
+ * Native speech tools for OmniVoice. With function calling, speak_segment
+ * carries a structured language tag instead of a pseudo-call in the text.
+ */
+export function buildSpeechTools(
+	llmProvider: string,
+	speechEnabled: boolean,
+	settings: Pick<SpeechSettings, 'activeProvider' | 'enableAltLanguage' | 'enableToolCalling' | 'activeLanguage' | 'altLanguage'>
+): OpenAiToolDefinition[] | undefined {
+	const languages = buildSpeechToolLanguages(settings);
+	if (!shouldUseSpeechTools(llmProvider, speechEnabled, settings)) return undefined;
+	return [
+		{
+			type: 'function',
+			function: {
+				name: 'speak_segment',
+				description: 'Speak exactly ONE short phrase. Call separately for each phrase. language is REQUIRED.',
+				parameters: {
+					type: 'object',
+					properties: {
+						text: { type: 'string', description: 'One short phrase to speak. Max 1 sentence.' },
+						language: { type: 'string', enum: languages, description: 'Language of the text. REQUIRED.' }
+					},
+					required: ['text', 'language']
+				}
+			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'pause_segment',
+				description: 'Insert a short silent pause between spoken phrases.',
+				parameters: {
+					type: 'object',
+					properties: {
+						ms: { type: 'integer', description: 'Pause length in milliseconds (100-5000).' }
+					},
+					required: ['ms']
+				}
+			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'gesture_segment',
+				description: 'Show a small non-verbal gesture before or with the next phrase.',
+				parameters: {
+					type: 'object',
+					properties: {
+						type: {
+							type: 'string',
+							enum: ['smile', 'laugh', 'surprise', 'nod', 'shake_head', 'wave'],
+							description: 'The gesture to show.'
+						}
+					},
+					required: ['type']
+				}
+			}
+		}
+	];
 }
 
 export interface SpeakParams {

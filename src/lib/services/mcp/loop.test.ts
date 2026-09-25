@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
 	buildAssistantToolMessage,
+	buildSendTools,
 	buildToolResultMessages,
 	capToolResult,
+	collectToolResults,
 	ensureToolPairs,
 	findMcpTool,
 	mcpCallsOnly,
@@ -142,4 +144,35 @@ test('user-side result copies follow the complete tool response group', () => {
 	})));
 	assert.deepEqual(messages.map((message) => message.role), ['tool', 'tool', 'user', 'user']);
 	assert.deepEqual(messages.slice(0, 2).map((message) => message.tool_call_id), ['c1', 'c2']);
+});
+
+test('buildSendTools sends nothing without speech or MCP tools', () => {
+	assert.equal(buildSendTools(undefined, []), undefined);
+	assert.equal(buildSendTools([], []), undefined);
+});
+
+test('buildSendTools passes speech tools through on their own', () => {
+	const speech = [{ type: 'function' as const, function: { name: 'speak_segment', description: 'Speak', parameters: {} } }];
+	assert.deepEqual(buildSendTools(speech, []), speech);
+});
+
+test('buildSendTools puts speech tools ahead of converted MCP tools', () => {
+	const speech = [{ type: 'function' as const, function: { name: 'speak_segment', description: 'Speak', parameters: {} } }];
+	assert.deepEqual(buildSendTools(speech, [TOOL]), [...speech, toOpenAiTool(TOOL)]);
+	assert.deepEqual(buildSendTools(undefined, [TOOL]), [toOpenAiTool(TOOL)]);
+});
+
+test('collectToolResults keeps order, reports rejections and the skipped excess', () => {
+	const calls: McpCollectedToolCall[] = ['c1', 'c2', 'c3', 'c4'].map((id) => ({ id, name: 'get_state', args: {} }));
+	const results = collectToolResults([
+		{ status: 'fulfilled', value: { call: calls[0], content: 'ok', injectAsUser: true } },
+		{ status: 'rejected', reason: new Error('network down') },
+		{ status: 'rejected', reason: 'boom' }
+	], calls.slice(0, 3), calls.slice(3));
+	assert.deepEqual(results, [
+		{ call: calls[0], content: 'ok', injectAsUser: true },
+		{ call: calls[1], content: 'Error: network down' },
+		{ call: calls[2], content: 'Error: boom' },
+		{ call: calls[3], content: 'Error: too many tool calls in one round (limit 8) — this call was not executed.' }
+	]);
 });

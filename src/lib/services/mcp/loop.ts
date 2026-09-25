@@ -87,6 +87,15 @@ export function toOpenAiTool(tool: McpTool): OpenAiToolDefinition {
 	};
 }
 
+/** Speech tools and MCP tools share one OpenAI-shaped tool list; empty sends none. */
+export function buildSendTools(
+	speechTools: OpenAiToolDefinition[] | undefined,
+	mcpTools: McpTool[]
+): OpenAiToolDefinition[] | undefined {
+	const tools = [...(speechTools ?? []), ...mcpTools.map(toOpenAiTool)];
+	return tools.length > 0 ? tools : undefined;
+}
+
 /**
  * Cut a round's text at the state fence. Intermediate rounds must not carry a
  * state block into the assembled response — only the final round keeps one.
@@ -132,6 +141,31 @@ export function buildToolResultMessages(entries: ToolResultEntry[]): LoopMessage
 		}
 	}
 	return messages;
+}
+
+/**
+ * One result per call: rejected executions become error results the model can
+ * read, and calls over the per-round cap are answered without running.
+ */
+export function collectToolResults(
+	settled: PromiseSettledResult<ToolResultEntry>[],
+	run: McpCollectedToolCall[],
+	skipped: McpCollectedToolCall[]
+): ToolResultEntry[] {
+	return [
+		...settled.map((entry, index) =>
+			entry.status === 'fulfilled'
+				? entry.value
+				: {
+						call: run[index],
+						content: `Error: ${entry.reason instanceof Error ? entry.reason.message : String(entry.reason)}`
+					}
+		),
+		...skipped.map((call) => ({
+			call,
+			content: `Error: too many tool calls in one round (limit ${MAX_TOOL_CALLS_PER_ROUND}) — this call was not executed.`
+		}))
+	];
 }
 
 /** Ack for a speech tool call, matching the server-side no-op tool result. */
