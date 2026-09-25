@@ -142,9 +142,6 @@
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(28, 43, 51, 0.28);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -160,13 +157,10 @@
 
 	.modal-container {
 		position: relative;
-		background: var(--bg-primary);
-		border-radius: var(--radius-xl);
 		max-width: 440px;
 		width: 100%;
 		max-height: 85vh;
 		overflow: hidden;
-		box-shadow: var(--shadow-xl);
 		animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 

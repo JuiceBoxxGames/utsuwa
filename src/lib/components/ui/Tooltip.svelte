@@ -35,7 +35,6 @@
 
 <style>
 	:global(.ui-tooltip-trigger) { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; border-radius: var(--radius-sm); }
-	:global(.ui-tooltip-trigger:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 	:global(.ui-tooltip-content) {
 		z-index: 1400;
 		max-width: min(20rem, calc(100vw - 2rem));

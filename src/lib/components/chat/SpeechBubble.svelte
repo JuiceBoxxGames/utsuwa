@@ -122,23 +122,9 @@
 		padding: 0.75rem 1rem;
 	}
 
-	/* Custom scrollbar */
-	.speech-bubble-content::-webkit-scrollbar {
-		width: 6px;
-	}
-
+	/* The global scrollbar rule styles the thumb; inset the track from the corners. */
 	.speech-bubble-content::-webkit-scrollbar-track {
-		background: transparent;
 		margin: 4px 0;
-	}
-
-	.speech-bubble-content::-webkit-scrollbar-thumb {
-		background: var(--scrollbar-thumb);
-		border-radius: 3px;
-	}
-
-	.speech-bubble-content::-webkit-scrollbar-thumb:hover {
-		background: var(--scrollbar-thumb-hover);
 	}
 
 	.bubble-tail {

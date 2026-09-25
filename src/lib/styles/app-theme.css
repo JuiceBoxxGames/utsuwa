@@ -6,7 +6,7 @@ html:has(.app, .overlay-app, .docs-site) {
 	--t3-surface: #f3f3f5;
 	--t3-surface-overlay: #ffffff;
 	--t3-text: #27272a;
-	--t3-text-muted: #71717b;
+	--t3-text-muted: #63636d;
 	--t3-border: transparent;
 	--t3-input: #d4d4da;
 	--control-bg: #e7e7eb;
@@ -15,14 +15,15 @@ html:has(.app, .overlay-app, .docs-site) {
 	--selection-bg: #ffffff;
 	--t3-focus: var(--t3-accent);
 	--t3-accent: #04b2fd;
-	--t3-accent-foreground: #ffffff;
+	--t3-accent-foreground: #0a0a0a;
+	--t3-accent-text: #006ba1;
 	--t3-accent-surface: #eaeaec;
 	--t3-message-surface: var(--control-selected);
 	--t3-message-foreground: #27272a;
 	--t3-message-action-hover: color-mix(in srgb, var(--t3-accent) 90%, black);
 	--t3-sidebar: #f1f1f3;
 	--t3-sidebar-foreground: #27272a;
-	--t3-sidebar-muted-foreground: #71717b;
+	--t3-sidebar-muted-foreground: #63636d;
 	--t3-sidebar-control-surface: #f4f4f5;
 	--t3-sidebar-row-hover: #fcfcfc;
 	--t3-sidebar-row-selected: #ffffff;
@@ -30,6 +31,8 @@ html:has(.app, .overlay-app, .docs-site) {
 	--t3-error: #fb2c36;
 	--t3-error-foreground: #c10007;
 	--t3-error-surface: #fcebec;
+	--t3-error-fill: #e7000b;
+	--t3-error-fill-foreground: #ffffff;
 	--t3-warning: #fe9a00;
 	--t3-warning-foreground: #bb4d00;
 	--t3-warning-surface: #fcf4e8;
@@ -41,7 +44,7 @@ html.dark:has(.app, .overlay-app, .docs-site) {
 	--t3-surface: #171717;
 	--t3-surface-overlay: #232323;
 	--t3-text: #f5f5f5;
-	--t3-text-muted: #818181;
+	--t3-text-muted: #909090;
 	--t3-border: transparent;
 	--t3-input: #363636;
 	--control-bg: #292929;
@@ -49,6 +52,7 @@ html.dark:has(.app, .overlay-app, .docs-site) {
 	--control-selected: #424242;
 	--selection-bg: #3a3a3a;
 	--t3-accent-surface: #222222;
+	--t3-accent-text: var(--t3-accent);
 	--t3-message-foreground: #f5f5f5;
 	--t3-sidebar: #000000;
 	--t3-sidebar-foreground: #f1f3f7;
@@ -72,35 +76,42 @@ html:has(.app, .overlay-app, .docs-site) {
 	--bg-tertiary: var(--t3-input);
 	--text-primary: var(--t3-text);
 	--text-secondary: var(--t3-text-muted);
-	--text-tertiary: var(--t3-text-muted);
+	--text-tertiary: var(--text-secondary);
 	--border-light: var(--t3-border);
 	--border-subtle: color-mix(in srgb, var(--t3-border) 60%, transparent);
 	--accent: var(--t3-accent);
 	--accent-contrast: var(--t3-accent-foreground);
+	--accent-text: var(--t3-accent-text);
 	--accent-hover: var(--t3-message-action-hover);
 	--accent-muted: color-mix(in srgb, var(--accent) 15%, transparent);
 	--accent-subtle: color-mix(in srgb, var(--accent) 6%, transparent);
 	--color-error: var(--t3-error);
+	--color-error-bg: var(--t3-error-surface);
+	--color-error-text: var(--t3-error-foreground);
+	--color-error-fill: var(--t3-error-fill);
+	--color-error-contrast: var(--t3-error-fill-foreground);
 	--color-warning: var(--t3-warning);
 	--color-info: var(--accent);
 	--stat-energy: var(--accent);
 	--tier-acquaintance: var(--accent);
 	--font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-	--control-radius: 8px;
-	--radius-xs: 4px;
+	--radius-badge: 4px;
+	--radius-control: 8px;
+	--radius-panel: 12px;
+	--radius-dialog: 18px;
+	--radius-full: 9999px;
+	--radius-xs: var(--radius-badge);
+	--radius-md: var(--radius-control);
+	--radius-lg: var(--radius-panel);
+	--radius-xl: var(--radius-dialog);
+	--control-radius: var(--radius-control);
+	/* Off the scale; kept until its remaining consumers move to a scale step. */
 	--radius-sm: 6px;
-	--radius-md: 8px;
-	--radius-lg: 12px;
-	--radius-xl: 16px;
 	--shadow-xs: 0 0 transparent;
 	--shadow-sm: 0 1px 3px rgb(0 0 0 / 8%);
 	--shadow-md: 0 4px 12px rgb(0 0 0 / 10%);
 	--shadow-lg: 0 8px 24px rgb(0 0 0 / 16%);
 	--shadow-xl: 0 16px 48px rgb(0 0 0 / 24%);
-	--shadow-glow: var(--shadow-xs);
-	--glass-bg: color-mix(in srgb, var(--bg-primary) 90%, transparent);
-	--glass-bg-subtle: color-mix(in srgb, var(--bg-primary) 80%, transparent);
-	--scene-bg: var(--bg-page);
 	--scrollbar-thumb: var(--t3-input);
 	--scrollbar-thumb-hover: var(--text-secondary);
 	font-family: var(--font-sans);
@@ -112,13 +123,23 @@ html:has(.app, .overlay-app, .docs-site) body {
 	-webkit-font-smoothing: antialiased;
 }
 
-/* T3 button geometry with neutral fills, primary, and ghost treatments. */
+/* The one button family: T3 geometry, neutral fills, primary, ghost, and danger.
+   Layout stays at class specificity so components can still hide or restack a .btn. */
+:where(html:has(.app, .overlay-app, .docs-site)) .btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-family: inherit;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+}
 html:has(.app, .overlay-app, .docs-site) .btn {
+	gap: 8px;
 	min-height: 32px;
 	padding: 5px 11px;
-	gap: 8px;
 	border: 1px solid transparent;
-	border-radius: var(--control-radius);
+	border-radius: var(--radius-control);
 	font-size: 14px;
 	font-weight: 500;
 	line-height: 20px;
@@ -127,32 +148,37 @@ html:has(.app, .overlay-app, .docs-site) .btn {
 }
 html:has(.app, .overlay-app, .docs-site) .btn-sm { min-height: 28px; padding: 3px 9px; font-size: 13px; }
 html:has(.app, .overlay-app, .docs-site) .btn-lg { min-height: 36px; padding: 7px 13px; }
+:where(html:has(.app, .overlay-app, .docs-site)) .btn-block { width: 100%; }
 html:has(.app, .overlay-app, .docs-site) .btn-primary {
 	background: var(--accent);
 	border-color: var(--accent);
 	color: var(--accent-contrast);
-	box-shadow: none;
 }
-html:has(.app, .overlay-app, .docs-site) .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+html:has(.app, .overlay-app, .docs-site) .btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: none; }
 html:has(.app, .overlay-app, .docs-site) .btn-secondary {
 	background: var(--control-bg);
-	border-color: transparent;
 	color: var(--text-primary);
-	box-shadow: none;
 }
 html:has(.app, .overlay-app, .docs-site) .btn-secondary:hover:not(:disabled) { background: var(--control-hover); }
+html:has(.app, .overlay-app, .docs-site) .btn-secondary:is([aria-pressed="true"], [aria-expanded="true"]) {
+	background: var(--control-selected);
+	color: var(--text-primary);
+}
 html:has(.app, .overlay-app, .docs-site) .btn-ghost { color: var(--text-secondary); background: transparent; }
 html:has(.app, .overlay-app, .docs-site) .btn-ghost:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-secondary); }
-html:has(.app, .overlay-app, .docs-site) .btn-danger { background: var(--color-error); color: white; }
-html:has(.app, .overlay-app, .docs-site) .btn:disabled { opacity: 0.64; }
+html:has(.app, .overlay-app, .docs-site) .btn-danger { background: var(--color-error-fill); color: var(--color-error-contrast); }
+html:has(.app, .overlay-app, .docs-site) .btn-danger:hover:not(:disabled) { filter: brightness(0.94); }
+html:has(.app, .overlay-app, .docs-site) .btn-icon { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; }
+html:has(.app, .overlay-app, .docs-site) .btn:disabled { opacity: 0.64; cursor: not-allowed; }
 html:has(.app, .overlay-app, .docs-site) .btn:active:not(:disabled) { transform: scale(0.97); }
+@media (pointer: coarse) {
+	html:has(.app, .overlay-app, .docs-site) .btn { min-height: 44px; }
+	html:has(.app, .overlay-app, .docs-site) .btn-icon { width: 44px; height: 44px; }
+}
+
 /* Composite inputs show focus on their container, not the inner text field. */
 html:has(.app, .overlay-app, .docs-site) :where(button, a, input, select, textarea):not(:where(.chat-input textarea, .settings-search input)):focus-visible {
 	outline: 2px solid var(--t3-focus);
 	outline-offset: 2px;
 }
 html:has(.app, .overlay-app, .docs-site) :where(input, textarea, select) { accent-color: var(--accent); }
-html:has(.app, .overlay-app, .docs-site) ::-webkit-scrollbar { width: 6px; height: 6px; }
-@media (pointer: coarse) {
-	html:has(.app, .overlay-app, .docs-site) .btn { min-height: 44px; }
-}

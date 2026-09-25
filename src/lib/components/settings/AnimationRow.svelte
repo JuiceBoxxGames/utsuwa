@@ -78,13 +78,11 @@
 	.anim-row:last-child { padding-bottom: 0; }
 	:global(.anim-row) + .anim-row { border-top: 1px solid var(--border-subtle); }
 	.anim-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
-	.anim-head .setting-label { font-size: 14px; font-weight: 500; color: var(--text-primary); }
 	.anim-name { flex: 1; min-width: 0; max-width: 320px; }
 	.duration { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 	.anim-actions { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
 	.anim-actions :global(.btn) { display: inline-flex; align-items: center; gap: 6px; }
 	.anim-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-	.setting-desc { font-size: 13px; color: var(--text-secondary); }
 	@media (max-width: 480px) {
 		.anim-head { flex-wrap: wrap; }
 		.anim-name { flex-basis: 100%; max-width: none; }

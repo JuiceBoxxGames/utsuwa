@@ -1,9 +1,0 @@
-/* Layout helpers. The app-wide control recipes live in app-controls.css. */
-.settings-field, .api-key-input { width: 100%; }
-.settings-field::placeholder, .api-key-input::placeholder { color: var(--text-tertiary); }
-textarea.settings-field { resize: vertical; }
-.settings-range { width: 100%; min-width: 0; margin: 0; }
-.settings-label { display: block; font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
-@media (prefers-reduced-motion: reduce) {
-	.settings-field, .api-key-input { transition: none; }
-}

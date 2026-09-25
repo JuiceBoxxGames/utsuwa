@@ -144,7 +144,7 @@
 	.uploader.dragging {
 		border-color: var(--accent);
 		background: var(--accent-subtle);
-		box-shadow: var(--shadow-glow);
+		box-shadow: none;
 	}
 
 	.icon {
@@ -162,7 +162,7 @@
 	.uploader:hover .icon,
 	.uploader.dragging .icon {
 		background: var(--accent);
-		color: #fff;
+		color: var(--accent-contrast);
 	}
 
 	.label {
@@ -184,6 +184,6 @@
 
 	.uploader:hover .hint:not(.error),
 	.uploader.dragging .hint:not(.error) {
-		color: var(--accent);
+		color: var(--accent-text);
 	}
 </style>

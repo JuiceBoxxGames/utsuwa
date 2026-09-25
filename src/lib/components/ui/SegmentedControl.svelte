@@ -74,10 +74,6 @@
 		background: var(--selection-bg);
 		box-shadow: var(--shadow-xs);
 	}
-	button:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
-	}
 	@media (pointer: coarse) { button { min-height: 44px; } }
 	@media (prefers-reduced-motion: reduce) {
 		button {

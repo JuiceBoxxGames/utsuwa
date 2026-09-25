@@ -109,7 +109,7 @@
 	.floating-mic-btn.recording {
 		background: var(--accent);
 		color: var(--accent-contrast);
-		box-shadow: var(--shadow-glow);
+		box-shadow: none;
 	}
 
 	.floating-mic-btn.recording:hover {
@@ -213,5 +213,4 @@
 		}
 	}
 	@media (pointer: coarse) { button { min-width: 44px; min-height: 44px; } }
-	@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>

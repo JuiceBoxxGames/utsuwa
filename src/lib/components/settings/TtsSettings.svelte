@@ -7,7 +7,6 @@
 	import SettingsSection from './SettingsSection.svelte';
 	import { checkTTSProviderHealth } from '$lib/services/providers/health-check';
 	import type { TtsSettingsState } from '$lib/stores/ai-services-settings.svelte';
-	import './ai-services-settings.css';
 
 	let { state }: { state: TtsSettingsState } = $props();
 </script>

@@ -68,10 +68,6 @@
 		background: var(--accent-contrast);
 		transform: translateX(12px);
 	}
-	:global(.ui-switch:focus-visible) {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
 	:global(.ui-switch:disabled) {
 		opacity: 0.64;
 		cursor: default;

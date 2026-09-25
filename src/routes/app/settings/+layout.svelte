@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import './settings-page.css';
-	import '$lib/components/settings/settings-controls.css';
 	import { page } from '$app/stores';
 	import { Icon } from '$lib/components/ui';
 	import { localPath } from '$lib/config/links';

@@ -1,0 +1,408 @@
+/* Marketing site, blog, and legal pages. Light only; the app and docs use app-theme.css. */
+:root {
+	--bg-page: #ffffff;
+	--bg-primary: #ffffff;
+	--bg-secondary: #f2f4f7;
+	--bg-tertiary: #e8ecf1;
+	--text-primary: #1c2b33;
+	--text-secondary: #70767d;
+	--text-tertiary: #9da9b7;
+	--border-light: #d9d9d9;
+	--border-subtle: #eceef1;
+	--accent: #00b2ff;
+	--accent-hover: #0096d6;
+	--accent-muted: rgba(0, 178, 255, 0.1);
+
+	/* Aurora gradients (hero shapes, avatars, thumbnails) */
+	--gradient-aurora: linear-gradient(135deg, #f4e7ff 0%, #fdddde 100%);
+	--gradient-aurora-cool: linear-gradient(135deg, #e7fdff 0%, #ede4ff 100%);
+	--gradient-aurora-iris: linear-gradient(135deg, #feefff 0%, #effcff 49%, #f9fae9 100%);
+	--gradient-aurora-mint: linear-gradient(135deg, #dffdf1 0%, #fcfddd 100%);
+
+	--shadow-xs: 0 0 6px rgba(28, 43, 51, 0.04);
+	--shadow-sm: 0 0 10px rgba(28, 43, 51, 0.06);
+	--shadow-md: 0 0 16px rgba(28, 43, 51, 0.08);
+	--shadow-lg: 0 8px 24px rgba(28, 43, 51, 0.1);
+	--shadow-xl: 0 16px 48px rgba(28, 43, 51, 0.12);
+
+	--radius-xs: 4px;
+	--radius-sm: 8px;
+	--radius-md: 12px;
+	--radius-lg: 16px;
+	--radius-xl: 24px;
+	--radius-full: 9999px;
+
+	--scrollbar-thumb: rgba(28, 43, 51, 0.12);
+	--scrollbar-thumb-hover: rgba(28, 43, 51, 0.2);
+}
+
+/* Film grain overlay. Static SVG noise, no animation. */
+.grain::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	pointer-events: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	background-repeat: repeat;
+	opacity: 0.03;
+}
+
+/* Pill button. The site only uses it with .btn-hero. */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 0.6rem 1.25rem;
+	border: 1px solid transparent;
+	border-radius: var(--radius-full);
+	font-family: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+	outline: none;
+	text-decoration: none;
+	white-space: nowrap;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease,
+		border-color 0.15s ease,
+		box-shadow 0.15s ease,
+		transform 0.1s ease;
+}
+
+.btn:focus-visible {
+	box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+/* Hero: the marketing CTA. A warm pill so it pops against the window light. */
+.btn-hero {
+	gap: 0.625rem;
+	padding: 1.5rem 2.25rem;
+	border-color: rgba(255, 255, 255, 0.05);
+	background: var(--stat-affection);
+	color: #fff;
+	font-size: 1rem;
+	letter-spacing: -0.03em;
+}
+
+.btn-hero:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--stat-affection), #000 8%);
+}
+
+/* Japanese pages: system Japanese fonts behind Inter, none of the tight
+   Latin tracking, phrase-aware line breaks, and room for full-height glyphs */
+html[lang='ja'] {
+	--font-sans: 'Inter Variable', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', Meiryo, sans-serif;
+	word-break: auto-phrase;
+}
+
+html[lang='ja'] body * {
+	letter-spacing: normal !important;
+}
+
+/* A phrase wider than a small phone may break inside itself rather than overflow */
+html[lang='ja'] :is(h1, h2, h3, p) {
+	overflow-wrap: anywhere;
+}
+
+html[lang='ja'] .hero-title {
+	line-height: 1.12;
+}
+
+html[lang='ja'] :is(.letter-big, .cta-title, .own-title) {
+	line-height: 1.2;
+}
+
+html[lang='ja'] :is(.slide-title, .features-title, .stories-title) {
+	line-height: 1.3;
+}
+
+/* Japanese phrases don't break inside words, so give the long ones room */
+html[lang='ja'] .slide-title {
+	max-width: 600px;
+}
+
+html[lang='ja'] .own-title {
+	font-size: 56px;
+}
+
+@media (max-width: 768px) {
+	html[lang='ja'] .own-title {
+		font-size: clamp(28px, 8.4vw, 40px);
+	}
+
+	html[lang='ja'] .features-title {
+		font-size: 32px;
+	}
+}
+
+/* Page transitions: the hero card glides between pages */
+::view-transition-group(hero-card) {
+	animation-duration: 0.55s;
+	animation-timing-function: var(--ease-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation: none;
+	}
+}
+
+/* Blog and legal prose (.docs wrapper). Docs pages use .docs-site in prose.css. */
+.docs .prose {
+	color: var(--text-primary);
+	line-height: 1.75;
+}
+
+.docs .prose h1 {
+	font-size: 2.25rem;
+	font-weight: 700;
+	margin-bottom: 0.75rem;
+	color: var(--text-primary);
+}
+
+.docs .prose h2 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	margin-top: 2.5rem;
+	margin-bottom: 0.75rem;
+	color: var(--text-primary);
+}
+
+.docs .prose h3 {
+	font-size: 1.125rem;
+	font-weight: 600;
+	margin-top: 2rem;
+	margin-bottom: 0.5rem;
+	color: var(--text-primary);
+}
+
+.docs .prose p {
+	margin-bottom: 1rem;
+	color: var(--text-primary);
+}
+
+.docs .prose a {
+	color: var(--accent);
+	text-decoration: none;
+	font-weight: 500;
+	transition: all 0.15s ease;
+	border-bottom: 1px solid transparent;
+}
+
+.docs .prose a:hover {
+	color: var(--accent-hover);
+	border-bottom-color: var(--accent);
+	text-shadow: 0 0 8px var(--accent-muted);
+}
+
+.docs .prose code {
+	background: var(--bg-secondary);
+	color: var(--text-primary);
+	padding: 0.2rem 0.45rem;
+	border-radius: 0.375rem;
+	font-size: 0.875em;
+	border: 1px solid var(--border-light);
+}
+
+.docs .prose pre {
+	background: var(--bg-secondary);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	padding: 1.25rem 1.5rem;
+	border-radius: 0.875rem;
+	overflow-x: auto;
+	margin: 1.5rem 0;
+	position: relative;
+	border: 1px solid var(--border-subtle);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.docs .prose pre:hover {
+	box-shadow:
+		0 0 12px var(--accent-muted),
+		0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.docs .copy-btn {
+	position: absolute;
+	top: 0.75rem;
+	right: 0.75rem;
+	padding: 0.5rem;
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-light);
+	border-radius: 0.5rem;
+	cursor: pointer;
+	opacity: 0;
+	transition: all 0.2s ease;
+	color: var(--text-secondary);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.docs .prose pre:hover .copy-btn {
+	opacity: 1;
+}
+
+.docs .copy-btn:hover {
+	background: var(--bg-primary);
+	color: var(--accent);
+	border-color: var(--accent);
+	box-shadow: 0 0 8px var(--accent-muted);
+}
+
+.docs .prose pre code {
+	background: none;
+	padding: 0;
+	border: none;
+	box-shadow: none;
+}
+
+.docs .prose ul,
+.docs .prose ol {
+	padding-left: 1.5rem;
+	margin-bottom: 1rem;
+}
+
+.docs .prose ul {
+	list-style: none;
+}
+
+.docs .prose ul > li::before {
+	content: '\2022';
+	color: var(--accent);
+	font-weight: 700;
+	display: inline-block;
+	width: 1em;
+	margin-left: -1em;
+	text-shadow: 0 0 6px var(--accent-muted);
+}
+
+.docs .prose ol {
+	list-style: none;
+	counter-reset: ol-counter;
+}
+
+.docs .prose ol > li {
+	counter-increment: ol-counter;
+}
+
+.docs .prose ol > li::before {
+	content: counter(ol-counter) '.';
+	color: var(--accent);
+	font-weight: 700;
+	display: inline-block;
+	width: 1.5em;
+	margin-left: -1.5em;
+}
+
+.docs .prose li {
+	margin-bottom: 0.375rem;
+}
+
+.docs .prose img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 0.875rem;
+	border: 1px solid var(--border-subtle);
+	margin: 1.5rem 0;
+	box-shadow:
+		0 4px 16px rgba(0, 0, 0, 0.08),
+		0 0 0 1px var(--border-light);
+	transition: all 0.2s ease;
+}
+
+.docs .prose img:hover {
+	box-shadow:
+		0 0 20px var(--accent-muted),
+		0 8px 24px rgba(0, 0, 0, 0.12);
+	transform: scale(1.01);
+}
+
+.docs .prose blockquote {
+	position: relative;
+	border: none;
+	padding: 1.25rem 1.5rem;
+	padding-left: 1.75rem;
+	color: var(--text-primary);
+	margin: 1.5rem 0;
+	background: var(--bg-secondary);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border-radius: 0.75rem;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.docs .prose blockquote::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 4px;
+	background: var(--accent);
+	border-radius: 4px 0 0 4px;
+	box-shadow: 0 0 8px var(--accent-muted);
+}
+
+.docs .prose hr {
+	border: none;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, var(--accent), transparent);
+	margin: 2.5rem 0;
+	opacity: 0.5;
+}
+
+.docs .prose table {
+	display: block;
+	width: 100%;
+	overflow-x: auto;
+	border-collapse: separate;
+	border-spacing: 0;
+	margin: 1.5rem 0;
+	white-space: nowrap;
+	background: var(--bg-secondary);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border: 1px solid var(--border-subtle);
+	border-radius: 0.75rem;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.docs .prose th,
+.docs .prose td {
+	text-align: left;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--border-light);
+	font-size: 0.8125rem;
+}
+
+.docs .prose th {
+	font-weight: 700;
+	background: var(--bg-secondary);
+	color: var(--text-primary);
+}
+
+.docs .prose tr:last-child td {
+	border-bottom: none;
+}
+
+.docs .prose tr:hover td {
+	background: var(--bg-secondary);
+}

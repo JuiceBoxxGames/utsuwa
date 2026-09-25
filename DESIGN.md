@@ -6,8 +6,12 @@ These rules cover the main app, settings, desktop overlay, documentation, and th
 
 ## Shared styles
 
-- `src/lib/styles/app-theme.css` owns the app palette, typography, button variants, and focus defaults.
-- `src/lib/styles/app-controls.css` owns fields, selects, dropdowns, sliders, native checkboxes and radios, badges, and floating panels.
+- `src/app.css` holds the Tailwind import (preflight and `sr-only`), global resets, selection, the reduced-motion clamp, the scrollbar, and the tokens shared by the site and the app: status, stat, tier, and mood colors, fonts, and `--ease-brand`.
+- `src/lib/styles/app-theme.css` owns the app palette, typography, radius scale, the `.btn` family, and focus defaults.
+- `src/lib/styles/app-controls.css` owns fields and their layout helpers, selects, dropdowns, sliders, native checkboxes and radios, badges, floating panels, and dialogs.
+- `src/routes/app/settings/settings-page.css` owns the settings column, page header, section panel, and the one `setting-row` family.
+- `src/lib/styles/site.css` owns the marketing site, blog, and legal pages: their palette, radius and shadow scale, pill and hero buttons, grain, Japanese typography, view transitions, and blog and legal prose. The landing, download, blog, and legal routes import it.
+- `src/lib/styles/prose.css` owns the docs prose (`.docs-site .prose`) and the Shiki code colors.
 - The `html:has(.app, .overlay-app, .docs-site)` scope includes content portaled to the document body and stops applying outside the app and docs.
 - Components consume tokens. Do not add per-component hex colors or duplicate shared control styling. Keep semantic status colors, graph categories, and authored media separate from interface colors.
 
@@ -25,11 +29,18 @@ These rules cover the main app, settings, desktop overlay, documentation, and th
 | Selected tab, `--selection-bg` | `#FFFFFF` | `#3A3A3A` |
 | Elevated menu or dialog | `#FFFFFF` | `#232323` |
 | Primary text, `--text-primary` | `#27272A` | `#F5F5F5` |
-| Secondary text, `--text-secondary` | `#71717B` | `#818181` |
+| Secondary text, `--text-secondary` | `#63636D` | `#909090` |
 | Primary blue, `--accent` | `#04B2FD` | `#04B2FD` |
-| Text and icons on blue, `--accent-contrast` | `#FFFFFF` | `#FFFFFF` |
+| Text and icons on blue, `--accent-contrast` | `#0A0A0A` | `#0A0A0A` |
+| Blue text on neutral fills, `--accent-text` | `#006BA1` | `#04B2FD` |
+| Error surface, `--color-error-bg` | `#FCEBEC` | `#301214` |
+| Error text on that surface, `--color-error-text` | `#C10007` | `#FF6467` |
+| Filled error badge, `--color-error-fill` | `#E7000B` | `#E7000B` |
+| Text on the error fill, `--color-error-contrast` | `#FFFFFF` | `#FFFFFF` |
 
-Use the same blue in both themes. Derive hover colors and muted focus washes from the accent. Filled primary buttons always use white text and icons. Activated blue switches, radio dots, and checkbox marks also use white foregrounds.
+`--text-tertiary` is an alias of `--text-secondary`; there is no third text strength. Secondary text passes 4.5:1 on the canvas, panel, sidebar, nested panel, and control fills in both themes.
+
+Use the same blue in both themes. White reaches only 2.39:1 on it, short of both the 4.5:1 text and 3:1 graphics minimums, so everything drawn on the blue uses `--accent-contrast`: primary button text and icons, the thumb of an active switch, checkbox marks, and radio dots. Use `--accent` for fills, rings, sliders, and switches and `--accent-text` for blue text and links. Derive hover colors and muted focus washes from the accent. Error messages sit on `--color-error-bg` with `--color-error-text`; filled badges and destructive buttons use `--color-error-fill` with white.
 
 Support light, dark, and system preferences. Theme changes must apply to open menus and synchronize between the main and overlay windows.
 
@@ -37,7 +48,7 @@ Support light, dark, and system preferences. Theme changes must apply to open me
 
 Use the system sans serif font. Control labels are normally 14px with a 20px line height. Descriptions are 13px; group headings are 14px and muted; page headings are 20px. Use normal case and avoid decorative letter spacing.
 
-Control corners are 8px, grouped panels 12px, and dialogs 18px. Small badges use 4px corners. Reserve circular shapes for switch tracks, radio controls, status dots, and artwork that requires them.
+Corners come from one scale: `--radius-badge` 4px, `--radius-control` 8px, `--radius-panel` 12px, and `--radius-dialog` 18px. The older `--radius-xs`, `--radius-md`, `--radius-lg`, and `--radius-xl` names alias those steps; `--radius-sm` (6px) is off the scale and kept only for its remaining consumers. Reserve circular shapes for switch tracks, radio controls, status dots, and artwork that requires them.
 
 Desktop controls are 32px high, with 28px compact and 36px large variants. Touch controls have at least 44px targets. Settings groups use 16px padding, reduced to 12px on narrow screens. Separate groups by 24 to 28px.
 
@@ -47,10 +58,10 @@ Panels use neutral fills. Resting border tokens are transparent. Use shadows to 
 
 Use `Button.svelte` or the shared `.btn` classes:
 
-- Primary actions use the blue fill with white text and icons.
+- Primary actions use the blue fill with dark text and icons.
 - Secondary actions use a neutral fill, with distinct hover and pressed fills.
 - Ghost actions start transparent and gain a neutral fill on hover.
-- Destructive actions use the error color and require the existing confirmation behavior.
+- Destructive actions use the error fill with white text and require the existing confirmation behavior.
 - Icon actions use the shared icon-button size and an accessible name.
 
 Use `Switch.svelte` for booleans, `SegmentedControl.svelte` for short exclusive choices, and `Tabs.svelte` to switch panels. Selected tabs use a distinct fill. Expose selection with `aria-pressed`, `aria-selected`, or the component's native semantics. Expandable controls expose `aria-expanded`.

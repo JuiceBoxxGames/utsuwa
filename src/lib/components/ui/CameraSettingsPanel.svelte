@@ -217,10 +217,6 @@
 		max-height: calc(100dvh - 96px);
 		overflow-y: auto;
 		padding: 1rem;
-		background: var(--bg-primary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-lg);
 		display: flex;
 		flex-direction: column;
 		gap: 0.875rem;

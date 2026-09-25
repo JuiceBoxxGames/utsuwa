@@ -67,9 +67,6 @@
 
 <style>
 	.profile-sections { display: flex; flex-direction: column; gap: 24px; }
-	.setting-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-	.setting-info { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; }
-	.setting-desc { color: var(--text-secondary); }
 	.name-field { width: min(100%, 260px); }
 	textarea { line-height: 1.6; }
 	:global(.confirm-modal) { position: fixed; inset: 0; z-index: 1100; }

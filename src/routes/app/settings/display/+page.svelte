@@ -134,66 +134,11 @@
 </div>
 
 <style>
-	.display-page {
-		height: 100%;
-		max-width: 960px;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		overflow-y: auto;
-	}
-
-	.page-header {
-		flex-shrink: 0;
-	}
-
-	.page-header h2 {
-		margin: 0 0 0.25rem;
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: var(--text-primary);
-	}
-
-	.page-header p {
-		margin: 0;
-		color: var(--text-secondary);
-		font-size: 0.875rem;
-	}
-
-	.setting-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-	}
-
-	.setting-info {
-		flex: 1;
-		min-width: 180px;
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	.setting-label {
-		font-weight: 500;
-		font-size: 0.875rem;
-		color: var(--text-primary);
-	}
-
-	.setting-desc {
-		font-size: 0.75rem;
-		color: var(--text-secondary);
-	}
-
 	.delay-input-container {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
 	}
-
-
-
 
 	.delay-input {
 		width: 3.5rem;
@@ -212,11 +157,5 @@
 	.delay-unit {
 		font-size: 0.8rem;
 		color: var(--text-secondary);
-	}
-
-	@media (max-width: 640px) {
-		.setting-row {
-			flex-wrap: wrap;
-		}
 	}
 </style>

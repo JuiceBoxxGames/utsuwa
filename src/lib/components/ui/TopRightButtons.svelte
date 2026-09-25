@@ -321,8 +321,8 @@
 		min-width: 18px;
 		height: 18px;
 		padding: 0 5px;
-		background: var(--color-error);
-		color: white;
+		background: var(--color-error-fill);
+		color: var(--color-error-contrast);
 		font-size: 10px;
 		font-weight: 700;
 		border-radius: 9px;
@@ -339,11 +339,7 @@
 		width: 280px;
 		max-height: 320px;
 		overflow-y: auto;
-		background: var(--bg-primary);
-		border: 1px solid var(--border-light);
-		border-radius: var(--radius-lg);
 		padding: 0.75rem;
-		box-shadow: var(--shadow-lg);
 		z-index: 60;
 	}
 

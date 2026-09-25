@@ -335,7 +335,7 @@
 		border-radius: calc(var(--radius-xl) - 4px);
 		background: var(--accent-subtle);
 		border: 2px dashed var(--accent);
-		color: var(--accent);
+		color: var(--accent-text);
 		font-size: 0.95rem;
 		font-weight: 600;
 		z-index: 4;

@@ -289,7 +289,7 @@
 
 	.photo-card:hover .photo-btn img {
 		border-color: var(--accent);
-		box-shadow: var(--shadow-glow);
+		box-shadow: none;
 	}
 
 	.caption {
@@ -308,8 +308,8 @@
 		height: 20px;
 		border: 2px solid var(--bg-primary);
 		border-radius: var(--control-radius, var(--radius-md));
-		background: var(--color-error);
-		color: #fff;
+		background: var(--color-error-fill);
+		color: var(--color-error-contrast);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -374,6 +374,11 @@
 		z-index: 1100;
 		padding: 2rem;
 		animation: fadeIn 0.2s ease-out;
+	}
+
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
 	}
 
 	.lb-close {

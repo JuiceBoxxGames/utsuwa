@@ -10,7 +10,6 @@
 	import { getTTSBaseUrl } from '$lib/services/providers/local-endpoints';
 	import { buildPresetInstructions } from '$lib/stores/ai-services-settings-logic';
 	import { getFocusableElements, handleModalKeydown } from './tts-modal-a11y';
-	import './ai-services-settings.css';
 
 	let {
 		state: settings,
@@ -1175,8 +1174,8 @@
 		gap: 0.5rem;
 		padding: 0.5rem 0.75rem;
 		margin-top: 0.5rem;
-		background: var(--color-error-bg, rgba(239, 68, 68, 0.12));
-		color: var(--color-error);
+		background: var(--color-error-bg);
+		color: var(--color-error-text);
 		border: 1px solid var(--color-error);
 		border-radius: var(--radius-lg);
 		font-size: 0.8rem;

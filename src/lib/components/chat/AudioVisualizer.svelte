@@ -73,7 +73,7 @@
 	.transcript {
 		flex: 1;
 		min-width: 0;
-		color: var(--color-neutral-800);
+		color: var(--text-primary);
 		font-size: 1rem;
 		line-height: 1.5;
 		white-space: nowrap;
@@ -82,6 +82,6 @@
 	}
 
 	.transcript.placeholder {
-		color: var(--color-neutral-500);
+		color: var(--text-secondary);
 	}
 </style>

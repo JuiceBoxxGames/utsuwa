@@ -1,9 +1,0 @@
-@import './settings-controls.css';
-
-/* Field stack for the LLM, TTS, and STT sections */
-.ai-fields { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.ai-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.ai-field .settings-label { margin-bottom: 0; }
-.ai-fields .hint { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
-
-.api-key-input { flex: 1; }

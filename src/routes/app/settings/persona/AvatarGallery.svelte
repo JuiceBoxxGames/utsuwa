@@ -103,7 +103,7 @@
 	}
 
 	.model-card.active .model-name {
-		color: var(--accent);
+		color: var(--accent-text);
 	}
 
 	.model-card.active .model-preview {

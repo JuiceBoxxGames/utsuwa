@@ -8,7 +8,6 @@
 	import { isTauri } from '$lib/services/platform';
 	import type { LlmSettingsState } from '$lib/stores/ai-services-settings.svelte';
 	import SettingsSection from './SettingsSection.svelte';
-	import './ai-services-settings.css';
 
 	let { state }: { state: LlmSettingsState } = $props();
 

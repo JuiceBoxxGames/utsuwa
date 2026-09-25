@@ -1,17 +1,13 @@
 <script lang="ts">
-	import '$lib/styles/prose.css';
-	import { lightVars } from '$lib/config/docs-theme';
+	import '$lib/styles/site.css';
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();
-
-	// Marketing pages are light only, so the docs aliases are fixed here.
-	const docsVars = Object.entries(lightVars).map(([k, v]) => `${k}: ${v}`).join('; ');
 </script>
 
-<div class="docs legal-site grain" style={docsVars}>
+<div class="docs legal-site grain">
 	<SiteNav />
 
 	<main class="legal-main">
@@ -25,7 +21,7 @@
 	.legal-site {
 		min-height: 100vh;
 		background: var(--bg-page);
-		color: var(--docs-text);
+		color: var(--text-primary);
 		font-family: var(--font-sans);
 	}
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '$lib/styles/site.css';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';

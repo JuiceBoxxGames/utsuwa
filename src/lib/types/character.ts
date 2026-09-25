@@ -154,7 +154,7 @@ export const RELATIONSHIP_STAGE_INFO: Record<RelationshipStage, RelationshipStag
 	companion: {
 		name: 'Companion',
 		description: 'Your helpful AI assistant',
-		color: 'var(--ctp-blue)',
+		color: 'var(--color-info)',
 		icon: 'sparkles'
 	},
 	stranger: {
@@ -216,16 +216,16 @@ export interface MoodInfo {
 }
 
 export const MOOD_INFO: Record<Emotion, MoodInfo> = {
-	happy: { name: 'Happy', description: 'Feeling good!', color: 'var(--ctp-yellow)', icon: 'smile' },
-	sad: { name: 'Sad', description: 'Feeling down...', color: 'var(--ctp-blue)', icon: 'sad' },
-	excited: { name: 'Excited', description: 'So excited!', color: 'var(--ctp-peach)', icon: 'sparkles' },
-	anxious: { name: 'Anxious', description: 'A bit worried...', color: 'var(--ctp-mauve)', icon: 'alert-circle' },
-	content: { name: 'Content', description: 'Peacefully content', color: 'var(--ctp-green)', icon: 'sun' },
-	frustrated: { name: 'Frustrated', description: 'Ugh...', color: 'var(--ctp-red)', icon: 'frown' },
-	curious: { name: 'Curious', description: 'Hmm, interesting...', color: 'var(--ctp-sky)', icon: 'circle-help' },
-	affectionate: { name: 'Affectionate', description: 'Feeling close to you', color: 'var(--ctp-pink)', icon: 'heart' },
-	playful: { name: 'Playful', description: 'In a playful mood~', color: 'var(--ctp-teal)', icon: 'smile' },
-	melancholy: { name: 'Melancholy', description: 'Feeling reflective...', color: 'var(--ctp-overlay0)', icon: 'meh' },
-	flustered: { name: 'Flustered', description: 'W-what?!', color: 'var(--ctp-red)', icon: 'zap' },
-	neutral: { name: 'Neutral', description: 'Just normal', color: 'var(--ctp-subtext0)', icon: 'minus' }
+	happy: { name: 'Happy', description: 'Feeling good!', color: 'var(--mood-happy)', icon: 'smile' },
+	sad: { name: 'Sad', description: 'Feeling down...', color: 'var(--mood-sad)', icon: 'sad' },
+	excited: { name: 'Excited', description: 'So excited!', color: 'var(--mood-excited)', icon: 'sparkles' },
+	anxious: { name: 'Anxious', description: 'A bit worried...', color: 'var(--mood-anxious)', icon: 'alert-circle' },
+	content: { name: 'Content', description: 'Peacefully content', color: 'var(--mood-content)', icon: 'sun' },
+	frustrated: { name: 'Frustrated', description: 'Ugh...', color: 'var(--mood-frustrated)', icon: 'frown' },
+	curious: { name: 'Curious', description: 'Hmm, interesting...', color: 'var(--mood-curious)', icon: 'circle-help' },
+	affectionate: { name: 'Affectionate', description: 'Feeling close to you', color: 'var(--mood-affectionate)', icon: 'heart' },
+	playful: { name: 'Playful', description: 'In a playful mood~', color: 'var(--mood-playful)', icon: 'smile' },
+	melancholy: { name: 'Melancholy', description: 'Feeling reflective...', color: 'var(--mood-melancholy)', icon: 'meh' },
+	flustered: { name: 'Flustered', description: 'W-what?!', color: 'var(--mood-frustrated)', icon: 'zap' },
+	neutral: { name: 'Neutral', description: 'Just normal', color: 'var(--mood-neutral)', icon: 'minus' }
 };
