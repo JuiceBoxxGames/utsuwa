@@ -37,7 +37,7 @@ const config = {
 		adapter: isTauri
 			? adapterStatic({ fallback: 'index.html' })
 			: adapterAuto(),
-		// Lock down the desktop webview: with a broad fs read capability, a script
+		// Lock down the desktop webview: with fs and http capabilities, a script
 		// injection would be dangerous, so forbid inline/remote script execution.
 		// SvelteKit hashes its own inline scripts in 'hash' mode. Applied only to
 		// the Tauri build — the web deployment has no filesystem access and its

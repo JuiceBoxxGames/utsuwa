@@ -384,7 +384,7 @@ A written scene is cached per event for the session, so a dismissed event that c
 
 Companion Mode uses a shorter prompt: system, character, a `<state>` with mood and energy only, memory, the same optional layers, and simpler instructions.
 
-When MCP tools are active and `PUBLIC_MCP_PROMPT_HARDENING` is set, an `<mcp_tool_security>` block is appended. See [MCP Servers](/docs/guides/mcp#optional-hardening-env-gated).
+When MCP tools are active, an `<mcp_tool_security>` block is appended unless `PUBLIC_MCP_PROMPT_HARDENING=false` opts out. See [MCP Servers](/docs/guides/mcp#hardening).
 
 ### Turn Progress Hooks
 

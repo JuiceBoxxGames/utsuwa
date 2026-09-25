@@ -4,6 +4,7 @@
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
 	import { TopRightButtons, TopLeftButtons, InfoModal, Icon } from '$lib/components/ui';
 	import BottomChatBar from '$lib/components/chat/BottomChatBar.svelte';
+	import McpConfirmDialog from '$lib/components/mcp/McpConfirmDialog.svelte';
 	import PhotoModeDock from '$lib/components/photomode/PhotoModeDock.svelte';
 	import PhotoStickerLayer from '$lib/components/photomode/PhotoStickerLayer.svelte';
 	import PhotoFramePreview from '$lib/components/photomode/PhotoFramePreview.svelte';
@@ -309,6 +310,7 @@
 	{#if showInfoModal}
 		<InfoModal onClose={() => showInfoModal = false} />
 	{/if}
+	<McpConfirmDialog />
 	{#if showBoard}
 		<Photoboard onClose={() => showBoard = false} />
 	{/if}

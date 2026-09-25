@@ -41,6 +41,15 @@ let refetchQueued = false;
 let toolsError = $state<string | null>(null);
 let capability = $state<McpCapabilityState>('unknown');
 
+export interface McpToolConfirmation {
+	serverName: string;
+	toolName: string;
+	args: Record<string, unknown>;
+}
+
+// One dialog at a time; parallel calls from a round wait in line.
+let confirmations = $state.raw<Array<McpToolConfirmation & { resolve: (run: boolean) => void }>>([]);
+
 /**
  * Probe the server route once: a 404 means MCP is disabled on this deployment,
  * so the settings page can explain why nothing works and the chat never sends
@@ -157,7 +166,7 @@ export const mcpStore = {
 	},
 
 	addServer(config: Omit<McpServerConfig, 'id'>) {
-		const newServer: McpServerConfig = { ...config, id: crypto.randomUUID() };
+		const newServer: McpServerConfig = { askBeforeRun: true, ...config, id: crypto.randomUUID() };
 		servers = [...servers, newServer];
 		persist(servers);
 		if (newServer.enabled) void fetchTools();
@@ -179,6 +188,23 @@ export const mcpStore = {
 		servers = servers.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s));
 		persist(servers);
 		void fetchTools();
+	},
+
+	get pendingConfirmation(): McpToolConfirmation | null {
+		return confirmations[0] ?? null;
+	},
+
+	confirmToolCall(request: McpToolConfirmation): Promise<boolean> {
+		return new Promise((resolve) => {
+			confirmations = [...confirmations, { ...request, resolve }];
+		});
+	},
+
+	answerConfirmation(run: boolean) {
+		const [first, ...rest] = confirmations;
+		if (!first) return;
+		confirmations = rest;
+		first.resolve(run);
 	},
 
 	refreshTools,

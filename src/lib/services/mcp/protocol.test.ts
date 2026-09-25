@@ -6,10 +6,10 @@ import {
 	buildInitializeRequest,
 	buildRpcRequest,
 	combineServerResults,
+	isMcpHardeningEnabled,
 	isServerMcpEnabled,
 	isAllowedMcpHttpUrl,
 	isBlockedMcpHost,
-	isStdioCommandAllowed,
 	mergeStdioEnv,
 	mcpUrlCandidates,
 	parseEnvLines,
@@ -21,9 +21,13 @@ import {
 	pickStdioEnv,
 	resolveCapabilityFromProbe,
 	singleFlight,
-	stdioDenyReason,
 	stringifyToolResult
 } from './protocol.ts';
+
+test('isMcpHardeningEnabled is on unless explicitly opted out', () => {
+	for (const raw of [undefined, null, '', 'true', '1', 'yes']) assert.equal(isMcpHardeningEnabled(raw), true);
+	for (const raw of ['false', '0', 'FALSE', ' off ']) assert.equal(isMcpHardeningEnabled(raw), false);
+});
 
 test('isServerMcpEnabled: server and both enable the routes', () => {
 	assert.equal(isServerMcpEnabled('server'), true);
@@ -227,25 +231,6 @@ test('isBlockedMcpHost keeps loopback, RFC1918 and public hosts reachable', () =
 	assert.equal(isBlockedMcpHost('192.168.10.3'), false);
 	assert.equal(isBlockedMcpHost('homeassistant.local'), false);
 	assert.equal(isBlockedMcpHost('api.githubcopilot.com'), false);
-});
-
-test('isStdioCommandAllowed is fail-closed without an allowlist', () => {
-	assert.equal(isStdioCommandAllowed('rm', []), false);
-	assert.equal(isStdioCommandAllowed('npx', []), false);
-	assert.equal(isStdioCommandAllowed(undefined, []), false);
-});
-
-test('isStdioCommandAllowed enforces a configured allowlist and the wildcard', () => {
-	assert.equal(isStdioCommandAllowed('npx', ['npx', 'node']), true);
-	assert.equal(isStdioCommandAllowed('rm', ['npx', 'node']), false);
-	assert.equal(isStdioCommandAllowed(undefined, ['npx']), false);
-	assert.equal(isStdioCommandAllowed('rm', ['*']), true);
-});
-
-test('stdioDenyReason explains disabled vs not-allowed', () => {
-	assert.equal(stdioDenyReason('npx', ['npx']), null);
-	assert.match(stdioDenyReason('npx', []) ?? '', /disabled/);
-	assert.match(stdioDenyReason('rm', ['npx']) ?? '', /not allowed/);
 });
 
 test('pickStdioEnv keeps only the safe environment subset', () => {

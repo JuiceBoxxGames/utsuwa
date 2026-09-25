@@ -50,6 +50,16 @@ test('a stdio server that exits during the handshake rejects with its exit code'
 	);
 });
 
+test('a stdio server flooding stdout without a newline is cut off at 4 MB', async () => {
+	const script = "process.stdin.resume(); const chunk = 'x'.repeat(1 << 20); for (let i = 0; i < 6; i++) process.stdout.write(chunk);";
+	await assert.rejects(
+		createStdioSession(stdioConfig({ command: process.execPath, args: ['-e', script] }), {
+			timeoutMs: 10_000
+		}),
+		/exceeded 4 MB/
+	);
+});
+
 test('stdio servers receive a minimal environment plus their configured vars', async () => {
 	const dir = mkdtempSync(join(tmpdir(), 'mcp-stdio-env-'));
 	const stateFile = join(dir, 'env.json');

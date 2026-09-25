@@ -25,6 +25,11 @@ export function isServerMcpEnabled(raw: string | undefined | null): boolean {
 	return raw === 'server' || raw === 'both';
 }
 
+/** MCP prompt hardening is on by default; `false`, `0`, or `off` opt out. */
+export function isMcpHardeningEnabled(raw: string | undefined | null): boolean {
+	return !['false', '0', 'off'].includes((raw ?? '').trim().toLowerCase());
+}
+
 /** Capability of the current runtime as seen by the client store. */
 export type McpCapabilityState = 'unknown' | 'server' | 'client' | 'none';
 
@@ -292,31 +297,6 @@ export function isBlockedMcpHost(rawHostname: string): boolean {
 }
 
 /**
- * stdio is fail-closed: without an allowlist no command runs. `*` is the
- * explicit opt-in to allow every command.
- */
-export function isStdioCommandAllowed(
-	command: string | undefined | null,
-	allowed: string[]
-): boolean {
-	if (allowed.includes('*')) return true;
-	if (!command) return false;
-	return allowed.includes(command);
-}
-
-/** Human-readable reason when a stdio command is denied, else null. */
-export function stdioDenyReason(
-	command: string | undefined | null,
-	allowed: string[]
-): string | null {
-	if (isStdioCommandAllowed(command, allowed)) return null;
-	if (allowed.length === 0) {
-		return 'stdio is disabled — set MCP_STDIO_ALLOWED_COMMANDS to allowlist commands';
-	}
-	return `stdio command "${command ?? ''}" is not allowed (MCP_STDIO_ALLOWED_COMMANDS)`;
-}
-
-/**
  * Environment a spawned stdio server inherits from the app process. Everything
  * else — database URLs, API keys, provider tokens — stays inside the app; the
  * per-server `env` config adds only what a server actually needs (e.g.
@@ -370,8 +350,15 @@ const STDIO_ENV_DENYLIST = new Set([
 	'LD_PRELOAD',
 	'LD_LIBRARY_PATH',
 	'DYLD_INSERT_LIBRARIES',
-	'DYLD_LIBRARY_PATH'
+	'DYLD_LIBRARY_PATH',
+	'BASH_ENV',
+	'PYTHONPATH'
 ]);
+
+export function isDeniedStdioEnvName(name: string): boolean {
+	const upper = name.toUpperCase();
+	return STDIO_ENV_DENYLIST.has(upper) || upper.startsWith('NPM_CONFIG_');
+}
 
 /** Merge per-server env vars over the (already filtered) base env, blocking critical keys. */
 export function mergeStdioEnv(
@@ -383,7 +370,7 @@ export function mergeStdioEnv(
 		if (value !== undefined) merged[key] = value;
 	}
 	for (const [key, value] of Object.entries(extra ?? {})) {
-		if (STDIO_ENV_DENYLIST.has(key.toUpperCase())) continue;
+		if (isDeniedStdioEnvName(key)) continue;
 		merged[key] = value;
 	}
 	return merged;

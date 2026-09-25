@@ -7,12 +7,8 @@ import { env as publicEnv } from '$env/dynamic/public';
 import type { RequestHandler } from './$types';
 import type { McpServerConfig } from '$lib/types/mcp';
 import { callTool } from '$lib/services/mcp/client.server';
-import {
-	isAllowedMcpHttpUrl,
-	isServerMcpEnabled,
-	parseToolNameList,
-	stdioDenyReason
-} from '$lib/services/mcp/protocol';
+import { isAllowedMcpHttpUrl, isServerMcpEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
+import { applyStdioPolicy } from '$lib/services/mcp/stdio-policy';
 
 export const POST: RequestHandler = async ({ request }) => {
 	if (!isServerMcpEnabled(env.MCP_ENABLED)) {
@@ -47,17 +43,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		});
 	}
 
-	// Env-gated safety net: stdio is fail-closed — without an allowlist no
-	// command runs; with one, only listed commands pass.
-	const stdioDeny =
-		server.transport === 'stdio'
-			? stdioDenyReason(server.command, parseToolNameList(env.MCP_STDIO_ALLOWED_COMMANDS))
-			: null;
-	if (stdioDeny) {
-		return new Response(JSON.stringify({ error: stdioDeny }), {
-			status: 403,
-			headers: { 'Content-Type': 'application/json' }
-		});
+	// stdio is fail-closed: only allowlisted command lines run, and only
+	// allowlisted env var names reach the process.
+	let target = server;
+	if (server.transport === 'stdio') {
+		const policy = applyStdioPolicy(server, env);
+		if ('error' in policy) {
+			return new Response(JSON.stringify({ error: policy.error }), {
+				status: 403,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+		target = policy.server;
 	}
 
 	// Env-gated safety net: tools on the confirmation list are never executed
@@ -69,7 +66,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 	}
 
-	const result = await callTool(server, toolName, args);
+	const result = await callTool(target, toolName, args);
 
 	return new Response(JSON.stringify(result), {
 		headers: { 'Content-Type': 'application/json' }

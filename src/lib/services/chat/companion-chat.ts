@@ -37,7 +37,7 @@ import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { shouldUseSpeechTools } from '$lib/services/tts/tool-definitions';
 import { isTauri } from '$lib/services/platform';
 import { env as publicEnv } from '$env/dynamic/public';
-import { parseToolNameList } from '$lib/services/mcp/protocol';
+import { isMcpHardeningEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
 import { mcpStore } from '$lib/stores/mcp.svelte';
 import { callTool } from '$lib/services/mcp/capability';
 import {
@@ -428,12 +428,11 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		const mcpToolNames = new Set(mcpTools.map((tool) => tool.name));
 		const useMcpLoop = mcpTools.length > 0;
 
-		// Optional env-gated hardening (default off): tool results are untrusted
-		// data and state-changing actions need an explicit user request. Added
-		// before truncation so the layer counts against the context budget.
+		// Hardening is on unless opted out: tool results are untrusted data and
+		// state-changing actions need an explicit user request. Added before
+		// truncation so the layer counts against the context budget.
 		const confirmToolNames = new Set(parseToolNameList(publicEnv.PUBLIC_MCP_CONFIRM_TOOLS));
-		const hardeningEnabled =
-			publicEnv.PUBLIC_MCP_PROMPT_HARDENING === 'true' || publicEnv.PUBLIC_MCP_PROMPT_HARDENING === '1';
+		const hardeningEnabled = isMcpHardeningEnabled(publicEnv.PUBLIC_MCP_PROMPT_HARDENING);
 		if (mcpTools.length > 0) {
 			const security = buildMcpSecurityInstructions({
 				mcpActive: true,
@@ -664,6 +663,15 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 						return {
 							call,
 							content: `Error: no enabled MCP server configured for tool "${call.name}"`
+						};
+					}
+					if (
+						server.askBeforeRun !== false &&
+						!(await mcpStore.confirmToolCall({ serverName: server.name, toolName: call.name, args: call.args }))
+					) {
+						return {
+							call,
+							content: `The user declined to run tool "${call.name}"; it was NOT executed. Do not retry it unless the user asks.`
 						};
 					}
 					const result = await callTool(server, call.name, call.args);

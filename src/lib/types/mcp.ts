@@ -29,6 +29,8 @@ export interface McpServerConfig {
 	 * role messages.
 	 */
 	injectResultsAsUser?: boolean;
+	/** Ask the user before each tool call. Unset counts as on. */
+	askBeforeRun?: boolean;
 	enabled: boolean;
 }
 

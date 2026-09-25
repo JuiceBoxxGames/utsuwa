@@ -16,6 +16,7 @@ import {
 	pickStdioEnv,
 	stringifyToolResult
 } from './protocol.ts';
+import { STDIO_MAX_STDOUT_BUFFER } from './stdio-policy.ts';
 
 const STDIO_REQUEST_TIMEOUT_MS = 15_000;
 
@@ -127,11 +128,26 @@ export async function createStdioSession(
 	// surface through the pending promise, not as an uncaught stream error.
 	proc.stdin.on('error', () => {});
 
+	function failAll(err: Error) {
+		for (const [id, entry] of pending) {
+			pending.delete(id);
+			entry.reject(err);
+		}
+	}
+
+	// setEncoding keeps multi-byte characters intact across chunk boundaries.
+	proc.stdout.setEncoding('utf8');
 	let buffer = '';
-	proc.stdout.on('data', (chunk: Buffer) => {
-		buffer += chunk.toString();
+	proc.stdout.on('data', (chunk: string) => {
+		buffer += chunk;
 		const lines = buffer.split('\n');
 		buffer = lines.pop() ?? '';
+		if (buffer.length > STDIO_MAX_STDOUT_BUFFER) {
+			buffer = '';
+			failAll(new Error('MCP stdio output exceeded 4 MB without a newline'));
+			proc.kill('SIGKILL');
+			return;
+		}
 		for (const line of lines) {
 			if (!line.trim()) continue;
 			try {
@@ -155,19 +171,8 @@ export async function createStdioSession(
 		}
 	});
 
-	proc.on('error', (err) => {
-		for (const [id, entry] of pending) {
-			pending.delete(id);
-			entry.reject(err);
-		}
-	});
-
-	proc.on('exit', (code) => {
-		for (const [id, entry] of pending) {
-			pending.delete(id);
-			entry.reject(new Error(`MCP stdio process exited with code ${code ?? 'unknown'}`));
-		}
-	});
+	proc.on('error', failAll);
+	proc.on('exit', (code) => failAll(new Error(`MCP stdio process exited with code ${code ?? 'unknown'}`)));
 
 	let closed = false;
 	function close() {
