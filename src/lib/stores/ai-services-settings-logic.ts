@@ -1,6 +1,7 @@
 import type { ModelInfo } from '$lib/services/providers/use-model-fetch';
 import type { ProviderMetadata } from '$lib/services/providers/registry';
 import type { ProviderConfig } from '$lib/types';
+import type { SpeechSettings } from '$lib/services/modules/settings';
 
 /**
  * Pure helpers for the LLM/TTS/STT settings UI.
@@ -47,6 +48,24 @@ export function isProviderReadyForFetch(
  */
 export function createFetchSignature(providerId: string, baseUrl: string | undefined): string {
 	return `${providerId}:${baseUrl ?? ''}`;
+}
+
+/**
+ * Whether onboarding can move past the chat step. Local providers need an
+ * installed model picked, custom endpoints a base URL and a typed model, and
+ * cloud providers a key when they require one.
+ */
+export function isLlmConfigured(
+	provider: ProviderMetadata | undefined,
+	config: ProviderConfig,
+	activeModel: string | undefined,
+	models: ModelInfo[]
+): boolean {
+	if (!provider) return false;
+	if (provider.isLocal) return !!activeModel && models.some((model) => model.id === activeModel);
+	if (provider.custom) return !!config.baseUrl && !!activeModel;
+	if (!provider.requiresApiKey) return true;
+	return !!config.apiKey;
 }
 
 // ── OmniVoice voice design helpers ───────────────────────────────────────────
@@ -111,3 +130,79 @@ export function buildPresetInstructions(
 	const accent = language === 'en' ? attrs.accent : '';
 	return buildInstructions(attrs.gender, attrs.age, attrs.pitch, accent);
 }
+
+export const DEFAULT_OMNIVOICE_PRESET = 'alloy';
+
+export const OMNIVOICE_LANGUAGES = [
+	{ code: 'en', name: 'English' },
+	{ code: 'de', name: 'German' },
+	{ code: 'es', name: 'Spanish' },
+	{ code: 'fr', name: 'French' },
+	{ code: 'it', name: 'Italian' },
+	{ code: 'pt', name: 'Portuguese' },
+	{ code: 'ja', name: 'Japanese' },
+	{ code: 'ko', name: 'Korean' },
+	{ code: 'zh', name: 'Chinese' },
+	{ code: 'ru', name: 'Russian' },
+	{ code: 'ar', name: 'Arabic' },
+	{ code: 'nl', name: 'Dutch' },
+	{ code: 'pl', name: 'Polish' },
+	{ code: 'tr', name: 'Turkish' },
+	{ code: 'sv', name: 'Swedish' }
+];
+
+export const OMNIVOICE_TEST_PHRASES: Record<string, string> = {
+	en: 'Hello, this is a test of OmniVoice text to speech.',
+	de: 'Hallo, dies ist ein Test von OmniVoice.',
+	es: 'Hola, esta es una prueba de OmniVoice.',
+	fr: 'Bonjour, ceci est un test de OmniVoice.',
+	it: 'Ciao, questo è un test di OmniVoice.',
+	pt: 'Olá, este é um teste do OmniVoice.',
+	ja: 'こんにちは、これはOmniVoiceのテストです。',
+	ko: '안녕하세요, OmniVoice 테스트입니다.',
+	zh: '你好，这是OmniVoice的测试。',
+	ru: 'Здравствуйте, это тест OmniVoice.',
+	ar: 'مرحباً، هذا اختبار لـ OmniVoice.',
+	nl: 'Hallo, dit is een test van OmniVoice.',
+	pl: 'Cześć, to jest test OmniVoice.',
+	tr: 'Merhaba, bu OmniVoice bir testidir.',
+	sv: 'Hej, detta är ett test av OmniVoice.'
+};
+
+export const OMNIVOICE_PRESET_ATTRIBUTES: Record<string, OmniVoicePresetAttributes> = {
+	alloy: { gender: 'female', age: 'young adult', pitch: 'moderate', accent: 'american' },
+	ash: { gender: 'male', age: 'young adult', pitch: 'low', accent: 'american' },
+	ballad: { gender: 'male', age: 'middle-aged', pitch: 'low', accent: 'british' },
+	cedar: { gender: 'male', age: 'middle-aged', pitch: 'low', accent: 'american' },
+	coral: { gender: 'female', age: 'young adult', pitch: 'high', accent: 'australian' },
+	echo: { gender: 'male', age: 'middle-aged', pitch: 'moderate', accent: 'canadian' },
+	fable: { gender: 'female', age: 'middle-aged', pitch: 'moderate', accent: 'british' },
+	marin: { gender: 'female', age: 'middle-aged', pitch: 'moderate', accent: 'canadian' },
+	nova: { gender: 'female', age: 'young adult', pitch: 'high', accent: 'american' },
+	onyx: { gender: 'male', age: 'middle-aged', pitch: 'very low', accent: 'british' },
+	sage: { gender: 'female', age: 'elderly', pitch: 'low', accent: 'british' },
+	shimmer: { gender: 'female', age: 'young adult', pitch: 'very high', accent: 'american' },
+	verse: { gender: 'male', age: 'young adult', pitch: 'moderate', accent: 'british' }
+};
+
+export function omnivoicePresetInstructions(voiceId: string, language: string): string {
+	return buildPresetInstructions(voiceId || DEFAULT_OMNIVOICE_PRESET, language, OMNIVOICE_PRESET_ATTRIBUTES);
+}
+
+type OmniVoiceParam = 'speed' | 'numStep' | 'positionTemperature' | 'classTemperature';
+
+/** Synthesis sliders, shared by the primary voice and its alt* twin. */
+export const OMNIVOICE_PARAMS: Array<{
+	key: OmniVoiceParam & keyof SpeechSettings;
+	altKey: `alt${Capitalize<OmniVoiceParam>}` & keyof SpeechSettings;
+	id: string;
+	label: string;
+	min: number;
+	max: number;
+	step: number;
+}> = [
+	{ key: 'speed', altKey: 'altSpeed', id: 'speed', label: 'Speed', min: 0.5, max: 2, step: 0.1 },
+	{ key: 'numStep', altKey: 'altNumStep', id: 'num-step', label: 'Num Step', min: 4, max: 64, step: 1 },
+	{ key: 'positionTemperature', altKey: 'altPositionTemperature', id: 'position-temperature', label: 'Position Temperature', min: 0, max: 2, step: 0.1 },
+	{ key: 'classTemperature', altKey: 'altClassTemperature', id: 'class-temperature', label: 'Class Temperature', min: 0, max: 2, step: 0.1 }
+];

@@ -4,6 +4,7 @@ import {
 	selectDefaultModel,
 	isProviderReadyForFetch,
 	createFetchSignature,
+	isLlmConfigured,
 	buildInstructions,
 	buildPresetInstructions
 } from './ai-services-settings-logic.ts';
@@ -70,6 +71,33 @@ test('isProviderReadyForFetch requires base URL for custom endpoints', () => {
 	assert.equal(isProviderReadyForFetch(customProvider, {}), false);
 	assert.equal(isProviderReadyForFetch(customProvider, { apiKey: 'key' }), false);
 	assert.equal(isProviderReadyForFetch(customProvider, { baseUrl: 'http://localhost/v1' }), true);
+});
+
+test('isLlmConfigured needs a provider', () => {
+	assert.equal(isLlmConfigured(undefined, {}, 'gpt-4o', []), false);
+});
+
+test('isLlmConfigured needs an API key for cloud providers, not a model', () => {
+	assert.equal(isLlmConfigured(cloudProvider, {}, 'gpt-4o', []), false);
+	assert.equal(isLlmConfigured(cloudProvider, { apiKey: 'key' }, undefined, []), true);
+});
+
+test('isLlmConfigured needs an installed model for local providers', () => {
+	const installed = [mockModel('llama3')];
+	assert.equal(isLlmConfigured(localProvider, {}, undefined, installed), false);
+	assert.equal(isLlmConfigured(localProvider, {}, 'gpt-4o', installed), false);
+	assert.equal(isLlmConfigured(localProvider, {}, 'llama3', installed), true);
+});
+
+test('isLlmConfigured needs a base URL and a typed model for custom endpoints', () => {
+	assert.equal(isLlmConfigured(customProvider, { baseUrl: 'http://x/v1' }, '', []), false);
+	assert.equal(isLlmConfigured(customProvider, {}, 'm', []), false);
+	assert.equal(isLlmConfigured(customProvider, { baseUrl: 'http://x/v1' }, 'm', []), true);
+});
+
+test('isLlmConfigured accepts keyless cloud providers as they are', () => {
+	const keyless = { ...cloudProvider, requiresApiKey: false } as ProviderMetadata;
+	assert.equal(isLlmConfigured(keyless, {}, undefined, []), true);
 });
 
 test('createFetchSignature is stable for same inputs', () => {
