@@ -220,18 +220,18 @@ html:has(.app, .overlay-app, .docs-site) input[type='radio']:checked { backgroun
 html:has(.app, .overlay-app, .docs-site) input:is([type='checkbox'], [type='radio']):disabled { opacity: 0.64; cursor: not-allowed; }
 
 /* T3's dialog and popover surfaces, shared by every app entry point. */
-html:has(.app, .overlay-app, .docs-site) :is(.ui-dialog-backdrop, .modal-overlay, .omnivoice-modal-backdrop, .confirm-modal) {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-dialog-backdrop, .modal-overlay, .confirm-modal) {
 	background: var(--dialog-backdrop);
 	backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
-html:has(.app, .overlay-app, .docs-site) :is(.ui-dialog, .modal-container, .omnivoice-modal-card, .ar-modal, .upload-content, .confirm-content) {
+html:has(.app, .overlay-app, .docs-site) :is(.ui-dialog, .modal-container, .ar-modal, .upload-content, .confirm-content) {
 	border: 1px solid transparent; border-radius: var(--radius-dialog);
 	background: color-mix(in srgb, var(--t3-surface-overlay) 96%, transparent);
 	backdrop-filter: blur(var(--popup-blur)) saturate(var(--popup-saturation));
 	-webkit-backdrop-filter: blur(var(--popup-blur)) saturate(var(--popup-saturation));
 	box-shadow: 0 24px 64px -24px rgb(0 0 0 / 65%);
 }
-html.dark:has(.app, .overlay-app, .docs-site) :is(.ui-dialog, .modal-container, .omnivoice-modal-card, .ar-modal, .upload-content, .confirm-content) {
+html.dark:has(.app, .overlay-app, .docs-site) :is(.ui-dialog, .modal-container, .ar-modal, .upload-content, .confirm-content) {
 	box-shadow: 0 24px 72px -20px rgb(0 0 0 / 90%);
 }
 html:has(.app, .overlay-app, .docs-site) :is(.camera-panel, .photo-panel, .reminder-dropdown, .companion-stats-popover) {

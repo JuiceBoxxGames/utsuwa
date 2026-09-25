@@ -12,7 +12,7 @@ import {
 import {
 	selectDefaultModel,
 	isProviderReadyForFetch,
-	createFetchSignature
+	isLlmConfigured
 } from './ai-services-settings-logic.ts';
 
 /**
@@ -54,6 +54,16 @@ export function createLlmSettingsState() {
 		const provider = getLLMProvider(providerId);
 		if (!provider) return false;
 		return isProviderReadyForFetch(provider, settingsStore.getProviderConfig(providerId));
+	});
+
+	const isLLMConfigured = $derived.by(() => {
+		const providerId = consciousnessSettings.activeProvider;
+		return isLlmConfigured(
+			getLLMProvider(providerId),
+			settingsStore.getProviderConfig(providerId),
+			consciousnessSettings.activeModel,
+			llmModels
+		);
 	});
 
 	function activeLLMProviderForFetch() {
@@ -213,6 +223,9 @@ export function createLlmSettingsState() {
 		},
 		get llmHasApiKey() {
 			return llmHasApiKey;
+		},
+		get isLLMConfigured() {
+			return isLLMConfigured;
 		},
 		get lastLocalLLMFetchKey() {
 			return lastLocalLLMFetchKey;
