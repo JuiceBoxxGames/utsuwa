@@ -314,7 +314,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.875rem 1rem;
-		background: color-mix(in srgb, var(--color-error) 10%, transparent);
+		background: var(--color-error-bg);
 		border-radius: var(--radius-md);
 		color: var(--text-primary);
 		font-size: 0.875rem;
@@ -355,7 +355,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-weight: 600;
-		color: var(--accent);
+		color: var(--accent-text);
 		margin-bottom: 0.75rem;
 	}
 

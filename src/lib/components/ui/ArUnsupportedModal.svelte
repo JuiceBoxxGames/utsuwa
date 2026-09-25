@@ -126,9 +126,9 @@
 		color: var(--text-tertiary);
 	}
 
-	.ar-footnote {
-		font-size: 0.75rem !important;
-		color: var(--text-tertiary) !important;
+	.ar-modal .ar-footnote {
+		font-size: 0.75rem;
+		color: var(--text-tertiary);
 	}
 
 </style>

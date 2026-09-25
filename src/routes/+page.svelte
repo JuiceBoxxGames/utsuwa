@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '$lib/styles/site.css';
 	import type { PageData } from './$types';
 	import { SITE_URL } from '$lib/config/site';
 	import DownloadIcon from '@lucide/svelte/icons/download';

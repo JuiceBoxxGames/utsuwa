@@ -76,5 +76,4 @@
 		justify-content: center;
 	}
 	@media (pointer: coarse) { button { min-width: 44px; min-height: 44px; } }
-	@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>

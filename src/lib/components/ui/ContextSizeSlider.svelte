@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { rangeProgress } from '$lib/utils/range-progress';
 	import Switch from './Switch.svelte';
-	import '../settings/settings-controls.css';
-
 	const CONTEXT_SIZE_STEPS = [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072];
 
 	// Conservative default: 8k fits most local / entry-level models while still

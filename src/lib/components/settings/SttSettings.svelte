@@ -2,7 +2,6 @@
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { DEFAULT_STT_TIMEOUT_MS, resolveSttTimeoutMs } from '$lib/services/stt/openai-stt';
 	import SettingsSection from './SettingsSection.svelte';
-	import './ai-services-settings.css';
 </script>
 
 <SettingsSection

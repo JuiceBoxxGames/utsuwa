@@ -250,7 +250,7 @@
 
 	.pending-chip:hover img {
 		border-color: var(--accent);
-		box-shadow: var(--shadow-glow);
+		box-shadow: none;
 	}
 
 	.remove-chip {
@@ -261,8 +261,8 @@
 		height: 19px;
 		border: 2px solid var(--bg-primary);
 		border-radius: var(--control-radius, var(--radius-md));
-		background: var(--color-error);
-		color: #fff;
+		background: var(--color-error-fill);
+		color: var(--color-error-contrast);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -304,15 +304,11 @@
 	}
 
 	.input-wrapper:focus-within {
-		box-shadow:
-			0 0 0 3px var(--accent-muted),
-			var(--shadow-glow);
+		box-shadow: 0 0 0 3px var(--accent-muted);
 	}
 
 	.input-wrapper.recording {
-		box-shadow:
-			0 0 0 3px var(--accent-muted),
-			var(--shadow-glow);
+		box-shadow: 0 0 0 3px var(--accent-muted);
 	}
 
 	.input-wrapper.transcribing {
@@ -487,19 +483,15 @@
 
 	.send-btn {
 		background: var(--accent);
-		color: var(--text-on-accent, white);
+		color: var(--accent-contrast);
 	}
 	.send-btn:hover:not(:disabled) {
 		background: var(--accent-hover);
-		color: var(--text-on-accent, white);
+		color: var(--accent-contrast);
 	}
 	.send-btn:disabled {
 		opacity: 0.4;
 		cursor: default;
-	}
-	.mic-btn:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
 	}
 	.pending-chip:focus-within .remove-chip {
 		opacity: 1;

@@ -219,13 +219,13 @@
 	}
 
 	.upload-card:hover .upload-text {
-		color: var(--accent);
+		color: var(--accent-text);
 	}
 
 	.uploader-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(28, 43, 51, 0.28);
+		background: var(--dialog-backdrop);
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
 		display: flex;

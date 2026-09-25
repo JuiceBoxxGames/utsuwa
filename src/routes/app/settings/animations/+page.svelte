@@ -122,15 +122,10 @@
 	.hint { margin: 0; color: var(--text-secondary); }
 	.hint.error { margin-bottom: 12px; color: var(--color-error); }
 	.page :global(header .btn) { display: inline-flex; align-items: center; gap: 6px; }
-	.setting-row { display: flex; align-items: center; justify-content: space-between; }
-	.setting-info { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 4px; }
-	.setting-label { color: var(--text-primary); }
-	.setting-desc { color: var(--text-secondary); }
 	.pool { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; max-width: 420px; }
 	.page :global(.thinking-select) { width: 240px; max-width: 100%; }
 	.pool-option { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-primary); cursor: pointer; }
 	@media (max-width: 640px) {
-		.setting-row { flex-wrap: wrap; }
 		.pool { justify-content: flex-start; max-width: none; }
 		.page :global(.thinking-select) { width: 100%; }
 	}

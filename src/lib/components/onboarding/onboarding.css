@@ -1,4 +1,4 @@
-/* Shared onboarding vocabulary — global, used across all step components. */
+/* Onboarding layout, shared by every step. Field recipes live in app-controls.css. */
 
 .ob-step {
 	display: flex;
@@ -60,33 +60,16 @@
 .ob-input,
 .ob-textarea {
 	width: 100%;
-	padding: 0.85rem 1rem;
-	background: var(--bg-secondary);
-	border: 1px solid var(--border-light);
-	border-radius: var(--radius-lg);
-	font-family: inherit;
-	font-size: 0.95rem;
-	color: var(--text-primary);
-	transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .ob-textarea {
 	resize: vertical;
 	min-height: 116px;
-	line-height: 1.6;
 }
 
 .ob-input::placeholder,
 .ob-textarea::placeholder {
 	color: var(--text-tertiary);
-}
-
-.ob-input:focus,
-.ob-textarea:focus {
-	outline: none;
-	background: var(--bg-primary);
-	border-color: var(--accent);
-	box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
 .ob-hint {

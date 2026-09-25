@@ -33,11 +33,8 @@
 	import { PHOTO_FILTERS } from '$lib/stores/photomode.svelte';
 	import { onMount } from 'svelte';
 
-	// Backdrop colors per theme
-	const SCENE_COLORS = {
-		light: { background: '#fcfcfc', floor: '#000000' },
-		dark: { background: '#0a0a0a', floor: '#ffffff' }
-	};
+	// Floor tint per theme; the backdrop itself follows the page canvas token
+	const FLOOR_COLORS = { light: '#000000', dark: '#ffffff' };
 
 	// Soft studio floor: a disc that fades out toward its edge
 	const floorVertexShader = `
@@ -77,10 +74,12 @@
 
 	// Dark mode detection
 	let isDarkMode = $state(false);
+	let backgroundColor = $state('');
 
 	onMount(() => {
 		const checkDarkMode = () => {
 			isDarkMode = document.documentElement.classList.contains('dark');
+			backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-page').trim();
 		};
 		checkDarkMode();
 
@@ -252,16 +251,12 @@
 		}
 	});
 
-	const backgroundColor = $derived(
-		isDarkMode ? SCENE_COLORS.dark.background : SCENE_COLORS.light.background
-	);
-
 	// One material for the life of the scene; only its color uniform changes on
 	// theme toggle. Rebuilding it per toggle (the old $derived.by) orphaned a GPU
 	// shader program each time.
 	const floorMaterial = new ShaderMaterial({
 		uniforms: {
-			uColor: { value: new Color(SCENE_COLORS.light.floor) },
+			uColor: { value: new Color(FLOOR_COLORS.light) },
 			uOpacity: { value: 0.06 }
 		},
 		vertexShader: floorVertexShader,
@@ -271,8 +266,7 @@
 	});
 
 	$effect(() => {
-		const theme = isDarkMode ? SCENE_COLORS.dark : SCENE_COLORS.light;
-		(floorMaterial.uniforms.uColor.value as Color).set(theme.floor);
+		(floorMaterial.uniforms.uColor.value as Color).set(isDarkMode ? FLOOR_COLORS.dark : FLOOR_COLORS.light);
 	});
 
 	onMount(() => () => floorMaterial.dispose());
@@ -420,7 +414,7 @@
 
 <!-- Backdrop + floor (hidden in overlay mode, AR passthrough, and photo
      backgrounds, which render through a transparent canvas + composite) -->
-{#if !overlay && !$isPresenting && !photoTransparent}
+{#if !overlay && !$isPresenting && !photoTransparent && backgroundColor}
 	<T.Color attach="background" args={[backgroundColor]} />
 {/if}
 {#if !overlay && !$isPresenting && !(photomodeStore.active && photomodeStore.background.type !== 'room')}

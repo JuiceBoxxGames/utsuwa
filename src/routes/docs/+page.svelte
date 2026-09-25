@@ -88,8 +88,9 @@
 		margin-bottom: 40px;
 	}
 
-	/* Overrides the uppercase site .eyebrow from app.css. */
 	.eyebrow {
+		display: inline-flex;
+		align-items: center;
 		margin: 0 0 8px;
 		text-transform: none;
 		letter-spacing: normal;
