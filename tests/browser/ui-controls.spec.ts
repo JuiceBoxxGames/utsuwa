@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { openApp, waitForHydration, snap } from './helpers';
 
-test('photo controls share switches and slider fill follows edits and resets', async ({ page }) => {
+test('photo controls share switches and slider fill follows edits and resets', { tag: '@avatar' }, async ({ page }) => {
 	// Leave time for scene screenshots on CI's software renderer.
 	test.setTimeout(90_000);
 	await openApp(page);
