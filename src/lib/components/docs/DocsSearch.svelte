@@ -95,7 +95,8 @@
 				}
 				break;
 			case 'Escape':
-				e.preventDefault();
+				// An empty search lets Escape fall through to the docs drawer
+				if (showDropdown) e.preventDefault();
 				close();
 				break;
 		}

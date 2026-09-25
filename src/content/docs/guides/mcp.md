@@ -144,12 +144,64 @@ Known limitations:
 
 ## Hardening
 
-- **Ask before running tools** (per server, on by default): every tool call opens a dialog with the server, tool name, and arguments. **Run** executes it; **Skip** (or closing the dialog) feeds back a "declined" result so the model can answer without it. Parallel calls queue one dialog at a time. Turn it off in the server's edit form for servers you trust to run unattended; those show an **auto-run** badge.
+- **Ask before running tools** (per server, on by default): every tool call waits for your answer. See [Confirming tool calls](#confirming-tool-calls).
 - **`PUBLIC_MCP_PROMPT_HARDENING`** (on by default; `false`, `0`, or `off` opts out): adds a security layer to the system prompt on turns with MCP tools: tool results are untrusted data (never instructions), and state-changing or destructive actions require an explicit user request. On web the `PUBLIC_` variables are read at runtime; in the desktop build they are fixed at build time.
 - **`PUBLIC_MCP_CONFIRM_TOOLS`**: comma-separated, case-sensitive tool names (blank entries are ignored), for example `unlock_door,set_alarm`. Listed tools are **never executed automatically**: the chat loop feeds back a "requires manual user confirmation" result so the model asks you first, and the `/api/mcp/call` route rejects direct calls with `403`. The tools stay visible to the model, and the block applies even when prompt hardening is off.
-- **`MCP_STDIO_ALLOWED_COMMANDS`** (server builds only): comma-separated list of full command lines, for example `npx -y @brave/brave-search-mcp-server,npx -y mcp-searxng`. **stdio is fail-closed**: without this variable no stdio server runs (per-server error in the tool list, `403` on `/api/mcp/call`). A server runs only if its command equals an entry's command and its arguments equal the entry's arguments. End an entry with ` *` to allow extra arguments after the listed ones (`npx -y @modelcontextprotocol/server-filesystem *`). A bare command name like `npx` allows it only with no arguments, so `npx,node,uvx`-style lists no longer work: the server config comes from the browser, and `node -e ...` would be arbitrary code. A bare `*` allows every command line and logs a startup warning.
-- **`MCP_STDIO_ENV_ALLOWLIST`** (server builds only): comma-separated variable names a stdio server config may set, for example `BRAVE_API_KEY,SEARXNG_URL`. Other variables from the config are dropped. Variables that change how code loads (`PATH`, `HOME`, `NODE_OPTIONS`, `NODE_PATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_INSERT_LIBRARIES`, `DYLD_LIBRARY_PATH`, `BASH_ENV`, `PYTHONPATH`, `NPM_CONFIG_*`) are dropped even when listed.
-- Limits: one tools request spawns at most 4 stdio processes at a time, and a server that writes more than 4 MB to stdout without a newline is killed.
+- **`MCP_STDIO_ALLOWED_COMMANDS`** and **`MCP_STDIO_ENV_ALLOWLIST`** (server builds only): which stdio command lines may run and which variables they may receive. See [stdio allowlists](#stdio-allowlists).
+
+## Confirming tool calls
+
+Each server has an **Ask before running tools** checkbox in its edit form. It is on for new servers, and servers saved before the option existed count as on too.
+
+While it is on, every call the model makes to that server's tools pauses the reply and opens a dialog titled **Run `tool_name`?**. The dialog names the server and shows the exact arguments as JSON.
+
+- **Run** executes the call and the reply continues with its result.
+- **Skip**, **Escape**, or a click outside the dialog declines it. The model receives a result saying you declined and that it should not retry unless you ask, so it answers without the tool.
+- When the model calls several tools in one round, the dialogs queue and appear one at a time.
+- The dialog appears in the main window and in the desktop overlay, wherever the chat is running.
+
+Tools listed in `PUBLIC_MCP_CONFIRM_TOOLS` are blocked before this step: they never open a dialog and never run from chat.
+
+Turn the checkbox off only for servers you trust to run unattended. Those cards show an **auto-run** badge.
+
+## stdio allowlists
+
+Both variables are read by the server build only; the desktop app does not run stdio servers. Entries are separated by commas, and spaces around each entry are trimmed.
+
+### `MCP_STDIO_ALLOWED_COMMANDS`
+
+**stdio is fail-closed.** Without this variable no stdio server runs: the tool list shows a "stdio is disabled" error for the server and `/api/mcp/call` answers `403`.
+
+Each entry is a full command line, split into words the way a shell would split simple arguments: spaces separate words, and single or double quotes keep a word with spaces together (`"C:\Program Files\node.exe"`). The first word is the command, the rest are its arguments.
+
+A stdio server runs when some entry matches it:
+
+1. The server's **Command** equals the entry's first word exactly. There is no path lookup, so `npx` and `/usr/local/bin/npx` are different commands.
+2. The server's **Arguments** start with the entry's remaining words, in the same order and spelled exactly the same.
+3. The argument counts are equal, unless the entry ends with a separate ` *` word. Then any further arguments are allowed after the listed ones.
+
+| Entry | Allows | Rejects |
+| --- | --- | --- |
+| `npx -y @brave/brave-search-mcp-server` | `npx -y @brave/brave-search-mcp-server` | `npx -y @brave/brave-search-mcp-server --port 1` |
+| `npx -y @modelcontextprotocol/server-filesystem *` | the same line plus any directories after it | `npx @modelcontextprotocol/server-filesystem /tmp` (missing `-y`) |
+| `npx` | `npx` with no arguments | `npx -y anything` |
+| `*` | every command line | nothing |
+
+A bare command name like `npx` allows it only with no arguments, so older `npx,node,uvx`-style lists no longer work. The server config comes from the browser, and `node -e ...` would be arbitrary code. Utsuwa logs a startup warning for each bare command entry and another when `*` allows everything.
+
+Because commas separate entries, a command line that itself contains a comma cannot be listed.
+
+### `MCP_STDIO_ENV_ALLOWLIST`
+
+Comma-separated variable names a stdio server's **Env Vars** may set, for example `BRAVE_API_KEY,SEARXNG_URL`. Names must match exactly, including case. Variables not on the list are dropped silently before the process starts.
+
+Variables that change how code loads are dropped even when listed, in any case: `PATH`, `HOME`, `NODE_OPTIONS`, `NODE_PATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_INSERT_LIBRARIES`, `DYLD_LIBRARY_PATH`, `BASH_ENV`, `PYTHONPATH`, and anything starting with `NPM_CONFIG_`.
+
+### Limits
+
+- Listing tools (for example **Refresh** under *Available Tools*) starts at most 4 stdio servers at a time; the others wait for a free slot.
+- A server that writes more than 4 MB to stdout without a newline is killed, and its pending requests fail with an error.
+- Each stdio request times out after 15 seconds.
 
 ## Troubleshooting
 

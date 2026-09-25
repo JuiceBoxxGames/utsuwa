@@ -6,7 +6,7 @@ test('photo controls share switches and slider fill follows edits and resets', {
 	test.setTimeout(90_000);
 	await openApp(page);
 	await page.getByRole('button', { name: 'Open photo mode', exact: true }).click();
-	const panel = page.getByRole('toolbar', { name: 'Photo mode', exact: true });
+	const panel = page.getByRole('region', { name: 'Photo mode', exact: true });
 	await expect(panel).toBeVisible();
 	await panel.getByRole('tab', { name: 'Camera', exact: true }).click();
 	const grid = panel.getByRole('switch', { name: 'Thirds grid', exact: true });
@@ -42,12 +42,24 @@ test('photo controls share switches and slider fill follows edits and resets', {
 	await expect(panel.getByRole('button', { name: 'Polaroid', exact: true })).toHaveAttribute('aria-pressed', 'true');
 	const options = panel.locator('.tab-content');
 	await expect.poll(() => options.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+	const swatch = panel.getByRole('group', { name: 'Background', exact: true }).getByRole('button').first();
+	const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+	const size = (await swatch.boundingBox())!;
+	expect(Math.round(size.width)).toBe(coarse ? 44 : 32);
+	expect(Math.round(size.height)).toBe(coarse ? 44 : 32);
 	await snap(page, 'photo-scene-controls.png');
 	const vignette = panel.getByRole('switch', { name: 'Vignette', exact: true });
 	await vignette.check();
 	await expect(vignette).toBeChecked();
 	await vignette.uncheck();
 	await expect(vignette).not.toBeChecked();
+	await panel.getByRole('button', { name: 'Snap', exact: true }).click();
+	await expect(panel.getByRole('status')).toHaveText('Photo saved', { timeout: 20_000 });
+	await panel.getByRole('button', { name: 'Collapse panel', exact: true }).click();
+	const reopen = page.getByRole('button', { name: 'Open photo controls', exact: true });
+	await expect(reopen).toBeFocused();
+	await reopen.click();
+	await expect(panel.getByRole('button', { name: 'Collapse panel', exact: true })).toBeFocused();
 	await panel.getByRole('button', { name: 'Exit photo mode', exact: true }).click();
 	await expect(panel).toHaveCount(0);
 	await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
@@ -82,4 +94,36 @@ test('model search keeps text input and Escape returns focus to its trigger', as
 	await expect(search).toHaveValue('');
 	await page.getByRole('menuitem', { name: 'GPT-4o mini', exact: true }).click();
 	await expect(trigger).toHaveText('GPT-4o mini');
+});
+
+test('docs drawer takes focus, closes with Escape, and returns focus to its toggle', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/docs');
+	await page.waitForFunction(() => document.readyState === 'complete' && '__SVELTEKIT_APP_VERSION__' in globalThis);
+	const toggle = page.getByRole('button', { name: 'Open menu', exact: true });
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	const drawer = page.getByRole('complementary', { name: 'Documentation menu', exact: true });
+	// A click that lands before hydration does nothing, so retry until the drawer opens
+	await expect(async () => {
+		if ((await page.locator('#docs-menu-toggle').getAttribute('aria-expanded')) !== 'true') {
+			await page.locator('#docs-menu-toggle').click();
+		}
+		await expect(drawer).toBeVisible({ timeout: 500 });
+	}).toPass();
+	await expect(page.getByRole('button', { name: 'Close menu', exact: true })).toHaveAttribute('aria-expanded', 'true');
+	await expect.poll(() => drawer.evaluate(el => el.contains(document.activeElement))).toBe(true);
+	await expect(page.locator('main.docs-main')).toHaveAttribute('inert', '');
+	await snap(page, 'docs-drawer.png');
+	// Tabbing moves through the drawer, starting at search
+	await page.keyboard.press('Tab');
+	await expect(drawer.getByRole('textbox', { name: 'Search docs', exact: true })).toBeFocused();
+	await page.keyboard.press('Escape');
+	await expect(drawer).toBeHidden();
+	await expect(page.getByRole('button', { name: 'Open menu', exact: true })).toBeFocused();
+	await expect(page.locator('main.docs-main')).not.toHaveAttribute('inert', '');
+	// The scrim closes it for pointer users and still hands focus back
+	await page.getByRole('button', { name: 'Open menu', exact: true }).click();
+	await page.mouse.click(370, 400);
+	await expect(drawer).toBeHidden();
+	await expect(page.getByRole('button', { name: 'Open menu', exact: true })).toBeFocused();
 });

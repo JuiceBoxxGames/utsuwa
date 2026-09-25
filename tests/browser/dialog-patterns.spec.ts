@@ -33,6 +33,10 @@ test('app dialogs trap focus, close with Escape, and nested photos leave the boa
 	await page.keyboard.press('Escape');
 	await expect(page.getByRole('dialog', { name: 'Camera settings' })).toHaveCount(0);
 	await expect(camera).toBeFocused();
+	await camera.click();
+	await page.getByRole('button', { name: 'Close camera settings', exact: true }).click();
+	await expect(page.getByRole('dialog', { name: 'Camera settings' })).toHaveCount(0);
+	await expect(camera).toBeFocused();
 	await page.keyboard.press('Escape');
 	await expect(page.getByRole('button', { name: 'Controls', exact: true })).toBeFocused();
 

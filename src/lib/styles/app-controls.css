@@ -241,7 +241,7 @@ html:has(.app, .overlay-app, .docs-site) :is(.camera-panel, .photo-panel, .remin
 	-webkit-backdrop-filter: blur(var(--popup-blur)) saturate(var(--popup-saturation));
 	box-shadow: var(--popup-shadow);
 }
-html:has(.app, .overlay-app, .docs-site) .camera-panel { border-radius: var(--radius-dialog); }
+html:has(.app, .overlay-app, .docs-site) :is(.camera-panel, .photo-panel) { border-radius: var(--radius-dialog); }
 @media (pointer: coarse) {
 	html:has(.app, .overlay-app, .docs-site) input:is([type='checkbox'], [type='radio']) { width: 18px; height: 18px; flex-basis: 18px; }
 	html:has(.app, .overlay-app, .docs-site) label:has(input:is([type='checkbox'], [type='radio'])) { min-height: 44px; }
@@ -256,9 +256,6 @@ html:has(.app, .overlay-app, .docs-site) :is(.settings-field, .api-key-input, .o
 }
 html.dark:has(.app, .overlay-app, .docs-site) :is(.settings-field, .api-key-input, .ob-input, .ob-textarea):is(.error, [aria-invalid='true']):focus-visible {
 	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 24%, transparent);
-}
-@media (pointer: coarse) {
-	html:has(.app, .overlay-app, .docs-site) .photo-panel .tab { min-height: 44px; }
 }
 
 html:has(.app, .overlay-app, .docs-site) .ui-badge {

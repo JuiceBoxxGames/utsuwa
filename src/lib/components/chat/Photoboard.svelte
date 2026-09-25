@@ -181,7 +181,7 @@
  <div {...props} class="lightbox">
   <Dialog.Title class="sr-only">Photo</Dialog.Title>
   <Dialog.Description class="sr-only">Flip the photo to see its note.</Dialog.Description>
-		<button class="lb-close" onclick={closeLightbox} aria-label="Close">
+		<button class="lb-close btn btn-secondary btn-icon" onclick={closeLightbox} aria-label="Close">
 			<Icon name="x" size={18} />
 		</button>
 		<button class="flip-card" class:flipped onclick={() => (flipped = !flipped)} aria-label="Flip photo">
@@ -307,7 +307,7 @@
 		width: 20px;
 		height: 20px;
 		border: 2px solid var(--bg-primary);
-		border-radius: var(--control-radius, var(--radius-md));
+		border-radius: var(--radius-control);
 		background: var(--color-error-fill);
 		color: var(--color-error-contrast);
 		display: flex;
@@ -323,13 +323,21 @@
 			transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
-	.photo-card:hover .forget-btn {
+	.photo-card:hover .forget-btn,
+	.photo-card:focus-within .forget-btn {
 		opacity: 1;
 		transform: scale(1);
 	}
 
 	.forget-btn:hover {
 		transform: scale(1.18);
+	}
+
+	@media (hover: none) {
+		.forget-btn {
+			opacity: 1;
+			transform: scale(1);
+		}
 	}
 
 	.sentinel {
@@ -363,7 +371,7 @@
 	.lightbox {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.78);
+		background: var(--dialog-backdrop);
 		backdrop-filter: blur(6px);
 		-webkit-backdrop-filter: blur(6px);
 		display: flex;
@@ -385,24 +393,6 @@
 		position: absolute;
 		top: 1.25rem;
 		right: 1.25rem;
-		width: 38px;
-		height: 38px;
-		border: none;
-		border-radius: var(--control-radius);
-		background: rgba(255, 255, 255, 0.15);
-		color: #fff;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		transition:
-			transform 0.15s,
-			background 0.15s;
-	}
-
-	.lb-close:hover {
-		transform: scale(1.1);
-		background: rgba(255, 255, 255, 0.25);
 	}
 
 	.flip-card {
@@ -489,8 +479,8 @@
 	}
 
 	.lb-hint {
-		color: rgba(255, 255, 255, 0.6);
-		font-size: 0.8rem;
+		color: var(--text-secondary);
+		font-size: 13px;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
