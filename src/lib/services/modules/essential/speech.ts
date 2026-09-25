@@ -16,8 +16,7 @@ export const speechModule: ModuleDefinition = {
 				type: 'provider-select',
 				label: 'TTS Provider',
 				description: 'Select from your configured TTS providers',
-				providerCategory: 'tts',
-				defaultValue: ''
+				providerCategory: 'tts'
 			},
 			{
 				key: 'activeModel',
@@ -39,81 +38,70 @@ export const speechModule: ModuleDefinition = {
 				type: 'text',
 				label: 'Language',
 				description: 'Primary language for multilingual TTS (ISO 639-1)',
-				placeholder: 'en',
-				defaultValue: 'en'
+				placeholder: 'en'
 			},
 			{
 				key: 'enableAltLanguage',
 				type: 'boolean',
 				label: 'Enable Alternative Language',
-				description: 'Use a different voice for foreign-language text',
-				defaultValue: false
+				description: 'Use a different voice for foreign-language text'
 			},
 			{
 				key: 'enableToolCalling',
 				type: 'boolean',
 				label: 'Enable Function Calling',
-				description: 'Force language per speech segment (more reliable, but requires LLM function-calling support)',
-				defaultValue: true
+				description: 'Force language per speech segment (more reliable, but requires LLM function-calling support)'
 			},
 			{
 				key: 'altLanguage',
 				type: 'text',
 				label: 'Alternative Language',
 				description: 'ISO 639-1 code for the alternative language',
-				placeholder: 'es',
-				defaultValue: ''
+				placeholder: 'es'
 			},
 			{
 				key: 'altVoiceId',
 				type: 'text',
 				label: 'Alternative Voice',
 				description: 'Voice ID for the alternative language',
-				placeholder: 'Select a voice',
-				defaultValue: ''
+				placeholder: 'Select a voice'
 			},
 			{
 				key: 'altInstructions',
 				type: 'text',
 				label: 'Alternative Voice Instructions',
 				description: 'Voice design instructions for the alternative language',
-				placeholder: 'e.g. male, middle-aged',
-				defaultValue: ''
+				placeholder: 'e.g. male, middle-aged'
 			},
 			{
 				key: 'altSpeed',
 				type: 'number',
 				label: 'Alternative Voice Speed',
-				description: 'Speech rate for the alternative language (0.5-2.0). Falls back to primary speed.',
-				defaultValue: 1.0
+				description: 'Speech rate for the alternative language (0.5-2.0). Falls back to primary speed.'
 			},
 			{
 				key: 'altNumStep',
 				type: 'number',
 				label: 'Alternative Voice Num Steps',
-				description: 'OmniVoice quality steps for the alternative language (4-64). Falls back to primary.',
-				defaultValue: 32
+				description: 'OmniVoice quality steps for the alternative language (4-64). Falls back to primary.'
 			},
 			{
 				key: 'altPositionTemperature',
 				type: 'number',
 				label: 'Alternative Position Temperature',
-				description: 'Voice diversity temperature for the alternative language (0-2). Falls back to primary.',
-				defaultValue: 1.0
+				description: 'Voice diversity temperature for the alternative language (0-2). Falls back to primary.'
 			},
 			{
 				key: 'altClassTemperature',
 				type: 'number',
 				label: 'Alternative Class Temperature',
-				description: 'Token sampling temperature for the alternative language (0-2). Falls back to primary.',
-				defaultValue: 0.2
+				description: 'Token sampling temperature for the alternative language (0-2). Falls back to primary.'
 			},
 			{
 				key: 'speed',
 				type: 'number',
 				label: 'Speed',
-				description: 'Speech rate (0.5-2.0)',
-				defaultValue: 1.0
+				description: 'Speech rate (0.5-2.0)'
 			},
 			{
 				key: 'instructions',
@@ -125,22 +113,19 @@ export const speechModule: ModuleDefinition = {
 				key: 'numStep',
 				type: 'number',
 				label: 'Num Steps',
-				description: 'OmniVoice quality steps (4-64)',
-				defaultValue: 32
+				description: 'OmniVoice quality steps (4-64)'
 			},
 			{
 				key: 'positionTemperature',
 				type: 'number',
 				label: 'Position Temperature',
-				description: 'OmniVoice position temperature (0-2)',
-				defaultValue: 1.0
+				description: 'OmniVoice position temperature (0-2)'
 			},
 			{
 				key: 'classTemperature',
 				type: 'number',
 				label: 'Class Temperature',
-				description: 'OmniVoice class temperature (0-2)',
-				defaultValue: 0.2
+				description: 'OmniVoice class temperature (0-2)'
 			}
 		]
 	},

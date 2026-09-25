@@ -39,9 +39,9 @@
 
 	// LLM State
 	const llmSettings = $derived(modulesStore.getModuleSettings('consciousness'));
-	const llmProvider = $derived(getLLMProvider(llmSettings.activeProvider as string));
+	const llmProvider = $derived(getLLMProvider(llmSettings.activeProvider));
 	const staticLLMModels = $derived(llmProvider?.models ?? []);
-	const llmContextSize = $derived(llmSettings.contextSize as number | undefined);
+	const llmContextSize = $derived(llmSettings.contextSize);
 
 	// Dynamic model fetching state for LLM
 	let llmIsLoading = $state(false);
@@ -63,7 +63,7 @@
 	// TTS state
 
 	const ttsSettings = $derived(modulesStore.getModuleSettings('speech'));
-	const ttsProvider = $derived(getTTSProvider(ttsSettings.activeProvider as string));
+	const ttsProvider = $derived(getTTSProvider(ttsSettings.activeProvider));
 	const staticTTSModels = $derived(ttsProvider?.models ?? []);
 
 	// Dynamic model fetching state for TTS
@@ -85,16 +85,16 @@
 	// Validation
 	const isLLMConfigured = $derived.by(() => {
 		if (!llmSettings.activeProvider) return false;
-		const provider = getLLMProvider(llmSettings.activeProvider as string);
+		const provider = getLLMProvider(llmSettings.activeProvider);
 		if (!provider) return false;
 		if (provider.isLocal) {
-			const activeModel = llmSettings.activeModel as string;
+			const activeModel = llmSettings.activeModel;
 			return !!activeModel && llmModels.some((model) => model.id === activeModel);
 		}
 		// Custom endpoints need a base URL and a hand-entered model to work.
 		if (provider.custom) {
 			const config = settingsStore.getProviderConfig(provider.id);
-			return !!config.baseUrl && !!(llmSettings.activeModel as string);
+			return !!config.baseUrl && !!llmSettings.activeModel;
 		}
 		if (!provider.requiresApiKey) return true;
 		const config = settingsStore.getProviderConfig(provider.id);
@@ -121,7 +121,7 @@
 			onSuccess: (models) => {
 				llmIsLoading = false;
 				llmDynamicModels = models;
-				const currentModel = llmSettings.activeModel as string;
+				const currentModel = llmSettings.activeModel;
 				const modelExists = models.some((m) => m.id === currentModel);
 				if (!currentModel || !modelExists) {
 					modulesStore.setModuleSetting('consciousness', 'activeModel', models[0].id);
@@ -357,7 +357,7 @@
 
 		<ProviderDropdown
 			type="llm"
-			value={llmSettings.activeProvider as string}
+			value={llmSettings.activeProvider}
 			onSelect={handleLLMProviderChange}
 			placeholder="Select LLM provider..."
 		/>
@@ -414,13 +414,13 @@
 				type="text"
 				class="api-key-input"
 				placeholder="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)"
-				value={(llmSettings.activeModel as string) ?? ''}
+				value={llmSettings.activeModel ?? ''}
 				oninput={(e) => handleLLMModelChange(e.currentTarget.value.trim())}
 			/>
 			{#if customConfig.baseUrl}
 				<ModelDropdown
 					models={llmModels}
-					value={llmSettings.activeModel as string}
+					value={llmSettings.activeModel}
 					onSelect={handleLLMModelChange}
 					placeholder="Pick a fetched model..."
 					isLoading={llmIsLoading}
@@ -433,7 +433,7 @@
 		{:else if llmSettings.activeProvider}
 			<ModelDropdown
 				models={llmModels}
-				value={llmSettings.activeModel as string}
+				value={llmSettings.activeModel}
 				onSelect={handleLLMModelChange}
 				placeholder="Select model..."
 				isLoading={llmIsLoading}
@@ -465,7 +465,7 @@
 		{#if ttsEnabled}
 			<ProviderDropdown
 				type="tts"
-				value={ttsSettings.activeProvider as string}
+				value={ttsSettings.activeProvider}
 				onSelect={handleTTSProviderChange}
 				placeholder="Select TTS provider..."
 			/>
@@ -485,7 +485,7 @@
 			{#if ttsSettings.activeProvider && !ttsProvider?.isLocal}
 				<ModelDropdown
 					models={ttsModels}
-					value={ttsSettings.activeModel as string}
+					value={ttsSettings.activeModel}
 					onSelect={handleTTSModelChange}
 					placeholder="Select model..."
 					isLoading={ttsIsLoading}
@@ -501,7 +501,7 @@
 					class="api-key-input"
 					list="{ttsProvider.id}-voices"
 					placeholder="Voice ID"
-					value={ttsSettings.activeVoiceId as string ?? ''}
+					value={ttsSettings.activeVoiceId ?? ''}
 					oninput={(e) => handleTTSVoiceChange(e.currentTarget.value)}
 				/>
 				<datalist id="{ttsProvider.id}-voices">
@@ -516,7 +516,7 @@
 					type="text"
 					class="api-key-input"
 					placeholder="Model/voice name"
-					value={ttsSettings.activeModel as string ?? ''}
+					value={ttsSettings.activeModel ?? ''}
 					oninput={(e) => handleTTSModelChange(e.currentTarget.value)}
 				/>
 			{/if}

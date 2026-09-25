@@ -20,14 +20,14 @@
 				<span class="settings-label">Provider</span>
 				<ProviderDropdown
 					type="tts"
-					value={state.speechSettings.activeProvider as string}
+					value={state.speechSettings.activeProvider}
 					onSelect={state.handleTTSProviderChange}
 					placeholder="Select TTS provider..."
 				/>
 			</div>
 
 			{#if state.speechSettings.activeProvider}
-				{@const provider = getTTSProvider(state.speechSettings.activeProvider as string)}
+				{@const provider = getTTSProvider(state.speechSettings.activeProvider)}
 
 				{#if provider?.requiresApiKey}
 					<div class="ai-field">
@@ -50,8 +50,8 @@
 						<span class="settings-label">Model</span>
 						<ModelDropdown
 							models={state.ttsModels}
-							value={state.speechSettings.activeModel as string}
-							onSelect={state.handleTTSModelChange}
+							value={state.speechSettings.activeModel}
+							onSelect={(id) => state.setSpeech('activeModel', id)}
 							placeholder="Select model..."
 							isLoading={state.ttsIsLoading}
 							onRefresh={state.ttsHasApiKey ? state.fetchTTSModels : undefined}
@@ -70,8 +70,8 @@
 							class="settings-field"
 							list="{provider.id}-voices"
 							placeholder="Voice ID" aria-label="Voice ID"
-							value={state.speechSettings.activeVoiceId as string ?? ''}
-							onchange={(e) => state.handleTTSVoiceChange(e.currentTarget.value)}
+							value={state.speechSettings.activeVoiceId ?? ''}
+							onchange={(e) => state.setSpeech('activeVoiceId', e.currentTarget.value.trim())}
 						/>
 						<datalist id="{provider.id}-voices">
 							{#each provider?.voices ?? [] as voice}
@@ -90,8 +90,8 @@
 							class="settings-field"
 							list="local-tts-voices"
 							placeholder="Voice (e.g. af_bella)" aria-label="Voice (e.g. af_bella)"
-							value={state.speechSettings.activeVoiceId as string ?? ''}
-							onchange={(e) => state.handleTTSVoiceChange(e.currentTarget.value)}
+							value={state.speechSettings.activeVoiceId ?? ''}
+							onchange={(e) => state.setSpeech('activeVoiceId', e.currentTarget.value.trim())}
 						/>
 						<datalist id="local-tts-voices">
 							{#each provider.voices ?? [] as voice}
@@ -106,8 +106,8 @@
 							type="text"
 							class="settings-field"
 							placeholder="Model (optional, e.g. kokoro)" aria-label="Model (optional, e.g. kokoro)"
-							value={state.speechSettings.activeModel as string ?? ''}
-							onchange={(e) => state.handleTTSModelChange(e.currentTarget.value)}
+							value={state.speechSettings.activeModel ?? ''}
+							onchange={(e) => state.setSpeech('activeModel', e.currentTarget.value)}
 						/>
 					</div>
 					<div class="ai-field">

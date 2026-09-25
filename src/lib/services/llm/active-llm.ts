@@ -18,7 +18,7 @@ export interface ActiveLLM extends LLMTarget {
 export function resolveActiveLLM(): ActiveLLM | null {
 	if (!modulesStore.isModuleEnabled('consciousness')) return null;
 	const settings = modulesStore.getModuleSettings('consciousness');
-	const provider = settings.activeProvider as string | undefined;
+	const provider = settings.activeProvider;
 	if (!provider) return null;
 	const meta = getLLMProvider(provider);
 	const { apiKey, baseUrl } = settingsStore.getProviderConfig(provider);
@@ -26,7 +26,7 @@ export function resolveActiveLLM(): ActiveLLM | null {
 	return {
 		provider: provider as LLMProvider,
 		meta,
-		model: (settings.activeModel as string | undefined) || meta?.models?.[0]?.id || '',
+		model: settings.activeModel || meta?.models?.[0]?.id || '',
 		apiKey: apiKey || undefined,
 		baseURL: baseUrl || meta?.defaultBaseUrl,
 		isLocal: !!meta?.isLocal,
@@ -36,7 +36,7 @@ export function resolveActiveLLM(): ActiveLLM | null {
 
 /** What to tell the user when resolveActiveLLM() comes back empty with chat on. */
 export function missingLLMMessage(): string {
-	const provider = modulesStore.getModuleSettings('consciousness').activeProvider as string | undefined;
+	const provider = modulesStore.getModuleSettings('consciousness').activeProvider;
 	const meta = provider ? getLLMProvider(provider) : undefined;
 	return meta
 		? `Please configure API key for ${meta.name} in Settings > LLM Model`

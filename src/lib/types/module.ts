@@ -49,7 +49,6 @@ export interface ModuleSettingsField {
 	placeholder?: string;
 	description?: string;
 	options?: { value: string; label: string }[];
-	defaultValue?: unknown;
 	min?: number;
 	max?: number;
 	// For provider-select fields

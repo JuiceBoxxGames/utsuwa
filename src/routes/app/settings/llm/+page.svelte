@@ -10,7 +10,7 @@
 
 	// Fetch local LLM models automatically when the endpoint changes.
 	$effect(() => {
-		const providerId = state.consciousnessSettings.activeProvider as string;
+		const providerId = state.consciousnessSettings.activeProvider;
 		const provider = providerId ? getLLMProvider(providerId) : null;
 		if (!provider?.isLocal) {
 			state.lastLocalLLMFetchKey = '';

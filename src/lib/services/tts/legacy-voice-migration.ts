@@ -13,8 +13,8 @@ export function migrateLegacyElevenLabsVoice(): void {
 
 	const speech = modulesStore.getModuleSettings('speech');
 	const adopt = legacyVoiceToAdopt(
-		speech.activeProvider as string | undefined,
-		speech.activeVoiceId as string | undefined,
+		speech.activeProvider,
+		speech.activeVoiceId,
 		legacy,
 		getTTSProvider('elevenlabs')
 	);
