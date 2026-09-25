@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      tauri:
+        patterns: ['@tauri-apps/*']
+      svelte:
+        patterns:
+          - svelte
+          - '@sveltejs/kit'
+          - '@sveltejs/vite-plugin-svelte'
+          - vite
+    ignore:
+      - dependency-name: three
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/three'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@xenova/transformers'
+        update-types: ['version-update:semver-major']
+
+  # Tauri crate minors must match the @tauri-apps/* packages; see CONTRIBUTING.
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: weekly
+    groups:
+      tauri:
+        patterns: ['tauri*']

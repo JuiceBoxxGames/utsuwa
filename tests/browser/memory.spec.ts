@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForHydration } from './helpers';
+import { waitForHydration, snap } from './helpers';
 
 async function facts(page: import('@playwright/test').Page) {
 	return page.evaluate(async () => {
@@ -10,7 +10,7 @@ async function facts(page: import('@playwright/test').Page) {
 
 test('manual memory persists, is retrieved, and requires confirmation to delete', async ({
 	page
-}, info) => {
+}) => {
 	await page.goto('/app/settings/memory?view=facts');
 	await waitForHydration(page);
 	await expect(page.getByRole('heading', { name: 'Memory', exact: true })).toBeVisible();
@@ -25,7 +25,7 @@ test('manual memory persists, is retrieved, and requires confirmation to delete'
 		'I prefer tea to coffee. <script>bad()</script>'
 	);
 	await page.getByRole('searchbox').fill('coffee');
-	await page.screenshot({ path: info.outputPath('memory-facts.png') });
+	await snap(page, 'memory-facts.png');
 	await page.getByRole('button', { name: 'Delete', exact: true }).click();
 	expect(await facts(page)).toHaveLength(1);
 	await page.getByRole('button', { name: 'Cancel', exact: true }).click();

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForHydration } from './helpers';
+import { waitForHydration, snap } from './helpers';
 
 test('MCP stays hidden when the deployment disables it', async ({ page }) => {
 	await page.route('**/api/mcp/tools', (route) => route.fulfill({ status: 404 }));
@@ -10,7 +10,7 @@ test('MCP stays hidden when the deployment disables it', async ({ page }) => {
 	await expect(page.getByRole('button', { name: 'Add Server', exact: true })).toHaveCount(0);
 });
 
-test('MCP server settings persist and use the shared responsive controls', async ({ page }, info) => {
+test('MCP server settings persist and use the shared responsive controls', async ({ page }) => {
 	await page.route('**/api/mcp/tools', (route) => route.fulfill({ json: { tools: [], errors: [] } }));
 	await page.goto('/app/settings/mcp');
 	await waitForHydration(page);
@@ -39,7 +39,7 @@ test('MCP server settings persist and use the shared responsive controls', async
 		const box = (await actions.boundingBox())!;
 		return box.x + box.width;
 	}).toBeLessThanOrEqual(page.viewportSize()!.width);
-	await page.screenshot({ path: info.outputPath('mcp-server.png') });
+	await snap(page, 'mcp-server.png');
 	await page.getByRole('button', { name: 'Remove server', exact: true }).click();
 	await expect(page.getByText('No servers configured. Add one above to get started.')).toBeVisible();
 });

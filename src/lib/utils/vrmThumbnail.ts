@@ -1,5 +1,5 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { VRMLoaderPlugin, VRM, VRMUtils } from '@pixiv/three-vrm';
+import { VRMLoaderPlugin, VRMUtils, type VRM } from '@pixiv/three-vrm';
 import {
 	WebGLRenderer,
 	Scene,

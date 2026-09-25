@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { openApp, waitForHydration } from './helpers';
+import { openApp, waitForHydration, snap } from './helpers';
 
-test('photo controls share switches and slider fill follows edits and resets', async ({ page }, info) => {
+test('photo controls share switches and slider fill follows edits and resets', async ({ page }) => {
 	// Leave time for scene screenshots on CI's software renderer.
 	test.setTimeout(90_000);
 	await openApp(page);
@@ -25,7 +25,7 @@ test('photo controls share switches and slider fill follows edits and resets', a
 	await panel.getByRole('button', { name: 'Reset framing', exact: true }).click();
 	await expect(lens).toHaveValue(initial);
 	expect(await lens.evaluate(el => el.style.getPropertyValue('--settings-slider-progress'))).toBe(initialFill);
-	await page.screenshot({ path: info.outputPath('photo-camera-controls.png') });
+	await snap(page, 'photo-camera-controls.png');
 	await panel.getByRole('tab', { name: 'Scene', exact: true }).click();
 	const warm = panel.getByRole('button', { name: 'Warm', exact: true });
 	await warm.click();
@@ -42,7 +42,7 @@ test('photo controls share switches and slider fill follows edits and resets', a
 	await expect(panel.getByRole('button', { name: 'Polaroid', exact: true })).toHaveAttribute('aria-pressed', 'true');
 	const options = panel.locator('.tab-content');
 	await expect.poll(() => options.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
-	await page.screenshot({ path: info.outputPath('photo-scene-controls.png') });
+	await snap(page, 'photo-scene-controls.png');
 	const vignette = panel.getByRole('switch', { name: 'Vignette', exact: true });
 	await vignette.check();
 	await expect(vignette).toBeChecked();
@@ -53,7 +53,7 @@ test('photo controls share switches and slider fill follows edits and resets', a
 	await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
 });
 
-test('model search keeps text input and Escape returns focus to its trigger', async ({ page }, info) => {
+test('model search keeps text input and Escape returns focus to its trigger', async ({ page }) => {
 	await page.route('**/api/providers/models', route => route.fulfill({ json: {
 		models: [{ id: 'gpt-4o', name: 'GPT-4o' }, { id: 'gpt-4o-mini', name: 'GPT-4o mini' }]
 	} }));
@@ -73,7 +73,7 @@ test('model search keeps text input and Escape returns focus to its trigger', as
 	await search.fill('mini');
 	await expect(search).toHaveValue('mini');
 	await expect(page.getByRole('menuitem', { name: 'GPT-4o mini', exact: true })).toBeVisible();
-	await page.screenshot({ path: info.outputPath('model-search.png') });
+	await snap(page, 'model-search.png');
 	await search.press('Escape');
 	await expect(page.getByRole('menu')).toHaveCount(0);
 	await expect(trigger).toBeFocused();

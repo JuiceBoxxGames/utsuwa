@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openApp, waitForHydration, selectOption } from './helpers';
+import { openApp, waitForHydration, selectOption, snap } from './helpers';
 
 async function speechSettings(page: Page) {
 	return page.evaluate(async () => {
@@ -39,7 +39,7 @@ async function prepareOmniVoice(page: Page) {
 }
 
 for (const theme of ['light', 'dark']) {
-	test(`every settings page fits the viewport in ${theme} mode`, async ({ page }, info) => {
+	test(`every settings page fits the viewport in ${theme} mode`, async ({ page }) => {
 		test.setTimeout(90_000);
 		await page.route('**/api/mcp/tools', (route) => route.fulfill({ json: { tools: [], errors: [] } }));
 		await prepareOmniVoice(page);
@@ -97,7 +97,7 @@ for (const theme of ['light', 'dark']) {
 					elements.filter((el) => el.scrollWidth > el.clientWidth + 1).map((el) => el.className)
 				);
 			expect(scrollOverflow, `${route} scrolls horizontally`).toEqual([]);
-			await page.screenshot({ path: info.outputPath(`settings-${route}-${theme}.png`) });
+			await snap(page, `settings-${route}-${theme}.png`);
 			if (route === 'developer')
 				await page
 					.getByRole('button', { name: 'Reset Character Data', exact: true })
@@ -108,7 +108,7 @@ for (const theme of ['light', 'dark']) {
 
 test('OmniVoice fields preserve primary and alternative voice settings through reload', async ({
 	page
-}, info) => {
+}) => {
 	await prepareOmniVoice(page);
 	await page.goto('/app/settings/tts');
 	await expect(page.getByRole('heading', { name: 'Primary voice', exact: true })).toBeVisible();
@@ -142,7 +142,7 @@ test('OmniVoice fields preserve primary and alternative voice settings through r
 	await expect(page.locator('#omnivoice-alt-language')).toHaveCount(0);
 	await page.getByRole('checkbox', { name: 'Speak foreign words with a second voice' }).check();
 	await expect(page.locator('#omnivoice-alt-language')).toHaveAttribute('data-value', 'ja');
-	await page.screenshot({ path: info.outputPath('omnivoice-edited.png') });
+	await snap(page, 'omnivoice-edited.png');
 	await page.getByRole('radio', { name: 'Cloned', exact: true }).first().check();
 	await page.getByRole('button', { name: 'Clone New', exact: true }).click();
 	const dialog = page.getByRole('dialog');
@@ -192,13 +192,13 @@ test('shared LLM and display controls keep their existing values and callbacks',
 	).toHaveValue('0.0');
 });
 
-test('settings search finds categories and Escape clears it without leaving settings', async ({ page }, info) => {
+test('settings search finds categories and Escape clears it without leaving settings', async ({ page }) => {
 	await page.goto('/app/settings/display');
 	await waitForHydration(page);
 	await page.keyboard.press('/');
 	const search = page.getByRole('textbox', { name: 'Search settings' });
 	await expect(search).toBeFocused();
-	await page.screenshot({ path: info.outputPath('settings-search-focused.png') });
+	await snap(page, 'settings-search-focused.png');
 	await search.fill('voice');
 	await expect(page.locator('.nav-item')).toHaveCount(1);
 	await expect(page.getByRole('link', { name: 'TTS', exact: true })).toBeVisible();
@@ -236,7 +236,7 @@ test('appearance persists and app tokens follow the selected theme', async ({ pa
 });
 
 
-test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', async ({ page }, info) => {
+test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', async ({ page }) => {
 	await prepareOmniVoice(page);
 	await page.goto('/app/settings/tts');
 	await waitForHydration(page);
@@ -258,7 +258,7 @@ test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', as
 		expect(recipe.radius).toBe('8px');
 		expect(recipe.padding).toBe('4px');
 		expect(recipe.blur).toContain(theme === 'dark' ? '16px' : '12px');
-		await page.screenshot({ path: info.outputPath(`language-dropdown-${theme}.png`) });
+		await snap(page, `language-dropdown-${theme}.png`);
 		await page.keyboard.press('Escape');
 		await expect(popup).toHaveCount(0);
 		await expect(language).toBeFocused();
@@ -272,7 +272,7 @@ test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', as
 	expect((await speechSettings(page)).activeLanguage).toBe(firstValue);
 	await page.locator('.dropdown-trigger').click();
 	await expect(page.getByRole('menu')).toBeVisible();
-	await page.screenshot({ path: info.outputPath('provider-dropdown-dark.png') });
+	await snap(page, 'provider-dropdown-dark.png');
 	await page.keyboard.press('Escape');
 	await expect(page.getByRole('menu')).toHaveCount(0);
 	await expect(page.locator('.dropdown-trigger')).toBeFocused();
@@ -280,7 +280,7 @@ test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', as
 
 test('Fish Audio setup offers its models and voices without a failed model fetch', async ({
 	page
-}, info) => {
+}) => {
 	await openApp(page);
 	await page.evaluate(async () => {
 		const path = '/src/lib/stores/modules.svelte.ts';
@@ -316,5 +316,5 @@ test('Fish Audio setup offers its models and voices without a failed model fetch
 		activeModel: 's2.1-pro',
 		activeVoiceId: '933563129e564b19a115bedd57b7406a'
 	});
-	await page.screenshot({ path: info.outputPath('fish-audio-settings.png') });
+	await snap(page, 'fish-audio-settings.png');
 });

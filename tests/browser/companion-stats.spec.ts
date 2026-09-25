@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { openApp } from './helpers';
+import { openApp, snap } from './helpers';
 
 for (const mode of ['bubble', 'sidebar']) {
 	test(`${mode} shares the composer and opens read-only stats above its toolbar`, async ({
 		page
-	}, info) => {
+	}) => {
 		await openApp(page, { chatDisplayMode: mode });
 		await page.evaluate(async () => {
 			const path = '/src/lib/stores/character.svelte.ts';
@@ -39,10 +39,7 @@ for (const mode of ['bubble', 'sidebar']) {
 		const field = (await input.boundingBox())!;
 		const button = (await trigger.boundingBox())!;
 		expect(button.y).toBeGreaterThanOrEqual(field.y + field.height);
-		await page.screenshot({
-			animations: 'disabled',
-			path: info.outputPath(`${mode}-composer.png`)
-		});
+		await snap(page, `${mode}-composer.png`, { animations: 'disabled' });
 		await trigger.click();
 		const panel = page.getByRole('dialog', { name: 'Companion stats' });
 		await expect(panel).toBeVisible();
@@ -72,7 +69,7 @@ for (const mode of ['bubble', 'sidebar']) {
 		expect(box.x).toBeGreaterThanOrEqual(0);
 		expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
 		expect(box.y + box.height).toBeLessThanOrEqual(button.y);
-		await page.screenshot({ animations: 'disabled', path: info.outputPath(`${mode}-stats.png`) });
+		await snap(page, `${mode}-stats.png`, { animations: 'disabled' });
 		await page.keyboard.press('Escape');
 		await expect(panel).not.toBeVisible();
 		await expect(trigger).toBeFocused();
@@ -90,7 +87,7 @@ for (const mode of ['bubble', 'sidebar']) {
 		expect(await snapshot()).toBe(before);
 	});
 
-	test(`${mode} stats fit above a keyboard and respect companion mode`, async ({ page }, info) => {
+	test(`${mode} stats fit above a keyboard and respect companion mode`, async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await openApp(page, { chatDisplayMode: mode });
 		await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
@@ -125,10 +122,7 @@ for (const mode of ['bubble', 'sidebar']) {
 		await details.focus();
 		await details.press('End');
 		await expect.poll(() => details.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
-		await page.screenshot({
-			animations: 'disabled',
-			path: info.outputPath(`${mode}-short-stats.png`)
-		});
+		await snap(page, `${mode}-short-stats.png`, { animations: 'disabled' });
 		await page.evaluate(async () => {
 			const path = '/src/lib/stores/photomode.svelte.ts';
 			(await import(/* @vite-ignore */ path)).photomodeStore.enter();

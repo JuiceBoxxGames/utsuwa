@@ -21,16 +21,16 @@ importers:
         specifier: ^3.4.5
         version: 3.4.5(three@0.182.0)
       '@tauri-apps/plugin-http':
-        specifier: ^2.5.9
+        specifier: ~2.5.9
         version: 2.5.9
       '@tauri-apps/plugin-opener':
-        specifier: ^2.5.3
+        specifier: ~2.5.3
         version: 2.5.3
       '@tauri-apps/plugin-process':
-        specifier: ^2.3.1
+        specifier: ~2.3.1
         version: 2.3.1
       '@tauri-apps/plugin-updater':
-        specifier: ^2.10.1
+        specifier: ~2.10.1
         version: 2.10.1
       '@threlte/core':
         specifier: ^8.3.1
@@ -59,9 +59,6 @@ importers:
       localforage:
         specifier: ^1.10.0
         version: 1.10.0
-      simple-icons:
-        specifier: ^16.6.0
-        version: 16.6.1
       three:
         specifier: ^0.182.0
         version: 0.182.0
@@ -88,16 +85,16 @@ importers:
         specifier: ^4.1.18
         version: 4.1.18(vite@7.3.6(@types/node@25.0.10)(jiti@2.7.0)(lightningcss@1.30.2))
       '@tauri-apps/api':
-        specifier: ^2.10.1
+        specifier: ~2.10.1
         version: 2.10.1
       '@tauri-apps/cli':
         specifier: ^2.10.0
         version: 2.10.0
       '@tauri-apps/plugin-fs':
-        specifier: ^2.4.5
+        specifier: ~2.4.5
         version: 2.4.5
       '@tauri-apps/plugin-global-shortcut':
-        specifier: ^2.3.1
+        specifier: ~2.3.1
         version: 2.3.1
       '@types/three':
         specifier: ^0.182.0
@@ -1925,10 +1922,6 @@ packages:
   simple-get@4.0.1:
     resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
 
-  simple-icons@16.6.1:
-    resolution: {integrity: sha512-zg3g5RCnc3cJfxCclOvElfow2rtpeB+Ow/dj1uvGG3MkpT7OjPBrE2hotqW2Hmt2ZYbuXCx2u+Oh4yi5N+yg5Q==}
-    engines: {node: '>=0.12.18'}
-
   simple-swizzle@0.2.4:
     resolution: {integrity: sha512-nAu1WFPQSMNr2Zn9PGSZK9AGn4t/y97lEm+MXTtUDwfP0ksAIX4nO+6ruD9Jwut4C49SB1Ws+fbXsm/yScWOHw==}
 
@@ -3752,8 +3745,6 @@ snapshots:
       decompress-response: 6.0.0
       once: 1.4.0
       simple-concat: 1.0.1
-
-  simple-icons@16.6.1: {}
 
   simple-swizzle@0.2.4:
     dependencies:

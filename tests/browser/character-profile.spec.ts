@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { openApp, waitForHydration } from './helpers';
+import { openApp, waitForHydration, snap } from './helpers';
 
-test('the popover and Character settings share live stats and Profile saves edits', async ({ page }, info) => {
+test('the popover and Character settings share live stats and Profile saves edits', async ({ page }) => {
 	await openApp(page);
 	await page.evaluate(async () => {
 		const path = '/src/lib/stores/character.svelte.ts';
@@ -16,7 +16,7 @@ test('the popover and Character settings share live stats and Profile saves edit
 	await expect(page).toHaveURL(/persona\?view=state$/);
 	await expect(page.getByRole('tab', { name: 'State & activity' })).toHaveAttribute('aria-selected', 'true');
 	expect(await page.locator('.companion-state-summary').innerText()).toBe(before);
-	await page.screenshot({ path: info.outputPath('character-state.png') });
+	await snap(page, 'character-state.png');
 	await page.getByRole('tab', { name: 'Profile', exact: true }).click();
 	await page.getByRole('textbox', { name: 'Character name', exact: true }).fill('Aki');
 	await page.getByRole('textbox', { name: 'Core personality', exact: true }).fill('Patient, curious, and direct.');
@@ -25,7 +25,7 @@ test('the popover and Character settings share live stats and Profile saves edit
 	await waitForHydration(page);
 	await expect(page.getByRole('textbox', { name: 'Character name', exact: true })).toHaveValue('Aki');
 	await expect(page.getByRole('textbox', { name: 'Core personality', exact: true })).toHaveValue('Patient, curious, and direct.');
-	await page.screenshot({ path: info.outputPath('character-profile.png') });
+	await snap(page, 'character-profile.png');
 	const modes = page.getByRole('group', { name: 'App mode' });
 	await modes.getByRole('button', { name: 'Companion', exact: true }).click();
 	const confirm = page.getByRole('dialog', { name: 'Change companion mode?' });
