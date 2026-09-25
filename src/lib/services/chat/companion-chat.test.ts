@@ -26,10 +26,18 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	const hints: string[] = [];
 	const said: string[] = [];
 	let cancels = 0;
-	const messages: { role: string; content: string }[] = [];
+	const messages: { id: string; role: string; content: string }[] = [];
 	const chatStore = {
 		messages, isLoading: false, error: null as string | null,
-		addMessage: (role: string, content: string) => messages.push({ role, content }),
+		addMessage: (role: string, content: string) => {
+			const message = { id: crypto.randomUUID(), role, content };
+			messages.push(message);
+			return message;
+		},
+		removeMessage: (id: string) => {
+			const index = messages.findIndex((m) => m.id === id);
+			if (index >= 0) messages.splice(index, 1);
+		},
 		updateLastMessage: (content: string) => { messages[messages.length - 1].content = content; },
 		setLoading: (value: boolean) => { chatStore.isLoading = value; },
 		setError: (value: string | null) => { chatStore.error = value; }
@@ -59,6 +67,11 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			speak: (text: string) => { said.push(text); }
 		},
 		chatHintStore: { showHint: (hint: string) => { hints.push(hint); } },
+		chatDraftStore: {
+			draft: '',
+			pending: [] as unknown[],
+			addPending: (image: unknown, url: string) => { fixtures.chatDraftStore.pending.push({ image, url }); }
+		},
 		keepImage: async () => {},
 		mcpStore: {
 			ensureTools: async () => {},
@@ -96,7 +109,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	};
 	for (const [path, name] of Object.entries({
 		chat: 'chatStore', character: 'characterStore', persona: 'personaStore', settings: 'settingsStore',
-		modules: 'modulesStore', vrm: 'vrmStore', 'animation-library': 'animationLibraryStore', reminders: 'reminderStore', tts: 'ttsStore', mcp: 'mcpStore', 'chat-hint': 'chatHintStore'
+		modules: 'modulesStore', vrm: 'vrmStore', 'animation-library': 'animationLibraryStore', reminders: 'reminderStore', tts: 'ttsStore', mcp: 'mcpStore', 'chat-hint': 'chatHintStore', 'chat-draft': 'chatDraftStore'
 	})) replacements[`src/lib/stores/${path}.svelte`] = `export const ${name} = globalThis.__utsuwaChatIntegration.${name};`;
 	const server = await createServer({
 		root, configFile: false, server: { middlewareMode: true }, appType: 'custom',
@@ -818,6 +831,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		const resetTurn = () => {
 			messages.length = 0; spoken = []; turns.length = 0; thinking.length = 0;
 			hints.length = 0; said.length = 0; cancels = 0; chatStore.error = null;
+			fixtures.chatDraftStore.draft = ''; fixtures.chatDraftStore.pending.length = 0;
 		};
 
 		await t.test('the direct transport rejects instead of resolving silently when the key is missing', async () => {
@@ -899,6 +913,73 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			assert.equal(latest, 'What a view.');
 			assert.deepEqual(said, ['What a view.']);
 			assert.equal(hints.length, 1);
+		});
+		for (const transport of ['direct', 'hosted']) {
+			await t.test(`${transport}: a busy provider is retried and the reply still lands`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+				let upstream = 0;
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					// Retry-After: 0 keeps the test instant and proves the header is honored
+					if (upstream++ === 0) {
+						return new Response(JSON.stringify({ error: { message: 'Rate limit exceeded' } }), {
+							status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '0' }
+						});
+					}
+					return new Response(sse('Sorry, I was busy.') + 'data: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+				await sendCompanionMessage('Hello', [], hooks);
+				assert.equal(upstream, 2);
+				assert.equal(chatStore.error, null);
+				assert.equal(latest, 'Sorry, I was busy.');
+				assert.equal(hints.length, 1);
+				assert.match(hints[0], /retrying/i);
+			});
+			await t.test(`${transport}: a rejected key fails once and the message bounces back to the composer`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+				let upstream = 0;
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					upstream++;
+					return new Response(JSON.stringify({ error: { message: 'Invalid API key' } }), {
+						status: 401, headers: { 'Content-Type': 'application/json' }
+					});
+				});
+				const image = { id: 'img-1', mimeType: 'image/png', base64: 'eA==', blob: new Blob(['x'], { type: 'image/png' }) };
+				await sendCompanionMessage('Remember this long message?', [image], hooks);
+				assert.equal(upstream, 1);
+				assert.ok(chatStore.error);
+				assert.equal(messages.some((m) => m.role === 'user'), false, 'the failed bubble is taken back');
+				assert.equal(fixtures.chatDraftStore.draft, 'Remember this long message?');
+				assert.equal(fixtures.chatDraftStore.pending.length, 1);
+			});
+		}
+		await t.test('a reply that drops mid-stream is not retried and stays on screen', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			t.mock.method(console, 'error', () => {});
+			let upstream = 0;
+			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+				if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+				upstream++;
+				return new Response(new ReadableStream({ start(controller) {
+					controller.enqueue(new TextEncoder().encode(sse('Half a thou')));
+					// Drop the connection after the text has reached the client
+					setTimeout(() => controller.error(new TypeError('terminated')), 50);
+				} }), { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.equal(upstream, 1);
+			assert.ok(chatStore.error);
+			assert.equal(messages[0]?.content, 'Hello', 'the answered question stays put');
+			assert.equal(fixtures.chatDraftStore.draft, '');
+		});
+		await t.test('a draft typed during the failed turn is not overwritten', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			t.mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 400 }));
+			fixtures.chatDraftStore.draft = 'my next thought';
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.equal(fixtures.chatDraftStore.draft, 'my next thought');
+			assert.equal(messages[0]?.content, 'Hello');
 		});
 	} finally {
 		buffer?.reset();

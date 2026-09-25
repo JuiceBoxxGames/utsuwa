@@ -17,6 +17,7 @@ import {
 } from '$lib/services/providers/provider-errors';
 import { type MessageContent, toOpenAIContent, toAnthropicContent } from '$lib/services/chat/content';
 import { emitToolCalls, type ToolCallBuffer } from '$lib/services/chat/tool-call-buffers';
+import { ProviderError, isTransientStatus, parseRetryAfter, withRetry } from './retry';
 
 /** The model a request goes to. */
 export interface LLMTarget {
@@ -55,6 +56,8 @@ export interface ChatRequest extends LLMTarget {
 	/** Native tool definitions for providers that support function calling. */
 	tools?: Record<string, unknown>[];
 	signal?: AbortSignal;
+	/** Called before each automatic retry of a temporary failure. */
+	onRetry?: (attempt: number, delayMs: number) => void;
 }
 
 export interface JsonRequest extends LLMTarget {
@@ -107,8 +110,30 @@ export function providerEndpoint(provider: LLMProvider, apiKey?: string, baseURL
 /**
  * Stream a chat reply. onText gets the whole reply so far on every chunk; the
  * promise resolves with the full text and rejects with a user-facing message.
+ * Temporary failures are retried, but only before any output has arrived.
  */
 export async function streamChat(
+	request: ChatRequest,
+	onText: (fullText: string) => void,
+	onToolCall?: OnToolCall
+): Promise<string> {
+	let started = false;
+	const text = (fullText: string) => {
+		started = true;
+		onText(fullText);
+	};
+	const toolCall: OnToolCall | undefined = onToolCall && ((...args) => {
+		started = true;
+		onToolCall(...args);
+	});
+	return await withRetry(() => streamOnce(request, text, toolCall), {
+		signal: request.signal,
+		canRetry: () => !started,
+		onRetry: request.onRetry
+	});
+}
+
+async function streamOnce(
 	request: ChatRequest,
 	onText: (fullText: string) => void,
 	onToolCall?: OnToolCall
@@ -215,11 +240,9 @@ async function streamDirect(
 	} catch (err) {
 		if (options.signal?.aborted) throw err;
 		const rawMessage = err instanceof Error ? err.message : 'Failed to connect to provider';
-		throw new Error(
-			isLocal
-				? getLocalProviderConnectionHint(provider, providerBaseURL, getCurrentSiteOrigin())
-				: rawMessage
-		);
+		// A local server that isn't running won't be up in 2s; say how to fix it
+		if (isLocal) throw new Error(getLocalProviderConnectionHint(provider, providerBaseURL, getCurrentSiteOrigin()));
+		throw new ProviderError(rawMessage, true);
 	}
 
 	if (!response.ok) {
@@ -235,7 +258,11 @@ async function streamDirect(
 			}
 		}
 		msg = sanitizeProviderError(msg, providerBaseURL);
-		throw new Error(isLocal && response.status === 404 ? `${msg}. Pull or select an installed model.` : msg);
+		throw new ProviderError(
+			isLocal && response.status === 404 ? `${msg}. Pull or select an installed model.` : msg,
+			isTransientStatus(response.status),
+			parseRetryAfter(response.headers.get('retry-after'))
+		);
 	}
 
 	// A 200 with an HTML content-type means the URL points at a website, not an API
@@ -365,16 +392,28 @@ async function streamServer(
 	onToolCall?: OnToolCall,
 	signal?: AbortSignal
 ): Promise<string> {
-	const response = await fetch('/api/chat', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(body),
-		signal
-	});
+	let response: Response;
+	try {
+		response = await fetch('/api/chat', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+			signal
+		});
+	} catch (err) {
+		if (signal?.aborted) throw err;
+		throw new ProviderError(err instanceof Error ? err.message : 'Failed to reach the server', true);
+	}
 
+	// The route says whether the provider failure was temporary; a bare gateway
+	// error page (no JSON) falls back to the status.
 	if (!response.ok) {
 		const errBody = await response.json().catch(() => null);
-		throw new Error(errBody?.error || 'Failed to get response');
+		throw new ProviderError(
+			errBody?.error || 'Failed to get response',
+			errBody?.transient ?? isTransientStatus(response.status),
+			errBody?.retryAfterMs
+		);
 	}
 
 	const reader = response.body?.getReader();
@@ -394,7 +433,8 @@ async function streamServer(
 			};
 			onToolCall?.(name, args, id);
 		} else if (line.startsWith('e:')) {
-			throw new Error(JSON.parse(line.slice(2)).error);
+			const { error, transient, retryAfterMs } = JSON.parse(line.slice(2));
+			throw new ProviderError(error, transient === true, retryAfterMs);
 		}
 	};
 

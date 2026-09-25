@@ -63,6 +63,10 @@ function createChatStore() {
 		error = err;
 	}
 
+	function removeMessage(id: string) {
+		messages = messages.filter((m) => m.id !== id);
+	}
+
 	function clearMessages() {
 		messages = [];
 	}
@@ -82,6 +86,7 @@ function createChatStore() {
 		updateLastMessage,
 		setLoading,
 		setError,
+		removeMessage,
 		clearMessages
 	};
 }

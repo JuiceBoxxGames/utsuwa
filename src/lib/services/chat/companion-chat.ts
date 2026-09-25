@@ -6,7 +6,8 @@
 // a small set of hooks to sync their own reactive state.
 import { characterStore } from '$lib/stores/character.svelte';
 import type { ThinkingPhase } from './chat-phase';
-import { chatStore } from '$lib/stores/chat.svelte';
+import { chatStore, type Message } from '$lib/stores/chat.svelte';
+import { chatDraftStore } from '$lib/stores/chat-draft.svelte';
 import { settingsStore } from '$lib/stores/settings.svelte';
 import { modulesStore } from '$lib/stores/modules.svelte';
 import { ttsStore } from '$lib/stores/tts.svelte';
@@ -17,6 +18,7 @@ import { getTTSProvider } from '$lib/services/providers/registry';
 import { buildTTSOptions } from '$lib/services/tts/tts-options';
 import { cleanSpeechMarkers } from '$lib/services/tts/chat-text';
 import { streamChat } from '$lib/services/llm/transport';
+import { RETRY_DELAYS_MS } from '$lib/services/llm/retry';
 import { missingLLMMessage, resolveActiveLLM } from '$lib/services/llm/active-llm';
 
 import { processCompanionTurn } from '$lib/services/chat/companion-turn';
@@ -148,8 +150,9 @@ export async function sendCompanionMessage(
 
 	const shown = images.map((img) => ({ id: img.id, url: URL.createObjectURL(img.blob) }));
 
+	let sent: Message | undefined;
 	if (!systemEvent) {
-		chatStore.addMessage('user', content, shown.length ? shown : undefined);
+		sent = chatStore.addMessage('user', content, shown.length ? shown : undefined);
 		hooks.onShownImages?.(shown);
 	}
 
@@ -224,6 +227,12 @@ export async function sendCompanionMessage(
 			speak: streamingTTS ? (chunk) => ttsStore.feedStreaming(chunk) : undefined
 		});
 
+		const onRetry = (attempt: number, delayMs: number) => {
+			bumpStall();
+			const wait = delayMs >= 1000 ? ` in ${Math.round(delayMs / 1000)}s` : '';
+			chatHintStore.showHint(`The model is busy, retrying${wait} (${attempt}/${RETRY_DELAYS_MS.length})`);
+		};
+
 		const onDelta = (roundFull: string) => {
 			if (signal.aborted) return;
 			bumpStall();
@@ -289,7 +298,7 @@ export async function sendCompanionMessage(
 			bumpStall();
 			const roundText = await untilAborted(
 				streamChat(
-					{ ...llm, messages, systemPrompt, tools: sendTools, signal, ...advancedParams },
+					{ ...llm, messages, systemPrompt, tools: sendTools, signal, onRetry, ...advancedParams },
 					onDelta,
 					onToolCall
 				)
@@ -381,6 +390,7 @@ export async function sendCompanionMessage(
 			chatHintStore.showHint(signal.reason instanceof Error ? signal.reason.message : 'Stopped');
 		} else {
 			chatStore.setError(err instanceof Error ? err.message : 'Unknown error');
+			if (sent) bounceBack(sent, images);
 		}
 		hooks.setTyping(false);
 		vrmStore.setThinking(false);
@@ -525,6 +535,18 @@ async function scheduleReminderFallback(
 			}
 		}
 	}
+}
+
+// A turn that failed before she said anything goes back into the composer, so
+// the user can just resend and the history doesn't end up with the question twice.
+function bounceBack(sent: Message, images: PreparedImage[]) {
+	const [before, last] = chatStore.messages.slice(-2);
+	const unanswered =
+		last?.id === sent.id || (before?.id === sent.id && last.role === 'assistant' && !last.content);
+	if (!unanswered || chatDraftStore.draft.trim() || chatDraftStore.pending.length) return;
+	chatStore.removeMessage(sent.id);
+	chatDraftStore.draft = sent.content;
+	for (const image of images) chatDraftStore.addPending(image, URL.createObjectURL(image.blob));
 }
 
 // She's seen the images and responded; keep them as local keepsakes.
