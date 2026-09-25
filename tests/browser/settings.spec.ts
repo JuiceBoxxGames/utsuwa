@@ -253,11 +253,14 @@ test('dropdowns share T3 surfaces and keep keyboard selection and dismissal', as
 		expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
 		const recipe = await popup.evaluate(el => {
 			const style = getComputedStyle(el);
-			return { radius: style.borderRadius, padding: style.padding, blur: style.backdropFilter };
+			return { radius: style.borderRadius, padding: style.padding };
 		});
 		expect(recipe.radius).toBe('8px');
 		expect(recipe.padding).toBe('4px');
-		expect(recipe.blur).toContain(theme === 'dark' ? '16px' : '12px');
+		// The theme follows the media change event, which lands on a later frame.
+		await expect
+			.poll(() => popup.evaluate(el => getComputedStyle(el).backdropFilter))
+			.toContain(theme === 'dark' ? '16px' : '12px');
 		await snap(page, `language-dropdown-${theme}.png`);
 		await page.keyboard.press('Escape');
 		await expect(popup).toHaveCount(0);

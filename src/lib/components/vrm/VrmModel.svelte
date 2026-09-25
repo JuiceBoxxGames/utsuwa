@@ -779,6 +779,8 @@
 	// Load VRM when URL changes
 	$effect(() => {
 		if (!url) return;
+		// Browser tests skip the avatar unless they assert on it. Dev server only.
+		if (import.meta.env.DEV && (globalThis as { __utsuwaE2eNoAvatar?: boolean }).__utsuwaE2eNoAvatar) return;
 
 		// Capture the model this load belongs to, so a fast switch can't save this
 		// render under a different model's id.

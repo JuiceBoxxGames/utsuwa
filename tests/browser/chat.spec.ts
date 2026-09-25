@@ -66,7 +66,7 @@ test('user messages remain selectable and long text fits the window', async ({
 	}
 });
 
-test('sending through the real chat flow keeps focus before and after a streamed reply', async ({
+test('sending through the real chat flow keeps focus before and after a streamed reply', { tag: '@avatar' }, async ({
 	page
 }) => {
 	await openApp(page, { chatDisplayMode: 'sidebar' });
@@ -191,7 +191,7 @@ function silentWav(seconds: number, rate = 24000) {
 	return wav;
 }
 
-test('replies are spoken with Fish Audio through the web proxy', async ({ page }) => {
+test('replies are spoken with Fish Audio through the web proxy', { tag: '@avatar' }, async ({ page }) => {
 	await page.addInitScript(() => {
 		const played: number[] = [];
 		(window as Window & { playedAudio?: number[] }).playedAudio = played;

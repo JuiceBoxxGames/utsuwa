@@ -6,8 +6,19 @@ export async function snap(page: Page, name: string, options: PageScreenshotOpti
 	await page.screenshot({ ...options, path: test.info().outputPath(name) });
 }
 
+// Loading and drawing the avatar dominates CI's software renderer, so only tests
+// tagged @avatar (or visual review runs) get it. The app honors this in dev only.
+function avatarEnabled() {
+	return !!process.env.VISUAL_REVIEW || test.info().tags.includes('@avatar');
+}
+
 // These tests run against Vite in a fresh browser context, never a user's save.
 export async function openApp(page: Page, display: Record<string, unknown> = {}, completeOnboarding = true) {
+	if (!avatarEnabled()) {
+		await page.context().addInitScript(() => {
+			(globalThis as { __utsuwaE2eNoAvatar?: boolean }).__utsuwaE2eNoAvatar = true;
+		});
+	}
 	await page.route(/huggingface\.co|cdn-lfs|cdn\.jsdelivr\.net/, (route) => route.abort());
 	await page.goto('/app/settings/display');
 	await expect(page.getByRole('heading', { name: 'Display', exact: true })).toBeVisible();
@@ -50,7 +61,7 @@ export async function setLoading(page: Page, loading: boolean) {
 
 export async function waitForHydration(page: Page, waitForAvatar = true) {
 	const pathname = new URL(page.url()).pathname;
-	const hasAvatar = waitForAvatar && (pathname === '/app' || pathname === '/overlay');
+	const hasAvatar = waitForAvatar && avatarEnabled() && (pathname === '/app' || pathname === '/overlay');
 	await page.waitForFunction(
 		() => document.readyState === 'complete' && '__SVELTEKIT_APP_VERSION__' in globalThis,
 		undefined,
@@ -69,7 +80,7 @@ export async function waitForHydration(page: Page, waitForAvatar = true) {
 					}
 					// Module registration precedes hydration. The layout sets its inline
 					// height on mount, after child event handlers have been attached.
-					const app = document.querySelector<HTMLElement>('.app');
+					const app = document.querySelector<HTMLElement>('.app, .overlay-app');
 					if (app && !app.style.height) return false;
 					if (hasAvatar) {
 						// Software renderers compile the avatar during its first frame.
