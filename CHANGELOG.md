@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-09-25
+
+This release is the codebase audit: three tranches of hardening, cleanup, and structure work with no new features. Every change was verified live before merging.
+
+### Changed
+- Chat requests always settle: a per-turn abort with a 90 second stall limit and a 10 minute cap, a Stop button while a reply streams, and a keepsake write that can no longer fail the turn ([#214](https://github.com/JuiceBoxxGames/utsuwa/pull/214)).
+- One LLM transport for chat, memory extraction, and generated moments. On the hosted web build the memory extraction fallback now goes through the server route, so it works with cloud providers that block browser calls ([#223](https://github.com/JuiceBoxxGames/utsuwa/pull/223)).
+- Toasts are accessible: one component with a live region, a real Dismiss button, and a timer that pauses on hover and focus. Event scenes are proper dialogs that take focus, keep Tab inside, close on Escape, and return focus ([#224](https://github.com/JuiceBoxxGames/utsuwa/pull/224)).
+- Contrast fixed at the token level: secondary text passes 4.5:1 on every app fill, controls drawn on the accent blue use dark ink, blue text on neutral fills uses its own darker token, and error messages use error surfaces. One radius scale across controls, panels, and dialogs ([#229](https://github.com/JuiceBoxxGames/utsuwa/pull/229)).
+- Photo mode and the camera panel use the shared tabs, segmented controls, and swatch sizes, announce captures, and return focus on close. The docs mobile drawer traps focus and closes on Escape ([#234](https://github.com/JuiceBoxxGames/utsuwa/pull/235)).
+- Module settings are typed, with one defaults object each; saves missing a key now read its default ([#226](https://github.com/JuiceBoxxGames/utsuwa/pull/226)).
+- The embedding model moved to `@huggingface/transformers` 3. Vectors are identical, so nothing re-indexes. The ONNX runtime now ships with the app instead of loading a script from a CDN ([#227](https://github.com/JuiceBoxxGames/utsuwa/pull/227)).
+- Docs and blog index pages load only frontmatter, three.js sits in its own cached chunk, and the settings pages no longer download it ([#225](https://github.com/JuiceBoxxGames/utsuwa/pull/225)).
+- Onboarding reuses the settings state, so switching TTS providers during setup no longer keeps the previous provider's model id ([#233](https://github.com/JuiceBoxxGames/utsuwa/pull/233)).
+- Internal structure: the app and overlay share one session bootstrap; VrmModel, the chat send loop, and the OmniVoice settings are split into tested modules; dead code and duplicate helpers removed; the MCP guide documents the stdio allowlists and the tool confirmation flow ([#230](https://github.com/JuiceBoxxGames/utsuwa/pull/230), [#231](https://github.com/JuiceBoxxGames/utsuwa/pull/231), [#232](https://github.com/JuiceBoxxGames/utsuwa/pull/232), [#234](https://github.com/JuiceBoxxGames/utsuwa/pull/235)).
+
+### Fixed
+- Provider proxies reject private, loopback, and metadata hosts after DNS resolution and refuse redirects, closing SSRF bypasses ([#210](https://github.com/JuiceBoxxGames/utsuwa/pull/210)).
+- Security headers on every route, a narrower desktop file scope, and an MCP stdio policy with a full command-line allowlist, an env allowlist, output caps, and a per-server confirmation ([#213](https://github.com/JuiceBoxxGames/utsuwa/pull/213)).
+- Clear All Data removes every store and key, storage quota errors are reported instead of swallowed, and memories are capped in length ([#212](https://github.com/JuiceBoxxGames/utsuwa/pull/212)).
+- CI cancels superseded runs, and the browser suite skips the avatar in tests that never look at it, cutting the desktop job from about 20 minutes to under 10 ([#211](https://github.com/JuiceBoxxGames/utsuwa/pull/211), [#228](https://github.com/JuiceBoxxGames/utsuwa/pull/228)).
+
+### Upgrade notes
+- Desktop builds are about 21 MB larger because the ONNX runtime is bundled instead of fetched from a CDN. The model itself still downloads once from Hugging Face on first use.
+- Self-hosted web builds that run MCP stdio servers must set `MCP_STDIO_ALLOWED_COMMANDS`; see the MCP guide.
+
 ## [0.18.0] - 2026-09-24
 
 ### Added
