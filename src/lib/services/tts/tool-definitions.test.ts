@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseToolCall } from './tool-definitions.ts';
+import { buildSpeechTools, parseToolCall } from './tool-definitions.ts';
 
 test('parseToolCall parses valid speak call', () => {
 	const result = parseToolCall({ name: 'speak', arguments: { text: 'Hello', lang: 'de' } });
@@ -55,4 +55,24 @@ test('parseToolCall accepts long language tags like zh-Hans', () => {
 	});
 	assert.ok(result);
 	assert.equal(result?.arguments.lang, 'zh-hans');
+});
+
+const toolSpeech = { activeProvider: 'omnivoice', activeLanguage: 'en', altLanguage: 'es', enableAltLanguage: true, enableToolCalling: true };
+
+test('buildSpeechTools offers speak, pause and gesture with the configured languages', () => {
+	const tools = buildSpeechTools('openai', true, toolSpeech);
+	assert.deepEqual(tools?.map((t) => t.function.name), ['speak_segment', 'pause_segment', 'gesture_segment']);
+	const speak = tools?.[0].function.parameters as { properties: { language: { enum: string[] } }; required: string[] };
+	assert.deepEqual(speak.properties.language.enum, ['en', 'es']);
+	assert.deepEqual(speak.required, ['text', 'language']);
+	assert.deepEqual(buildSpeechTools('openai', true, { ...toolSpeech, altLanguage: '' })?.[0].function.parameters,
+		{ ...tools?.[0].function.parameters, properties: { ...speak.properties, language: { ...speak.properties.language, enum: ['en'] } } });
+});
+
+test('buildSpeechTools is undefined whenever speech tools are off', () => {
+	assert.equal(buildSpeechTools('anthropic', true, toolSpeech), undefined);
+	assert.equal(buildSpeechTools('openai', false, toolSpeech), undefined);
+	assert.equal(buildSpeechTools('openai', true, { ...toolSpeech, activeProvider: 'openai-tts' }), undefined);
+	assert.equal(buildSpeechTools('openai', true, { ...toolSpeech, enableAltLanguage: false }), undefined);
+	assert.equal(buildSpeechTools('openai', true, { ...toolSpeech, enableToolCalling: false }), undefined);
 });
