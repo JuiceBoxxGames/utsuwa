@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Icon } from '$lib/components/ui';
-	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 	import VrmUploader from '$lib/components/vrm/VrmUploader.svelte';
 
 	interface Props {
@@ -13,12 +13,12 @@
 	let showUploader = $state(false);
 
 	async function handleUpload(file: File) {
-		await vrmStore.addModel(file);
+		await vrmGalleryStore.addModel(file);
 		showUploader = false;
 	}
 
 	function selectModel(id: string) {
-		vrmStore.setActiveModel(id);
+		vrmGalleryStore.setActiveModel(id);
 	}
 </script>
 
@@ -29,10 +29,10 @@
 	</div>
 
 	<div class="gallery">
-		{#each vrmStore.models as model (model.id)}
+		{#each vrmGalleryStore.models as model (model.id)}
 			<button
 				class="model-card"
-				class:active={model.id === vrmStore.activeModelId}
+				class:active={model.id === vrmGalleryStore.activeModelId}
 				onclick={() => selectModel(model.id)}
 			>
 				<div class="model-preview">
@@ -41,7 +41,7 @@
 					{:else}
 						<Icon name="user" size={32} />
 					{/if}
-					{#if model.id === vrmStore.activeModelId}
+					{#if model.id === vrmGalleryStore.activeModelId}
 						<div class="active-badge">
 							<Icon name="check" size={14} strokeWidth={3} />
 						</div>

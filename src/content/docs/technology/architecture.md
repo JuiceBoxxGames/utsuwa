@@ -49,8 +49,12 @@ The avatar renders with Three.js through Threlte, the Svelte wrapper for Three.j
 
 **Key files:**
 - `src/lib/components/vrm/Scene.svelte`: camera, lights, orbit controls, scene backgrounds, tap raycasting, photo capture, and AR placement
-- `src/lib/components/vrm/VrmModel.svelte`: model loading, the idle and talking cycle, expressions, lip sync, and tap reactions
-- `src/lib/stores/vrm.svelte.ts`: model state, head tracking for UI positioning, talking and thinking flags, and flash requests. Uploaded models persist in the `utsuwa-vrm` localforage store
+- `src/lib/components/vrm/VrmModel.svelte`: model loading, the per-frame loop, and wiring store requests into the animator and the expression layers
+- `src/lib/services/avatar/avatar-animator.ts`: one per loaded model; owns the animation mixer, idle cycling, talking, thinking, emotes, and photo poses
+- `src/lib/services/avatar/body-motion.ts`: tap nudges, camera jiggle for the spring bones, and photo-mode head tracking
+- `src/lib/engine/expression-compose.ts`: layers the mood face, flash, blink, and lip-sync visemes into per-frame expression weights
+- `src/lib/stores/vrm.svelte.ts`: runtime state of the loaded avatar: expressions, head tracking for UI positioning, talking and thinking flags, and flash requests
+- `src/lib/stores/vrm-gallery.svelte.ts`: saved models, selection, and thumbnails. Uploaded models persist in the `utsuwa-vrm` localforage store
 - `src/lib/services/vrm-animations.ts`: loads `.vrma` files and caches one parsed animation per URL
 
 **Libraries:** `@pixiv/three-vrm` and `@pixiv/three-vrm-animation` for VRM and VRMA, `@threlte/core` for the render loop, and `@threlte/xr` for AR mode.
@@ -59,7 +63,7 @@ The avatar renders with Three.js through Threlte, the Svelte wrapper for Three.j
 1. The user picks a built-in model or uploads a `.vrm` file.
 2. The VRM loader parses it into a Three.js scene object.
 3. Threlte runs the render loop inside Svelte's reactivity.
-4. Each frame, `VrmModel.svelte` blends animation, expression layers, and lip-sync weights onto the humanoid.
+4. Each frame, `VrmModel.svelte` advances the animator and applies the weights from `composeExpressionWeights()` onto the humanoid.
 
 On WebXR devices that support `immersive-ar` (Android Chrome, headset browsers), `src/lib/stores/ar.svelte.ts` enables AR mode and `ArPlacement.svelte` places the model on a real floor.
 
@@ -359,7 +363,7 @@ tests/browser/            # Playwright browser tests
 
 1. The turn applies a mood change through `characterStore.applyUpdates()`.
 2. `VrmModel.svelte` recomputes the mood target from `moodExpressionTarget()`.
-3. Each frame it fades the old expression out before the new one comes in.
+3. Each frame `composeExpressionWeights()` fades the old expression out before the new one comes in.
 4. If the reply set `expression`, `vrmStore.requestFlash()` layers a short reaction on top.
 
 ### Event Triggering

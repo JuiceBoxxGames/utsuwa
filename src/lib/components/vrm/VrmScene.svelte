@@ -5,7 +5,7 @@
 	import { WebGLRenderer, SRGBColorSpace, NoToneMapping } from 'three';
 	import { onMount } from 'svelte';
 	import Scene from './Scene.svelte';
-	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 	import { arStore } from '$lib/stores/ar.svelte';
 	import { preGenerateThumbnails } from '$lib/utils/vrmThumbnail';
 	import { isWebGLAvailable } from '$lib/utils/webgl';
@@ -67,11 +67,11 @@
 
 		// Pre-generate thumbnails for models without previews. Wait for storage
 		// init first, otherwise saved previews look missing and get regenerated.
-		vrmStore.whenReady().then(() => {
-			const modelsNeedingThumbnails = vrmStore.models.filter((m) => !m.previewUrl);
+		vrmGalleryStore.whenReady().then(() => {
+			const modelsNeedingThumbnails = vrmGalleryStore.models.filter((m) => !m.previewUrl);
 			if (modelsNeedingThumbnails.length > 0) {
 				preGenerateThumbnails(modelsNeedingThumbnails, (modelId, dataUrl) => {
-					vrmStore.setModelPreview(modelId, dataUrl);
+					vrmGalleryStore.setModelPreview(modelId, dataUrl);
 				});
 			}
 		});

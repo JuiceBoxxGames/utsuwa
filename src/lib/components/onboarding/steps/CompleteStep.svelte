@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Icon } from '$lib/components/ui';
 	import { modulesStore } from '$lib/stores/modules.svelte';
-	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 
 	interface Props {
 		characterName: string;
@@ -11,7 +11,9 @@
 
 	let { characterName, onComplete, onBack }: Props = $props();
 
-	const activeModel = $derived(vrmStore.models.find((m) => m.id === vrmStore.activeModelId));
+	const activeModel = $derived(
+		vrmGalleryStore.models.find((m) => m.id === vrmGalleryStore.activeModelId)
+	);
 </script>
 
 <div class="ob-step ob-step--center">
