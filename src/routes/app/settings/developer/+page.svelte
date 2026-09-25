@@ -3,6 +3,7 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import { onDestroy } from 'svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import { Icon } from '$lib/components/ui';
 	import * as THREE from 'three';
@@ -221,7 +222,7 @@
 	// If parsing the temporary model fails, restore the original avatar so the
 	// expression list and viewport do not stay empty/corrupted.
 	$effect(() => {
-		if (vrmStore.tempModelLoadError) {
+		if (vrmGalleryStore.tempModelLoadError) {
 			vrmStore.restoreOriginalModel();
 			tempModelName = '';
 		}
@@ -317,27 +318,27 @@
 					and is <strong>not saved</strong>. When you leave this page or click "Restore Original",
 					the previously active avatar returns automatically.
 				</p>
-				{#if vrmStore.tempModelActive}
+				{#if vrmGalleryStore.tempModelActive}
 					<div class="temp-model-info">
 						<span class="temp-model-name">{tempModelName || 'Temporary model'}</span>
 						<button
 							class="btn btn-sm btn-secondary"
 							onclick={restoreOriginalModel}
-							disabled={vrmStore.tempModelLoading}
+							disabled={vrmGalleryStore.tempModelLoading}
 						>
 							<Icon name="rotate-ccw" size={14} />
 							Restore Original
 						</button>
 					</div>
 				{:else}
-					<label class="btn btn-sm btn-primary" class:disabled={vrmStore.tempModelLoading}>
+					<label class="btn btn-sm btn-primary" class:disabled={vrmGalleryStore.tempModelLoading}>
 						<Icon name="upload" size={14} />
-						{vrmStore.tempModelLoading ? 'Loading…' : 'Upload VRM'}
+						{vrmGalleryStore.tempModelLoading ? 'Loading…' : 'Upload VRM'}
 						<input
 							type="file"
 							accept=".vrm,.VRM"
 							onchange={handleTempModelSelect}
-							disabled={vrmStore.tempModelLoading}
+							disabled={vrmGalleryStore.tempModelLoading}
 							class="sr-only"
 						/>
 					</label>

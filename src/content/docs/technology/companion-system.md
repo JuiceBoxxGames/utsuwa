@@ -113,7 +113,7 @@ The avatar's resting face follows the mood. `moodExpressionTarget()` in `src/lib
 | curious | surprised | 0.3 |
 | neutral | none | 0 |
 
-VRM 1.0 preset names come first and VRM 0.x names such as `joy` and `sorrow` are fallbacks. `VrmModel.svelte` fades toward the target each frame and fully fades the old expression before a new one starts.
+VRM 1.0 preset names come first and VRM 0.x names such as `joy` and `sorrow` are fallbacks. `composeExpressionWeights()` fades toward the target each frame and fully fades the old expression before a new one starts.
 
 The model can also set `expression` in its JSON block, using the same emotion names. `flashExpressionTarget()` turns that into a stronger weight: 1.4 times the table value, capped at 0.9. The flash holds 2.5 seconds, or up to 8 seconds while she is speaking, then fades. `neutral` never flashes. The flash sits above the resting face and below tap reactions, emotes, and photo mode. Settings > Display > Mood expressions turns off both the resting face and the flash.
 

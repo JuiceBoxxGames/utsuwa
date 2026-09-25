@@ -1,6 +1,6 @@
 import { personaStore } from '$lib/stores/persona.svelte';
 import { characterStore } from '$lib/stores/character.svelte';
-import { vrmStore } from '$lib/stores/vrm.svelte';
+import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 import { allEvents } from '$lib/data/events';
 import type { CompletedEventRecord, EventType } from '$lib/types/events';
 
@@ -68,7 +68,7 @@ export function createPersonaPageState() {
 	}
 
 	async function handleUpload(file: File) {
-		await vrmStore.addModel(file);
+		await vrmGalleryStore.addModel(file);
 		uploadModalOpen = false;
 	}
 

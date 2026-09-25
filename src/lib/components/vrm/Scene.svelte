@@ -19,6 +19,7 @@
 	import ArPlacement from './ArPlacement.svelte';
 	import VrmModel from './VrmModel.svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { photomodeStore, type CaptureOptions } from '$lib/stores/photomode.svelte';
 	import { bucketTouchZone } from '$lib/services/photo-touch';
@@ -67,7 +68,7 @@
 
 	let { centered = false, locked = false, overlay = false, framing }: Props = $props();
 
-	const modelUrl = $derived(vrmStore.modelUrl);
+	const modelUrl = $derived(vrmGalleryStore.modelUrl);
 
 	const { camera, renderer, scene, size } = useThrelte();
 	const { isPresenting } = useXR();

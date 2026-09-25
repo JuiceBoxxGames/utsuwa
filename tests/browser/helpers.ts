@@ -32,12 +32,12 @@ export async function openApp(page: Page, display: Record<string, unknown> = {},
 		localStorage.setItem('utsuwa-display', JSON.stringify({ textRevealSpeed: 'off', ...settings }));
 		// Exercise the normal cached-preview state. The active avatar still loads
 		// and renders; unrelated thumbnail generation is not part of these UI tests.
-		const vrmPath = '/src/lib/stores/vrm.svelte.ts';
-		const { vrmStore } = await import(/* @vite-ignore */ vrmPath);
-		await vrmStore.whenReady();
+		const galleryPath = '/src/lib/stores/vrm-gallery.svelte.ts';
+		const { vrmGalleryStore } = await import(/* @vite-ignore */ galleryPath);
+		await vrmGalleryStore.whenReady();
 		await Promise.all(
-			vrmStore.models.map((model: { id: string }) =>
-				vrmStore.setModelPreview(
+			vrmGalleryStore.models.map((model: { id: string }) =>
+				vrmGalleryStore.setModelPreview(
 					model.id,
 					'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jD1sAAAAASUVORK5CYII='
 				)

@@ -38,6 +38,7 @@
 	import { goto } from '$app/navigation';
 	import { localPath } from '$lib/config/links';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 	import { chatStore } from '$lib/stores/chat.svelte';
 	import { modulesStore } from '$lib/stores/modules.svelte';
 	import { characterStore } from '$lib/stores/character.svelte';
@@ -215,7 +216,7 @@
 		<div class="character-frame" aria-hidden="true" bind:clientWidth={frameWidth} bind:clientHeight={frameHeight}></div>
 		<!-- VRM Stage (Full Background) -->
 		<div class="stage-container">
-			{#if vrmStore.isLoading || !vrmStore.modelUrl}
+			{#if vrmStore.isLoading || !vrmGalleryStore.modelUrl}
 				<div class="loading-dots" out:fadeFast={{ duration: 300 }}>
 					<span class="dot"></span>
 					<span class="dot"></span>
@@ -237,7 +238,7 @@
 			<!-- The avatar resolves into focus once the model is ready -->
 			<div
 				class="vrm-stage"
-				class:is-loading={vrmStore.isLoading || !vrmStore.modelUrl}
+				class:is-loading={vrmStore.isLoading || !vrmGalleryStore.modelUrl}
 				style:filter={photoFilterCss}
 			>
 				<VrmScene framing={{ width: frameWidth, height: frameHeight, left: displayStore.sidebarPosition === 'left' }} />

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
-	import { vrmStore } from '$lib/stores/vrm.svelte';
+	import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 	import { Icon } from '$lib/components/ui';
 	import VrmUploader from '$lib/components/vrm/VrmUploader.svelte';
 	import type { PersonaPageState } from './persona-page.svelte';
@@ -20,12 +20,12 @@
 	</div>
 
 	<div class="gallery-grid">
-		{#each vrmStore.models as model (model.id)}
+		{#each vrmGalleryStore.models as model (model.id)}
 			<button
 				class="model-card"
-				class:active={model.id === vrmStore.activeModelId}
-				aria-pressed={model.id === vrmStore.activeModelId}
-				onclick={() => vrmStore.setActiveModel(model.id)}
+				class:active={model.id === vrmGalleryStore.activeModelId}
+				aria-pressed={model.id === vrmGalleryStore.activeModelId}
+				onclick={() => vrmGalleryStore.setActiveModel(model.id)}
 			>
 				<div class="model-preview">
 					{#if model.previewUrl}
@@ -33,7 +33,7 @@
 					{:else}
 						<Icon name="user" size={24} />
 					{/if}
-					{#if model.id === vrmStore.activeModelId}
+					{#if model.id === vrmGalleryStore.activeModelId}
 						<div class="active-check">
 							<Icon name="check" size={12} strokeWidth={3} />
 						</div>
