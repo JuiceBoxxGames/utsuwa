@@ -108,10 +108,10 @@ async function buildCompanionPrompt(
 		pendingReminders: reminderStore.upcoming.map((r) => ({ triggerAt: r.triggerAt, content: r.content })),
 		sessionStartedAt: workingMemory.sessionStartedAt,
 		systemEvent,
-		ttsProvider: speechEnabled ? (speechSettings.activeProvider as string | undefined) : undefined,
-		ttsLanguage: (speechSettings.activeLanguage as string) || undefined,
-		ttsAltLanguage: (speechSettings.altLanguage as string) || undefined,
-		ttsAltEnabled: (speechSettings.enableAltLanguage as boolean) ?? false,
+		ttsProvider: speechEnabled ? speechSettings.activeProvider : undefined,
+		ttsLanguage: speechSettings.activeLanguage || undefined,
+		ttsAltLanguage: speechSettings.altLanguage || undefined,
+		ttsAltEnabled: speechSettings.enableAltLanguage,
 		// Same gate as the ttsTools injection in sendCompanionMessage: the
 		// speech layer must mandate tool calls exactly when the tools are sent.
 		ttsToolCalling: shouldUseSpeechTools(llmProvider, speechEnabled, speechSettings),
@@ -236,7 +236,7 @@ export async function sendCompanionMessage(
 		if (!llm) throw new Error(missingLLMMessage());
 		const { provider } = llm;
 
-		const contextSize = (consciousnessSettings.contextSize as number | undefined) || undefined;
+		const contextSize = consciousnessSettings.contextSize || undefined;
 
 		let systemPrompt = await untilAborted(buildCompanionPrompt(
 			content,
@@ -266,34 +266,32 @@ export async function sendCompanionMessage(
 		const baseTtsOptions: TTSOptions = {
 			provider: displayTtsProvider,
 			apiKey: ttsConfig.apiKey,
-			voiceId: (displaySpeechSettings.activeVoiceId as string) || undefined,
-			model: (displaySpeechSettings.activeModel as string) || ttsConfig.modelId,
+			voiceId: displaySpeechSettings.activeVoiceId || undefined,
+			model: displaySpeechSettings.activeModel || ttsConfig.modelId,
 			baseUrl: ttsConfig.baseUrl || ttsMeta?.defaultBaseUrl,
-			speed: (displaySpeechSettings.speed as number) ?? 1,
+			speed: displaySpeechSettings.speed,
 			// Leave unset when the user hasn't picked one; the orchestrator
 			// infers the primary language from the first segment instead.
-			language: (displaySpeechSettings.activeLanguage as string) || undefined,
-			altLanguage: (displaySpeechSettings.altLanguage as string) || undefined,
-			altVoiceId: (displaySpeechSettings.altVoiceId as string) || undefined,
-			enableAltLanguage: (displaySpeechSettings.enableAltLanguage as boolean) ?? false,
-			altSpeed: (displaySpeechSettings.altSpeed as number) ?? undefined
+			language: displaySpeechSettings.activeLanguage || undefined,
+			altLanguage: displaySpeechSettings.altLanguage || undefined,
+			altVoiceId: displaySpeechSettings.altVoiceId || undefined,
+			enableAltLanguage: displaySpeechSettings.enableAltLanguage,
+			altSpeed: displaySpeechSettings.altSpeed
 		};
 
 		const ttsOptions: TTSOptions =
 			displayTtsProvider === 'omnivoice'
 				? {
 						...baseTtsOptions,
-						instructions: (displaySpeechSettings.instructions as string) || undefined,
-						altInstructions: (displaySpeechSettings.altInstructions as string) || undefined,
-						numStep: (displaySpeechSettings.numStep as number) ?? undefined,
-						altNumStep: (displaySpeechSettings.altNumStep as number) ?? undefined,
-						positionTemperature: (displaySpeechSettings.positionTemperature as number) ?? undefined,
-classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefined,
-					altPositionTemperature:
-						(displaySpeechSettings.altPositionTemperature as number) ?? undefined,
-					altClassTemperature:
-						(displaySpeechSettings.altClassTemperature as number) ?? undefined
-			  }
+						instructions: displaySpeechSettings.instructions || undefined,
+						altInstructions: displaySpeechSettings.altInstructions || undefined,
+						numStep: displaySpeechSettings.numStep,
+						altNumStep: displaySpeechSettings.altNumStep,
+						positionTemperature: displaySpeechSettings.positionTemperature,
+						classTemperature: displaySpeechSettings.classTemperature,
+						altPositionTemperature: displaySpeechSettings.altPositionTemperature,
+						altClassTemperature: displaySpeechSettings.altClassTemperature
+					}
 			: baseTtsOptions;
 
 		streamingTTS =
@@ -414,11 +412,11 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		// Advanced parameters are only supported for OpenAI-compatible endpoints.
 		const advancedParams = llm.custom
 			? {
-					temperature: (consciousnessSettings.temperature as number) ?? 0.7,
-					topP: (consciousnessSettings.topP as number) ?? 1.0,
-					maxTokens: (consciousnessSettings.maxTokens as number) || undefined,
-					presencePenalty: (consciousnessSettings.presencePenalty as number) ?? 0,
-					frequencyPenalty: (consciousnessSettings.frequencyPenalty as number) ?? 0
+					temperature: consciousnessSettings.temperature,
+					topP: consciousnessSettings.topP,
+					maxTokens: consciousnessSettings.maxTokens || undefined,
+					presencePenalty: consciousnessSettings.presencePenalty,
+					frequencyPenalty: consciousnessSettings.frequencyPenalty
 				}
 			: {};
 
@@ -429,8 +427,8 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		// structured language tags instead of pseudo-calls in the text.
 		// Build the language enum from the configured primary + alternative
 		// languages so the tool only ever suggests what the user has set up.
-		const primaryLang = (displaySpeechSettings.activeLanguage as string)?.toLowerCase() || 'en';
-		const altLang = (displaySpeechSettings.altLanguage as string)?.toLowerCase();
+		const primaryLang = displaySpeechSettings.activeLanguage.toLowerCase() || 'en';
+		const altLang = displaySpeechSettings.altLanguage.toLowerCase();
 		const toolLanguages = Array.from(new Set([primaryLang, altLang].filter(Boolean))) as string[];
 
 		const ttsTools = shouldUseSpeechTools(provider, speechState?.enabled === true, displaySpeechSettings)

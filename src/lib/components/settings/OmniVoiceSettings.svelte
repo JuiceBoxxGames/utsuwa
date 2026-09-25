@@ -81,10 +81,10 @@
 
 	// ── Derived voice state ──────────────────────────────────────────────────
 
-	const activeVoiceId = $derived.by(() => (settings.speechSettings.activeVoiceId as string) || '');
+	const activeVoiceId = $derived.by(() => settings.speechSettings.activeVoiceId || '');
 	const isClone = $derived.by(() => activeVoiceId.startsWith('clone:'));
 	const activeLanguage = $derived.by(() => {
-		const lang = settings.speechSettings.activeLanguage as string;
+		const lang = settings.speechSettings.activeLanguage;
 		return languages.some((l) => l.code === lang) ? lang : 'en';
 	});
 
@@ -124,27 +124,17 @@
 		if (!voiceId) return;
 		const language = activeLanguage;
 		const instructions = deriveInstructions(voiceId, language);
-		settings.handleTTSInstructionsChange(instructions);
-		settings.handleTTSVoiceChange(voiceId);
+		settings.setSpeech('instructions', instructions);
+		settings.setSpeech('activeVoiceId', voiceId);
 	}
 
 	function handleLanguageChange(language: string) {
-		settings.handleTTSLanguageChange(language);
+		settings.setSpeech('activeLanguage', language);
 		if (isClone) return;
 		const voiceId = activeVoiceId || DEFAULT_PRESET_VOICE;
 		const instructions = deriveInstructions(voiceId, language);
-		settings.handleTTSInstructionsChange(instructions);
-		settings.handleTTSVoiceChange(voiceId);
-	}
-
-	function parseSpeed(value: string): number | undefined {
-		const parsed = parseFloat(value);
-		return Number.isNaN(parsed) ? undefined : parsed;
-	}
-
-	function parseNumber(value: string): number | undefined {
-		const parsed = parseFloat(value);
-		return Number.isNaN(parsed) ? undefined : parsed;
+		settings.setSpeech('instructions', instructions);
+		settings.setSpeech('activeVoiceId', voiceId);
 	}
 
 	// ── Profile initialization & regeneration ────────────────────────────────
@@ -173,7 +163,7 @@
 			const voice = isClone ? voiceId.replace('clone:', '') : voiceId;
 			const instructions = isClone
 				? undefined
-				: (settings.speechSettings.instructions as string) || deriveInstructions(voiceId, activeLanguage);
+				: settings.speechSettings.instructions || deriveInstructions(voiceId, activeLanguage);
 			const language = activeLanguage;
 
 			const body: Record<string, unknown> = { voice, language };
@@ -238,14 +228,15 @@
 	// Default settings initialization: runs when speech settings change.
 	$effect(() => {
 		if (!languages.some((l) => l.code === settings.speechSettings.activeLanguage)) {
-			settings.handleTTSLanguageChange('en');
+			settings.setSpeech('activeLanguage', 'en');
 		}
 		if (!activeVoiceId && !isClone) {
-			settings.handleTTSVoiceChange(DEFAULT_PRESET_VOICE);
-			settings.handleTTSInstructionsChange(deriveInstructions(DEFAULT_PRESET_VOICE, activeLanguage));
+			settings.setSpeech('activeVoiceId', DEFAULT_PRESET_VOICE);
+			settings.setSpeech('instructions', deriveInstructions(DEFAULT_PRESET_VOICE, activeLanguage));
 		}
-		if (!(settings.speechSettings.instructions as string) && !isClone) {
-			settings.handleTTSInstructionsChange(
+		if (!settings.speechSettings.instructions && !isClone) {
+			settings.setSpeech(
+				'instructions',
 				deriveInstructions(activeVoiceId || DEFAULT_PRESET_VOICE, activeLanguage)
 			);
 		}
@@ -266,7 +257,7 @@
 		if (isClone) return;
 		const voice = activeVoiceId || DEFAULT_PRESET_VOICE;
 		const instructions =
-			(settings.speechSettings.instructions as string) || deriveInstructions(voice, activeLanguage);
+			settings.speechSettings.instructions || deriveInstructions(voice, activeLanguage);
 		initializeProfile(voice, instructions, activeLanguage);
 	});
 
@@ -298,7 +289,7 @@
 			const text = TEST_PHRASES[lang] || TEST_PHRASES.en;
 			const instructions = isClone
 				? undefined
-				: (settings.speechSettings.instructions as string) ||
+				: settings.speechSettings.instructions ||
 				  deriveInstructions(activeVoiceId || DEFAULT_PRESET_VOICE, lang);
 
 			const body: Record<string, unknown> = {
@@ -309,14 +300,10 @@
 			};
 			if (activeVoiceId) body.voice = activeVoiceId;
 			if (instructions) body.instructions = instructions;
-			const speed = (settings.speechSettings.speed as number) ?? 1;
-			if (speed != null) body.speed = speed;
-			const ns = (settings.speechSettings.numStep as number) ?? 32;
-			if (ns != null) body.num_step = ns;
-			const pt = settings.speechSettings.positionTemperature as number;
-			if (pt != null) body.position_temperature = pt;
-			const ct = settings.speechSettings.classTemperature as number;
-			if (ct != null) body.class_temperature = ct;
+			body.speed = settings.speechSettings.speed;
+			body.num_step = settings.speechSettings.numStep;
+			body.position_temperature = settings.speechSettings.positionTemperature;
+			body.class_temperature = settings.speechSettings.classTemperature;
 
 			await playPreviewAudio(body);
 		} catch (err) {
@@ -328,13 +315,13 @@
 
 	// ── Alternative voice ────────────────────────────────────────────────────
 
-	const altEnabled = $derived.by(() => (settings.speechSettings.enableAltLanguage as boolean) ?? false);
-	const toolCallingEnabled = $derived.by(() => (settings.speechSettings.enableToolCalling as boolean) ?? true);
+	const altEnabled = $derived(settings.speechSettings.enableAltLanguage);
+	const toolCallingEnabled = $derived(settings.speechSettings.enableToolCalling);
 	const altLanguage = $derived.by(() => {
-		const lang = settings.speechSettings.altLanguage as string;
+		const lang = settings.speechSettings.altLanguage;
 		return languages.some((l) => l.code === lang) ? lang : '';
 	});
-	const altVoiceId = $derived.by(() => (settings.speechSettings.altVoiceId as string) || '');
+	const altVoiceId = $derived(settings.speechSettings.altVoiceId);
 	const altIsClone = $derived.by(() => altVoiceId.startsWith('clone:'));
 
 	function altLangOrDefault(): string {
@@ -342,28 +329,28 @@
 	}
 
 	function handleAltLanguageChange(language: string) {
-		settings.handleTTSAltLanguageChange(language);
+		settings.setSpeech('altLanguage', language);
 		if (altIsClone) return;
 		const voiceId = altVoiceId || DEFAULT_PRESET_VOICE;
-		settings.handleTTSAltInstructionsChange(deriveInstructions(voiceId, language));
+		settings.setSpeech('altInstructions', deriveInstructions(voiceId, language));
 	}
 
 	function handleAltPresetChange(voiceId: string) {
 		if (!voiceId) return;
-		settings.handleTTSAltInstructionsChange(deriveInstructions(voiceId, altLangOrDefault()));
-		settings.handleTTSAltVoiceChange(voiceId);
+		settings.setSpeech('altInstructions', deriveInstructions(voiceId, altLangOrDefault()));
+		settings.setSpeech('altVoiceId', voiceId);
 	}
 
 	function switchAltToSynthetic() {
-		settings.handleTTSAltVoiceChange(DEFAULT_PRESET_VOICE);
-		settings.handleTTSAltInstructionsChange(deriveInstructions(DEFAULT_PRESET_VOICE, altLangOrDefault()));
+		settings.setSpeech('altVoiceId', DEFAULT_PRESET_VOICE);
+		settings.setSpeech('altInstructions', deriveInstructions(DEFAULT_PRESET_VOICE, altLangOrDefault()));
 	}
 
 	function switchAltToClone() {
 		if (altIsClone) return;
 		const first = clonedVoices[0];
 		if (first) {
-			settings.handleTTSAltVoiceChange(first.id);
+			settings.setSpeech('altVoiceId', first.id);
 		} else {
 			openCloneModal();
 		}
@@ -373,10 +360,10 @@
 	$effect(() => {
 		if (!altEnabled) return;
 		const lang = altLangOrDefault();
-		if (!altLanguage) settings.handleTTSAltLanguageChange(lang);
+		if (!altLanguage) settings.setSpeech('altLanguage', lang);
 		if (!altVoiceId) {
-			settings.handleTTSAltVoiceChange(DEFAULT_PRESET_VOICE);
-			settings.handleTTSAltInstructionsChange(deriveInstructions(DEFAULT_PRESET_VOICE, lang));
+			settings.setSpeech('altVoiceId', DEFAULT_PRESET_VOICE);
+			settings.setSpeech('altInstructions', deriveInstructions(DEFAULT_PRESET_VOICE, lang));
 		}
 	});
 
@@ -386,7 +373,7 @@
 		if (!altEnabled || altIsClone || !altLanguage) return;
 		const voice = altVoiceId || DEFAULT_PRESET_VOICE;
 		const instructions =
-			(settings.speechSettings.altInstructions as string) ||
+			settings.speechSettings.altInstructions ||
 			deriveInstructions(voice, altLanguage);
 		initializeProfile(voice, instructions, altLanguage);
 	});
@@ -399,7 +386,7 @@
 			const text = TEST_PHRASES[lang] || TEST_PHRASES.en;
 			const instructions = altIsClone
 				? undefined
-				: (settings.speechSettings.altInstructions as string) ||
+				: settings.speechSettings.altInstructions ||
 				  deriveInstructions(altVoiceId || DEFAULT_PRESET_VOICE, lang);
 
 			const body: Record<string, unknown> = {
@@ -410,14 +397,10 @@
 			};
 			if (altVoiceId) body.voice = altVoiceId;
 			if (instructions) body.instructions = instructions;
-			const speed = (settings.speechSettings.altSpeed as number) ?? 1;
-			if (speed != null) body.speed = speed;
-			const ns = (settings.speechSettings.altNumStep as number) ?? 32;
-			if (ns != null) body.num_step = ns;
-			const apt = settings.speechSettings.altPositionTemperature as number;
-			if (apt != null) body.position_temperature = apt;
-			const act = settings.speechSettings.altClassTemperature as number;
-			if (act != null) body.class_temperature = act;
+			body.speed = settings.speechSettings.altSpeed;
+			body.num_step = settings.speechSettings.altNumStep;
+			body.position_temperature = settings.speechSettings.altPositionTemperature;
+			body.class_temperature = settings.speechSettings.altClassTemperature;
 
 			await playPreviewAudio(body);
 		} catch (err) {
@@ -477,7 +460,7 @@
 				const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
 				throw new Error((err as { detail?: string }).detail || `HTTP ${res.status}`);
 			}
-			settings.handleTTSVoiceChange('clone:' + cloneVoiceId.trim());
+			settings.setSpeech('activeVoiceId', 'clone:' + cloneVoiceId.trim());
 			closeCloneModal();
 			cloneVoiceId = '';
 			cloneRefText = '';
@@ -502,12 +485,12 @@
 			});
 			if (target === 'primary') {
 				if (activeVoiceId === 'clone:' + cloneId) {
-					settings.handleTTSVoiceChange(DEFAULT_PRESET_VOICE);
-					settings.handleTTSInstructionsChange(deriveInstructions(DEFAULT_PRESET_VOICE, activeLanguage));
+					settings.setSpeech('activeVoiceId', DEFAULT_PRESET_VOICE);
+					settings.setSpeech('instructions', deriveInstructions(DEFAULT_PRESET_VOICE, activeLanguage));
 				}
 			} else if (altVoiceId === 'clone:' + cloneId) {
-				settings.handleTTSAltVoiceChange(DEFAULT_PRESET_VOICE);
-				settings.handleTTSAltInstructionsChange(deriveInstructions(DEFAULT_PRESET_VOICE, altLangOrDefault()));
+				settings.setSpeech('altVoiceId', DEFAULT_PRESET_VOICE);
+				settings.setSpeech('altInstructions', deriveInstructions(DEFAULT_PRESET_VOICE, altLangOrDefault()));
 			}
 			await fetchClonedVoices();
 		} catch {
@@ -517,15 +500,15 @@
 	}
 
 	function switchToSynthetic() {
-		settings.handleTTSVoiceChange(DEFAULT_PRESET_VOICE);
-		settings.handleTTSInstructionsChange(deriveInstructions(DEFAULT_PRESET_VOICE, activeLanguage));
+		settings.setSpeech('activeVoiceId', DEFAULT_PRESET_VOICE);
+		settings.setSpeech('instructions', deriveInstructions(DEFAULT_PRESET_VOICE, activeLanguage));
 	}
 
 	function switchToClone() {
 		if (isClone) return;
 		const first = clonedVoices[0];
 		if (first) {
-			settings.handleTTSVoiceChange(first.id);
+			settings.setSpeech('activeVoiceId', first.id);
 		} else {
 			openCloneModal();
 		}
@@ -627,7 +610,7 @@
 			isClone,
 			selectId: 'omnivoice-voice',
 			onVoiceChange: (id) => {
-				if (isClone) settings.handleTTSVoiceChange(id);
+				if (isClone) settings.setSpeech('activeVoiceId', id);
 				else handlePresetChange(id);
 			},
 			onDeleteClone: (cloneId) => deleteClone(cloneId, 'primary')
@@ -678,28 +661,28 @@
 		<div class="omnivoice-design-row">
 			<label class="omnivoice-design-label" for="omnivoice-speed">Speed</label>
 			<input id="omnivoice-speed"
-				type="range" use:rangeProgress={(settings.speechSettings.speed as number) ?? 1}
+				type="range" use:rangeProgress={settings.speechSettings.speed}
 				min="0.5"
 				max="2.0"
 				step="0.1"
 				class="settings-range omnivoice-slider"
-				value={(settings.speechSettings.speed as number) ?? 1}
-				oninput={(e) => settings.handleTTSSpeedChange(parseSpeed(e.currentTarget.value))}
+				value={settings.speechSettings.speed}
+				oninput={(e) => settings.setSpeech('speed', Number(e.currentTarget.value))}
 			/>
-			<span class="omnivoice-slider-val">{(settings.speechSettings.speed as number) ?? 1}</span>
+			<span class="omnivoice-slider-val">{settings.speechSettings.speed}</span>
 		</div>
 		<div class="omnivoice-design-row">
 			<label class="omnivoice-design-label" for="omnivoice-num-step">Num Step</label>
 			<input id="omnivoice-num-step"
-				type="range" use:rangeProgress={(settings.speechSettings.numStep as number) ?? 32}
+				type="range" use:rangeProgress={settings.speechSettings.numStep}
 				min="4"
 				max="64"
 				step="1"
 				class="settings-range omnivoice-slider"
-				value={(settings.speechSettings.numStep as number) ?? 32}
-				oninput={(e) => settings.handleTTSNumStepChange(parseNumber(e.currentTarget.value))}
+				value={settings.speechSettings.numStep}
+				oninput={(e) => settings.setSpeech('numStep', Number(e.currentTarget.value))}
 			/>
-			<span class="omnivoice-slider-val">{(settings.speechSettings.numStep as number) ?? 32}</span>
+			<span class="omnivoice-slider-val">{settings.speechSettings.numStep}</span>
 		</div>
 	</div>
 
@@ -708,17 +691,17 @@
 			<label class="omnivoice-advanced-label" for="omnivoice-position-temperature">Position Temperature</label>
 			<div class="omnivoice-advanced-row">
 				<input id="omnivoice-position-temperature"
-					type="range" use:rangeProgress={(settings.speechSettings.positionTemperature as number) ?? 1}
+					type="range" use:rangeProgress={settings.speechSettings.positionTemperature}
 					min="0"
 					max="2"
 					step="0.1"
 					class="settings-range omnivoice-slider"
-					value={(settings.speechSettings.positionTemperature as number) ?? 1}
+					value={settings.speechSettings.positionTemperature}
 					oninput={(e) =>
-						settings.handleTTSPositionTemperatureChange(parseNumber(e.currentTarget.value))}
+						settings.setSpeech('positionTemperature', Number(e.currentTarget.value))}
 				/>
 				<span class="omnivoice-slider-val">
-					{(settings.speechSettings.positionTemperature as number) ?? 1}
+					{settings.speechSettings.positionTemperature}
 				</span>
 			</div>
 		</div>
@@ -726,17 +709,17 @@
 			<label class="omnivoice-advanced-label" for="omnivoice-class-temperature">Class Temperature</label>
 			<div class="omnivoice-advanced-row">
 				<input id="omnivoice-class-temperature"
-					type="range" use:rangeProgress={(settings.speechSettings.classTemperature as number) ?? 0.2}
+					type="range" use:rangeProgress={settings.speechSettings.classTemperature}
 					min="0"
 					max="2"
 					step="0.1"
 					class="settings-range omnivoice-slider"
-					value={(settings.speechSettings.classTemperature as number) ?? 0.2}
+					value={settings.speechSettings.classTemperature}
 					oninput={(e) =>
-						settings.handleTTSClassTemperatureChange(parseNumber(e.currentTarget.value))}
+						settings.setSpeech('classTemperature', Number(e.currentTarget.value))}
 				/>
 				<span class="omnivoice-slider-val">
-					{(settings.speechSettings.classTemperature as number) ?? 0.2}
+					{settings.speechSettings.classTemperature}
 				</span>
 			</div>
 		</div>
@@ -751,7 +734,7 @@
 			<input
 				type="checkbox"
 				checked={altEnabled}
-				onchange={(e) => settings.handleTTSEnableAltLanguageChange(e.currentTarget.checked)}
+				onchange={(e) => settings.setSpeech('enableAltLanguage', e.currentTarget.checked)}
 			/>
 			Speak foreign words with a second voice
 		</label>
@@ -783,7 +766,7 @@
 				isClone: altIsClone,
 				selectId: 'omnivoice-alt-voice',
 				onVoiceChange: (id) => {
-					if (altIsClone) settings.handleTTSAltVoiceChange(id);
+					if (altIsClone) settings.setSpeech('altVoiceId', id);
 					else handleAltPresetChange(id);
 				},
 				onDeleteClone: (cloneId) => deleteClone(cloneId, 'alt')
@@ -795,7 +778,7 @@
 			<input
 				type="checkbox"
 				checked={toolCallingEnabled}
-				onchange={(e) => settings.handleTTSEnableToolCallingChange(e.currentTarget.checked)}
+				onchange={(e) => settings.setSpeech('enableToolCalling', e.currentTarget.checked)}
 			/>
 			<span>Force language per segment</span>
 			</label>
@@ -830,28 +813,28 @@
 			<div class="omnivoice-design-row">
 				<label class="omnivoice-design-label" for="omnivoice-alt-speed">Alt Speed</label>
 				<input id="omnivoice-alt-speed"
-					type="range" use:rangeProgress={(settings.speechSettings.altSpeed as number) ?? 1}
+					type="range" use:rangeProgress={settings.speechSettings.altSpeed}
 					min="0.5"
 					max="2.0"
 					step="0.1"
 					class="settings-range omnivoice-slider"
-					value={(settings.speechSettings.altSpeed as number) ?? 1}
-					oninput={(e) => settings.handleTTSAltSpeedChange(parseSpeed(e.currentTarget.value))}
+					value={settings.speechSettings.altSpeed}
+					oninput={(e) => settings.setSpeech('altSpeed', Number(e.currentTarget.value))}
 				/>
-				<span class="omnivoice-slider-val">{(settings.speechSettings.altSpeed as number) ?? 1}</span>
+				<span class="omnivoice-slider-val">{settings.speechSettings.altSpeed}</span>
 			</div>
 			<div class="omnivoice-design-row">
 				<label class="omnivoice-design-label" for="omnivoice-alt-num-step">Alt Num Step</label>
 				<input id="omnivoice-alt-num-step"
-					type="range" use:rangeProgress={(settings.speechSettings.altNumStep as number) ?? 32}
+					type="range" use:rangeProgress={settings.speechSettings.altNumStep}
 					min="4"
 					max="64"
 					step="1"
 					class="settings-range omnivoice-slider"
-					value={(settings.speechSettings.altNumStep as number) ?? 32}
-					oninput={(e) => settings.handleTTSAltNumStepChange(parseNumber(e.currentTarget.value))}
+					value={settings.speechSettings.altNumStep}
+					oninput={(e) => settings.setSpeech('altNumStep', Number(e.currentTarget.value))}
 				/>
-				<span class="omnivoice-slider-val">{(settings.speechSettings.altNumStep as number) ?? 32}</span>
+				<span class="omnivoice-slider-val">{settings.speechSettings.altNumStep}</span>
 			</div>
 		</div>
 
@@ -860,17 +843,17 @@
 				<label class="omnivoice-advanced-label" for="omnivoice-alt-position-temperature">Alt Position Temperature</label>
 				<div class="omnivoice-advanced-row">
 					<input id="omnivoice-alt-position-temperature"
-						type="range" use:rangeProgress={(settings.speechSettings.altPositionTemperature as number) ?? 1}
+						type="range" use:rangeProgress={settings.speechSettings.altPositionTemperature}
 						min="0"
 						max="2"
 						step="0.1"
 						class="settings-range omnivoice-slider"
-						value={(settings.speechSettings.altPositionTemperature as number) ?? 1}
+						value={settings.speechSettings.altPositionTemperature}
 						oninput={(e) =>
-							settings.handleTTSAltPositionTemperatureChange(parseNumber(e.currentTarget.value))}
+							settings.setSpeech('altPositionTemperature', Number(e.currentTarget.value))}
 					/>
 					<span class="omnivoice-slider-val">
-						{(settings.speechSettings.altPositionTemperature as number) ?? 1}
+						{settings.speechSettings.altPositionTemperature}
 					</span>
 				</div>
 			</div>
@@ -878,17 +861,17 @@
 				<label class="omnivoice-advanced-label" for="omnivoice-alt-class-temperature">Alt Class Temperature</label>
 				<div class="omnivoice-advanced-row">
 					<input id="omnivoice-alt-class-temperature"
-						type="range" use:rangeProgress={(settings.speechSettings.altClassTemperature as number) ?? 0.2}
+						type="range" use:rangeProgress={settings.speechSettings.altClassTemperature}
 						min="0"
 						max="2"
 						step="0.1"
 						class="settings-range omnivoice-slider"
-						value={(settings.speechSettings.altClassTemperature as number) ?? 0.2}
+						value={settings.speechSettings.altClassTemperature}
 						oninput={(e) =>
-							settings.handleTTSAltClassTemperatureChange(parseNumber(e.currentTarget.value))}
+							settings.setSpeech('altClassTemperature', Number(e.currentTarget.value))}
 					/>
 					<span class="omnivoice-slider-val">
-						{(settings.speechSettings.altClassTemperature as number) ?? 0.2}
+						{settings.speechSettings.altClassTemperature}
 					</span>
 				</div>
 			</div>

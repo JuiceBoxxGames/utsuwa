@@ -2,6 +2,7 @@ import { modulesStore } from '$lib/stores/modules.svelte';
 import { settingsStore } from '$lib/stores/settings.svelte';
 import { getLLMProvider, getTTSProvider } from '$lib/services/providers/registry';
 import { defaultVoiceForProvider } from '$lib/services/tts/provider-utils';
+import type { ConsciousnessSettings, SpeechSettings } from '$lib/services/modules/settings';
 import {
 	fetchModels,
 	getCachedModelsForProvider,
@@ -39,7 +40,7 @@ export function createLlmSettingsState() {
 	let lastLocalLLMFetchKey = $state('');
 
 	const staticLLMModels = $derived.by(() => {
-		const providerId = consciousnessSettings.activeProvider as string;
+		const providerId = consciousnessSettings.activeProvider;
 		if (!providerId) return [];
 		const provider = getLLMProvider(providerId);
 		return provider?.models ?? [];
@@ -48,7 +49,7 @@ export function createLlmSettingsState() {
 	const llmModels = $derived(llmDynamicModels ?? staticLLMModels);
 
 	const llmHasApiKey = $derived.by(() => {
-		const providerId = consciousnessSettings.activeProvider as string;
+		const providerId = consciousnessSettings.activeProvider;
 		if (!providerId) return false;
 		const provider = getLLMProvider(providerId);
 		if (!provider) return false;
@@ -56,7 +57,7 @@ export function createLlmSettingsState() {
 	});
 
 	function activeLLMProviderForFetch() {
-		const providerId = consciousnessSettings.activeProvider as string;
+		const providerId = consciousnessSettings.activeProvider;
 		if (!providerId) return null;
 		const provider = getLLMProvider(providerId);
 		if (!provider) return null;
@@ -99,7 +100,7 @@ export function createLlmSettingsState() {
 			apiKey: config.apiKey ?? '',
 			baseUrl: config.baseUrl,
 			isLocal: provider.isLocal,
-			getCurrentProviderId: () => modulesStore.getModuleSettings('consciousness').activeProvider as string,
+			getCurrentProviderId: () => modulesStore.getModuleSettings('consciousness').activeProvider,
 			onStart: () => {
 				llmIsLoading = true;
 				llmFetchError = null;
@@ -107,7 +108,7 @@ export function createLlmSettingsState() {
 			onSuccess: (models) => {
 				llmIsLoading = false;
 				llmDynamicModels = models;
-				const currentModel = consciousnessSettings.activeModel as string;
+				const currentModel = consciousnessSettings.activeModel;
 				const nextModel = selectDefaultModel(models, currentModel);
 				if (nextModel !== currentModel) {
 					modulesStore.setModuleSetting('consciousness', 'activeModel', nextModel);
@@ -159,7 +160,9 @@ export function createLlmSettingsState() {
 		}
 	}
 
-	function handleLLMNumberSetting(key: string, value: number | undefined) {
+	type LlmNumberKey = 'temperature' | 'topP' | 'maxTokens' | 'contextSize' | 'presencePenalty' | 'frequencyPenalty';
+
+	function handleLLMNumberSetting<K extends LlmNumberKey>(key: K, value: ConsciousnessSettings[K]) {
 		if (value !== undefined && Number.isNaN(value)) return;
 		modulesStore.setModuleSetting('consciousness', key, value);
 	}
@@ -179,7 +182,7 @@ export function createLlmSettingsState() {
 	}
 
 	function handleLLMApiKeyBlur() {
-		const providerId = consciousnessSettings.activeProvider as string;
+		const providerId = consciousnessSettings.activeProvider;
 		if (!providerId) return;
 		const provider = getLLMProvider(providerId);
 		const config = settingsStore.getProviderConfig(providerId);
@@ -244,11 +247,11 @@ export function createTtsSettingsState() {
 	// Start from the cached list so a provider without static models (ElevenLabs)
 	// shows the saved model instead of the placeholder until someone hits refresh.
 	let ttsDynamicModels = $state<ModelInfo[] | null>(
-		getCachedModelsForProvider(modulesStore.getModuleSettings('speech').activeProvider as string)
+		getCachedModelsForProvider(modulesStore.getModuleSettings('speech').activeProvider)
 	);
 
 	const staticTTSModels = $derived.by(() => {
-		const providerId = speechSettings.activeProvider as string;
+		const providerId = speechSettings.activeProvider;
 		if (!providerId) return [];
 		const provider = getTTSProvider(providerId);
 		return provider?.models ?? [];
@@ -257,7 +260,7 @@ export function createTtsSettingsState() {
 	const ttsModels = $derived(ttsDynamicModels ?? staticTTSModels);
 
 	const ttsHasApiKey = $derived.by(() => {
-		const providerId = speechSettings.activeProvider as string;
+		const providerId = speechSettings.activeProvider;
 		if (!providerId) return false;
 		const provider = getTTSProvider(providerId);
 		if (!provider) return false;
@@ -265,7 +268,7 @@ export function createTtsSettingsState() {
 	});
 
 	async function fetchTTSModels() {
-		const targetProvider = speechSettings.activeProvider as string;
+		const targetProvider = speechSettings.activeProvider;
 		if (!targetProvider) return;
 		const provider = getTTSProvider(targetProvider);
 		if (!provider) return;
@@ -277,7 +280,7 @@ export function createTtsSettingsState() {
 			apiKey: config.apiKey ?? '',
 			baseUrl: config.baseUrl,
 			isLocal: provider.isLocal,
-			getCurrentProviderId: () => speechSettings.activeProvider as string,
+			getCurrentProviderId: () => speechSettings.activeProvider,
 			onStart: () => {
 				ttsIsLoading = true;
 				ttsFetchError = null;
@@ -285,7 +288,7 @@ export function createTtsSettingsState() {
 			onSuccess: (models) => {
 				ttsIsLoading = false;
 				ttsDynamicModels = models;
-				const currentModel = speechSettings.activeModel as string;
+				const currentModel = speechSettings.activeModel;
 				const nextModel = selectDefaultModel(models, currentModel);
 				if (nextModel !== currentModel) {
 					modulesStore.setModuleSetting('speech', 'activeModel', nextModel);
@@ -332,85 +335,12 @@ export function createTtsSettingsState() {
 		}
 	}
 
-	function handleTTSModelChange(modelId: string) {
-		modulesStore.setModuleSetting('speech', 'activeModel', modelId);
-	}
-
-	function handleTTSVoiceChange(voiceId: string) {
-		modulesStore.setModuleSetting('speech', 'activeVoiceId', voiceId.trim());
-	}
-
-	function handleTTSLanguageChange(language: string) {
-		modulesStore.setModuleSetting('speech', 'activeLanguage', language);
-	}
-
-	function handleTTSEnableAltLanguageChange(enabled: boolean) {
-		modulesStore.setModuleSetting('speech', 'enableAltLanguage', enabled);
-	}
-
-	function handleTTSEnableToolCallingChange(enabled: boolean) {
-		modulesStore.setModuleSetting('speech', 'enableToolCalling', enabled);
-	}
-
-	function handleTTSAltLanguageChange(language: string) {
-		modulesStore.setModuleSetting('speech', 'altLanguage', language);
-	}
-
-	function handleTTSAltVoiceChange(voiceId: string) {
-		modulesStore.setModuleSetting('speech', 'altVoiceId', voiceId);
-	}
-
-	function handleTTSAltInstructionsChange(instructions: string | undefined) {
-		modulesStore.setModuleSetting('speech', 'altInstructions', instructions ?? '');
-	}
-
-	function handleTTSAltSpeedChange(speed: number | undefined) {
-		if (speed !== undefined && Number.isNaN(speed)) return;
-		modulesStore.setModuleSetting('speech', 'altSpeed', speed ?? 1);
-	}
-
-	function handleTTSAltNumStepChange(numStep: number | undefined) {
-		if (numStep !== undefined && Number.isNaN(numStep)) return;
-		modulesStore.setModuleSetting('speech', 'altNumStep', numStep ?? 32);
-	}
-
-	function handleTTSAltPositionTemperatureChange(positionTemperature: number | undefined) {
-		if (positionTemperature !== undefined && Number.isNaN(positionTemperature)) return;
-		modulesStore.setModuleSetting('speech', 'altPositionTemperature', positionTemperature ?? 1);
-	}
-
-	function handleTTSAltClassTemperatureChange(classTemperature: number | undefined) {
-		if (classTemperature !== undefined && Number.isNaN(classTemperature)) return;
-		modulesStore.setModuleSetting('speech', 'altClassTemperature', classTemperature ?? 0.2);
-	}
-
-	function handleTTSSpeedChange(speed: number | undefined) {
-		if (speed !== undefined && Number.isNaN(speed)) return;
-		modulesStore.setModuleSetting('speech', 'speed', speed ?? 1);
-	}
-
-	function handleTTSInstructionsChange(instructions: string | undefined) {
-		modulesStore.setModuleSetting('speech', 'instructions', instructions ?? '');
-	}
-
-
-	function handleTTSNumStepChange(numStep: number | undefined) {
-		if (numStep !== undefined && Number.isNaN(numStep)) return;
-		modulesStore.setModuleSetting('speech', 'numStep', numStep ?? 32);
-	}
-
-	function handleTTSPositionTemperatureChange(positionTemperature: number | undefined) {
-		if (positionTemperature !== undefined && Number.isNaN(positionTemperature)) return;
-		modulesStore.setModuleSetting('speech', 'positionTemperature', positionTemperature ?? 1);
-	}
-
-	function handleTTSClassTemperatureChange(classTemperature: number | undefined) {
-		if (classTemperature !== undefined && Number.isNaN(classTemperature)) return;
-		modulesStore.setModuleSetting('speech', 'classTemperature', classTemperature ?? 0.2);
+	function setSpeech<K extends keyof SpeechSettings>(key: K, value: SpeechSettings[K]) {
+		modulesStore.setModuleSetting('speech', key, value);
 	}
 
 	function handleTTSApiKeyBlur() {
-		const providerId = speechSettings.activeProvider as string;
+		const providerId = speechSettings.activeProvider;
 		if (!providerId) return;
 		const provider = getTTSProvider(providerId);
 		const config = settingsStore.getProviderConfig(providerId);
@@ -449,24 +379,8 @@ export function createTtsSettingsState() {
 		},
 		fetchTTSModels,
 		debouncedFetchTTSModels,
-	handleTTSProviderChange,
-	handleTTSModelChange,
-	handleTTSVoiceChange,
-	handleTTSLanguageChange,
-	handleTTSEnableAltLanguageChange,
-	handleTTSEnableToolCallingChange,
-	handleTTSAltLanguageChange,
-	handleTTSAltVoiceChange,
-	handleTTSAltInstructionsChange,
-	handleTTSAltSpeedChange,
-	handleTTSAltNumStepChange,
-	handleTTSAltPositionTemperatureChange,
-	handleTTSAltClassTemperatureChange,
-	handleTTSSpeedChange,
-		handleTTSInstructionsChange,
-		handleTTSNumStepChange,
-		handleTTSPositionTemperatureChange,
-		handleTTSClassTemperatureChange,
+		handleTTSProviderChange,
+		setSpeech,
 		handleTTSApiKeyBlur,
 		handleApiKeyChange,
 		toggleTTS

@@ -16,8 +16,7 @@ export const consciousnessModule: ModuleDefinition = {
 				type: 'provider-select',
 				label: 'LLM Provider',
 				description: 'Select from your configured LLM providers',
-				providerCategory: 'llm',
-				defaultValue: ''
+				providerCategory: 'llm'
 			},
 			{
 				key: 'activeModel',
@@ -31,15 +30,13 @@ export const consciousnessModule: ModuleDefinition = {
 				key: 'temperature',
 				type: 'number',
 				label: 'Temperature',
-				description: 'Controls randomness in responses (0.0-2.0)',
-				defaultValue: 0.7
+				description: 'Controls randomness in responses (0.0-2.0)'
 			},
 			{
 				key: 'topP',
 				type: 'number',
 				label: 'Top P',
-				description: 'Nucleus sampling threshold (0.0-1.0)',
-				defaultValue: 1.0
+				description: 'Nucleus sampling threshold (0.0-1.0)'
 			},
 			{
 				key: 'maxTokens',
@@ -57,15 +54,13 @@ export const consciousnessModule: ModuleDefinition = {
 				key: 'presencePenalty',
 				type: 'number',
 				label: 'Presence Penalty',
-				description: 'Penalizes tokens that have already appeared (-2.0 to 2.0)',
-				defaultValue: 0
+				description: 'Penalizes tokens that have already appeared (-2.0 to 2.0)'
 			},
 			{
 				key: 'frequencyPenalty',
 				type: 'number',
 				label: 'Frequency Penalty',
-				description: 'Penalizes tokens based on how often they appeared (-2.0 to 2.0)',
-				defaultValue: 0
+				description: 'Penalizes tokens based on how often they appeared (-2.0 to 2.0)'
 			}
 		]
 	},

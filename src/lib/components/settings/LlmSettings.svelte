@@ -45,14 +45,14 @@
 				<span class="settings-label">Provider</span>
 				<ProviderDropdown
 					type="llm"
-					value={state.consciousnessSettings.activeProvider as string}
+					value={state.consciousnessSettings.activeProvider}
 					onSelect={state.handleLLMProviderChange}
 					placeholder="Select LLM provider..."
 				/>
 			</div>
 
 			{#if state.consciousnessSettings.activeProvider}
-				{@const provider = getLLMProvider(state.consciousnessSettings.activeProvider as string)}
+				{@const provider = getLLMProvider(state.consciousnessSettings.activeProvider)}
 
 				{#if provider?.requiresApiKey || provider?.custom}
 					<div class="ai-field">
@@ -106,13 +106,13 @@
 							type="text"
 							class="settings-field"
 							placeholder="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)" aria-label="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)"
-							value={(state.consciousnessSettings.activeModel as string) ?? ''}
+							value={state.consciousnessSettings.activeModel ?? ''}
 							oninput={(e) => state.handleLLMModelChange(e.currentTarget.value.trim())}
 						/>
 						{#if customConfig.baseUrl}
 							<ModelDropdown
 								models={state.llmModels}
-								value={state.consciousnessSettings.activeModel as string}
+								value={state.consciousnessSettings.activeModel}
 								onSelect={state.handleLLMModelChange}
 								placeholder="Pick a fetched model..."
 								isLoading={state.llmIsLoading}
@@ -130,16 +130,16 @@
 							<div class="llm-param-row">
 								<label class="llm-param-label" for="llm-temperature">
 									Temperature
-									<span class="llm-param-value">{((state.consciousnessSettings.temperature as number) ?? 0.7).toFixed(2)}</span>
+									<span class="llm-param-value">{state.consciousnessSettings.temperature.toFixed(2)}</span>
 								</label>
 								<input
 									id="llm-temperature"
-									type="range" use:rangeProgress={(state.consciousnessSettings.temperature as number) ?? 0.7}
+									type="range" use:rangeProgress={state.consciousnessSettings.temperature}
 									class="settings-range"
 									min="0"
 									max="2"
 									step="0.05"
-									value={(state.consciousnessSettings.temperature as number) ?? 0.7}
+									value={state.consciousnessSettings.temperature}
 									oninput={(e) => state.handleLLMNumberSetting('temperature', Number(e.currentTarget.value))}
 								/>
 								<p class="hint">Controls randomness: 0 = focused, 2 = highly creative.</p>
@@ -148,16 +148,16 @@
 							<div class="llm-param-row">
 								<label class="llm-param-label" for="llm-top-p">
 									Top P
-									<span class="llm-param-value">{((state.consciousnessSettings.topP as number) ?? 1.0).toFixed(2)}</span>
+									<span class="llm-param-value">{state.consciousnessSettings.topP.toFixed(2)}</span>
 								</label>
 								<input
 									id="llm-top-p"
-									type="range" use:rangeProgress={(state.consciousnessSettings.topP as number) ?? 1.0}
+									type="range" use:rangeProgress={state.consciousnessSettings.topP}
 									class="settings-range"
 									min="0"
 									max="1"
 									step="0.05"
-									value={(state.consciousnessSettings.topP as number) ?? 1.0}
+									value={state.consciousnessSettings.topP}
 									oninput={(e) => state.handleLLMNumberSetting('topP', Number(e.currentTarget.value))}
 								/>
 								<p class="hint">Nucleus sampling: 1 = disabled.</p>
@@ -175,7 +175,7 @@
 									min="1"
 									step="1"
 									placeholder="Unlimited" aria-label="Unlimited"
-									value={(state.consciousnessSettings.maxTokens as number) ?? ''}
+									value={state.consciousnessSettings.maxTokens ?? ''}
 									oninput={(e) => {
 										const val = e.currentTarget.value;
 										state.handleLLMNumberSetting('maxTokens', val ? parseInt(val, 10) : undefined);
@@ -187,16 +187,16 @@
 							<div class="llm-param-row">
 								<label class="llm-param-label" for="llm-presence-penalty">
 									Presence Penalty
-									<span class="llm-param-value">{((state.consciousnessSettings.presencePenalty as number) ?? 0).toFixed(1)}</span>
+									<span class="llm-param-value">{state.consciousnessSettings.presencePenalty.toFixed(1)}</span>
 								</label>
 								<input
 									id="llm-presence-penalty"
-									type="range" use:rangeProgress={(state.consciousnessSettings.presencePenalty as number) ?? 0}
+									type="range" use:rangeProgress={state.consciousnessSettings.presencePenalty}
 									class="settings-range"
 									min="-2"
 									max="2"
 									step="0.1"
-									value={(state.consciousnessSettings.presencePenalty as number) ?? 0}
+									value={state.consciousnessSettings.presencePenalty}
 									oninput={(e) => state.handleLLMNumberSetting('presencePenalty', Number(e.currentTarget.value))}
 								/>
 								<p class="hint">Reduces repetition of tokens already used.</p>
@@ -205,16 +205,16 @@
 							<div class="llm-param-row">
 								<label class="llm-param-label" for="llm-frequency-penalty">
 									Frequency Penalty
-									<span class="llm-param-value">{((state.consciousnessSettings.frequencyPenalty as number) ?? 0).toFixed(1)}</span>
+									<span class="llm-param-value">{state.consciousnessSettings.frequencyPenalty.toFixed(1)}</span>
 								</label>
 								<input
 									id="llm-frequency-penalty"
-									type="range" use:rangeProgress={(state.consciousnessSettings.frequencyPenalty as number) ?? 0}
+									type="range" use:rangeProgress={state.consciousnessSettings.frequencyPenalty}
 									class="settings-range"
 									min="-2"
 									max="2"
 									step="0.1"
-									value={(state.consciousnessSettings.frequencyPenalty as number) ?? 0}
+									value={state.consciousnessSettings.frequencyPenalty}
 									oninput={(e) => state.handleLLMNumberSetting('frequencyPenalty', Number(e.currentTarget.value))}
 								/>
 								<p class="hint">Stronger penalty for frequently repeated tokens.</p>
@@ -226,7 +226,7 @@
 						<span class="settings-label">Model</span>
 						<ModelDropdown
 							models={state.llmModels}
-							value={state.consciousnessSettings.activeModel as string}
+							value={state.consciousnessSettings.activeModel}
 							onSelect={state.handleLLMModelChange}
 							placeholder="Select model..."
 							isLoading={state.llmIsLoading}
@@ -238,7 +238,7 @@
 				{/if}
 
 				<ContextSizeSlider
-					contextSize={state.consciousnessSettings.contextSize as number | undefined}
+					contextSize={state.consciousnessSettings.contextSize}
 					onChange={handleContextSizeChange}
 					id="llm-context-size-toggle"
 				/>

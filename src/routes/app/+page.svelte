@@ -116,15 +116,15 @@
 	// Can the active LLM actually see images? Gates the "show" affordance.
 	const visionCapable = $derived.by(() => {
 		const cs = modulesStore.getModuleSettings('consciousness');
-		const provider = cs.activeProvider as string;
-		const model = cs.activeModel as string;
+		const provider = cs.activeProvider;
+		const model = cs.activeModel;
 		if (!provider) return false;
 		return canShowImages(providerSupportsVision(provider), isLocalLLMProvider(provider), model);
 	});
 
 	// Provider info for the one-time "where do photos go" disclosure.
 	const imageProvider = $derived.by(() => {
-		const provider = modulesStore.getModuleSettings('consciousness').activeProvider as string;
+		const provider = modulesStore.getModuleSettings('consciousness').activeProvider;
 		return {
 			label: getLLMProvider(provider)?.name ?? 'your AI provider',
 			isLocal: provider ? isLocalLLMProvider(provider) : false
