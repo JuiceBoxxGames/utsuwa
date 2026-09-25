@@ -7,7 +7,8 @@ import {
 	isLocalLLMProvider,
 	looksLikeOllama
 } from '$lib/services/providers/local-endpoints';
-import { assertSafeProviderUrl } from '$lib/services/providers/url-guard';
+import { assertSafeProviderTarget, createGuardedFetch } from '$lib/services/providers/url-guard.server';
+import { sanitizeProviderError } from '$lib/services/providers/provider-errors';
 import { DEFAULT_MODELS_BASE_URLS } from '$lib/services/providers/provider-defaults';
 
 interface ModelInfo {
@@ -18,6 +19,49 @@ interface ModelInfo {
 interface FetchModelsResponse {
 	models: ModelInfo[];
 	error?: string;
+}
+
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
+const TIMEOUT_MS = 15_000;
+
+type GetJson = <T>(path: string, headers?: Record<string, string>) => Promise<T>;
+
+// Paths are resolved against the base (never string-appended), and upstream
+// text never reaches the error message: only the status or a fixed phrase.
+function createGetJson(base: string, fetchImpl: typeof fetch, signal: AbortSignal): GetJson {
+	const root = new URL(base.endsWith('/') ? base : `${base}/`);
+	return async <T>(path: string, headers: Record<string, string> = {}) => {
+		const response = await fetchImpl(new URL(path, root), { headers, signal });
+		if (!response.ok) {
+			await response.body?.cancel();
+			throw new Error(`Failed to fetch models: HTTP ${response.status}`);
+		}
+		const text = await readCapped(response, MAX_BODY_BYTES);
+		try {
+			return JSON.parse(text) as T;
+		} catch {
+			throw new Error('Provider returned a response that is not JSON');
+		}
+	};
+}
+
+async function readCapped(response: Response, max: number): Promise<string> {
+	if (!response.body) return '';
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder();
+	let text = '';
+	let total = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		total += value.byteLength;
+		if (total > max) {
+			await reader.cancel();
+			throw new Error('Provider model list is too large');
+		}
+		text += decoder.decode(value, { stream: true });
+	}
+	return text + decoder.decode();
 }
 
 
@@ -63,84 +107,61 @@ function normalizeModelName(id: string, providerId: string): string {
 	return name;
 }
 
-async function fetchOpenAIModels(apiKey: string | undefined, baseUrl: string): Promise<ModelInfo[]> {
+type ModelList<T> = { data?: T[] };
+
+async function fetchOpenAIModels(get: GetJson, apiKey?: string): Promise<ModelInfo[]> {
 	const headers: Record<string, string> = {};
 	if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-	const response = await fetch(`${baseUrl}/models`, { headers });
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
-	return (data.data || []).map((m: { id: string }) => ({
+	const data = await get<ModelList<{ id: string }>>('models', headers);
+	return (data.data || []).map((m) => ({
 		id: m.id,
 		name: normalizeModelName(m.id, 'openai')
 	}));
 }
 
-async function fetchAnthropicModels(apiKey: string, baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/models`, {
-		headers: {
-			'x-api-key': apiKey,
-			'anthropic-version': '2023-06-01'
-		}
+async function fetchAnthropicModels(get: GetJson, apiKey: string): Promise<ModelInfo[]> {
+	const data = await get<Required<ModelList<{ id: string }>>>('models', {
+		'x-api-key': apiKey,
+		'anthropic-version': '2023-06-01'
 	});
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
-	return data.data.map((m: { id: string }) => ({
+	return data.data.map((m) => ({
 		id: m.id,
 		name: normalizeModelName(m.id, 'anthropic')
 	}));
 }
 
-async function fetchOllamaModels(baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/api/tags`);
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
-	return (data.models || []).map((m: { name: string }) => ({
+async function fetchOllamaModels(get: GetJson): Promise<ModelInfo[]> {
+	const data = await get<{ models?: Array<{ name: string }> }>('api/tags');
+	return (data.models || []).map((m) => ({
 		id: m.name,
 		name: m.name
 	}));
 }
 
-async function fetchLMStudioModels(baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/models`);
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
-	return data.data.map((m: { id: string }) => ({
+async function fetchLMStudioModels(get: GetJson): Promise<ModelInfo[]> {
+	const data = await get<Required<ModelList<{ id: string }>>>('models');
+	return data.data.map((m) => ({
 		id: m.id,
 		name: m.id
 	}));
 }
 
-async function fetchDeepSeekModels(apiKey: string, baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/models`, {
-		headers: { Authorization: `Bearer ${apiKey}` }
+// DeepSeek and xAI share the OpenAI list shape with a required key.
+async function fetchBearerModels(get: GetJson, apiKey: string, providerId: string): Promise<ModelInfo[]> {
+	const data = await get<Required<ModelList<{ id: string }>>>('models', {
+		Authorization: `Bearer ${apiKey}`
 	});
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
-	return data.data.map((m: { id: string }) => ({
+	return data.data.map((m) => ({
 		id: m.id,
-		name: normalizeModelName(m.id, 'deepseek')
+		name: normalizeModelName(m.id, providerId)
 	}));
 }
 
-async function fetchXAIModels(apiKey: string, baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/models`, {
-		headers: { Authorization: `Bearer ${apiKey}` }
+async function fetchGoogleModels(get: GetJson, apiKey: string): Promise<ModelInfo[]> {
+	const data = await get<{ models?: Array<{ name: string; displayName?: string }> }>('models', {
+		'x-goog-api-key': apiKey
 	});
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
-	return data.data.map((m: { id: string }) => ({
-		id: m.id,
-		name: normalizeModelName(m.id, 'xai')
-	}));
-}
-
-async function fetchGoogleModels(apiKey: string, baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/models`, {
-		headers: { 'x-goog-api-key': apiKey }
-	});
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
-	return (data.models || []).map((m: { name: string; displayName?: string }) => ({
+	return (data.models || []).map((m) => ({
 		id: m.name.replace('models/', ''),
 		name: m.displayName || normalizeModelName(m.name, 'google')
 	}));
@@ -148,31 +169,28 @@ async function fetchGoogleModels(apiKey: string, baseUrl: string): Promise<Model
 
 // TTS Provider fetch functions
 
-async function fetchElevenLabsModels(apiKey: string, baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/models`, {
-		headers: { 'xi-api-key': apiKey }
-	});
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const models = await response.json();
+async function fetchElevenLabsModels(get: GetJson, apiKey: string): Promise<ModelInfo[]> {
+	const models = await get<Array<{ model_id: string; name: string; can_do_text_to_speech?: boolean }>>(
+		'models',
+		{ 'xi-api-key': apiKey }
+	);
 	// Filter to TTS-capable models only
 	return models
-		.filter((m: { can_do_text_to_speech?: boolean }) => m.can_do_text_to_speech)
-		.map((m: { model_id: string; name: string }) => ({
+		.filter((m) => m.can_do_text_to_speech)
+		.map((m) => ({
 			id: m.model_id,
 			name: m.name
 		}));
 }
 
-async function fetchOpenAITTSModels(apiKey: string, baseUrl: string): Promise<ModelInfo[]> {
-	const response = await fetch(`${baseUrl}/models`, {
-		headers: { Authorization: `Bearer ${apiKey}` }
+async function fetchOpenAITTSModels(get: GetJson, apiKey: string): Promise<ModelInfo[]> {
+	const data = await get<Required<ModelList<{ id: string }>>>('models', {
+		Authorization: `Bearer ${apiKey}`
 	});
-	if (!response.ok) throw new Error(`Failed to fetch models: ${response.statusText}`);
-	const data = await response.json();
 	// Filter to TTS models only (contain "tts" in name)
 	return data.data
-		.filter((m: { id: string }) => m.id.includes('tts'))
-		.map((m: { id: string }) => ({
+		.filter((m) => m.id.includes('tts'))
+		.map((m) => ({
 			id: m.id,
 			name: normalizeModelName(m.id, 'openai-tts')
 		}));
@@ -198,8 +216,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				: effectiveBaseUrl.replace(/\/+$/, '');
 
 		// Block SSRF: the base URL is client-supplied and fetched server-side.
+		const allowPrivate = env.ALLOW_LOCAL_PROVIDER_HOSTS === 'true';
 		try {
-			assertSafeProviderUrl(cleanBaseUrl, env.ALLOW_LOCAL_PROVIDER_HOSTS === 'true');
+			await assertSafeProviderTarget(cleanBaseUrl, allowPrivate);
 		} catch (e) {
 			return Response.json(
 				{
@@ -210,53 +229,57 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
+		const guardedFetch = createGuardedFetch(allowPrivate, TIMEOUT_MS);
+		const signal = AbortSignal.any([request.signal, AbortSignal.timeout(TIMEOUT_MS)]);
+		const at = (base: string) => createGetJson(base, guardedFetch, signal);
+		const get = at(cleanBaseUrl);
+
 		let models: ModelInfo[] = [];
 
 		switch (providerId) {
 			case 'openai':
 				if (!apiKey) throw new Error('API key required for OpenAI');
-				models = await fetchOpenAIModels(apiKey, cleanBaseUrl);
+				models = await fetchOpenAIModels(get, apiKey);
 				break;
 			case 'openai-compatible': {
 				// OpenAI-compatible endpoints may or may not require an API key.
 				if (looksLikeOllama(cleanBaseUrl)) {
-					models = await fetchOllamaModels(cleanBaseUrl);
+					models = await fetchOllamaModels(get);
 				} else {
-					const normalizedUrl = ensureOpenAIPath(cleanBaseUrl);
-					models = await fetchOpenAIModels(apiKey, normalizedUrl);
+					models = await fetchOpenAIModels(at(ensureOpenAIPath(cleanBaseUrl)), apiKey);
 				}
 				break;
 			}
 			case 'anthropic':
 				if (!apiKey) throw new Error('API key required for Anthropic');
-				models = await fetchAnthropicModels(apiKey, cleanBaseUrl);
+				models = await fetchAnthropicModels(get, apiKey);
 				break;
 			case 'ollama':
-				models = await fetchOllamaModels(cleanBaseUrl);
+				models = await fetchOllamaModels(get);
 				break;
 			case 'lmstudio':
-				models = await fetchLMStudioModels(cleanBaseUrl);
+				models = await fetchLMStudioModels(get);
 				break;
 			case 'deepseek':
 				if (!apiKey) throw new Error('API key required for DeepSeek');
-				models = await fetchDeepSeekModels(apiKey, cleanBaseUrl);
+				models = await fetchBearerModels(get, apiKey, 'deepseek');
 				break;
 			case 'xai':
 				if (!apiKey) throw new Error('API key required for xAI');
-				models = await fetchXAIModels(apiKey, cleanBaseUrl);
+				models = await fetchBearerModels(get, apiKey, 'xai');
 				break;
 			case 'google':
 				if (!apiKey) throw new Error('API key required for Google');
-				models = await fetchGoogleModels(apiKey, cleanBaseUrl);
+				models = await fetchGoogleModels(get, apiKey);
 				break;
 			// TTS providers
 			case 'elevenlabs':
 				if (!apiKey) throw new Error('API key required for ElevenLabs');
-				models = await fetchElevenLabsModels(apiKey, cleanBaseUrl);
+				models = await fetchElevenLabsModels(get, apiKey);
 				break;
 			case 'openai-tts':
 				if (!apiKey) throw new Error('API key required for OpenAI TTS');
-				models = await fetchOpenAITTSModels(apiKey, cleanBaseUrl);
+				models = await fetchOpenAITTSModels(get, apiKey);
 				break;
 			default:
 				return Response.json(
@@ -272,6 +295,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch (error) {
 		console.error('Error fetching models:', error);
 		const message = error instanceof Error ? error.message : 'Unknown error';
-		return Response.json({ models: [], error: message } as FetchModelsResponse, { status: 500 });
+		return Response.json({ models: [], error: sanitizeProviderError(message) } as FetchModelsResponse, {
+			status: 500
+		});
 	}
 };

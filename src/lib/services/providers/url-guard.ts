@@ -3,88 +3,87 @@
 // anyone could point it at internal addresses (cloud metadata, localhost
 // services, private ranges). The desktop build talks to providers directly and
 // never hits these routes, so this only gates the hosted web path.
+// This file is the pure host check; url-guard.server.ts adds DNS resolution
+// and the redirect-refusing fetch.
 
-// Parse a single IPv4 octet that may be written in decimal, 0x-hex, or 0-octal
-// form. Returns null if it isn't a valid integer in the given radix.
-function parseOctet(part: string): number | null {
-	let value: number;
-	if (/^0x[0-9a-f]+$/i.test(part)) value = parseInt(part, 16);
-	else if (/^0[0-7]+$/.test(part)) value = parseInt(part, 8);
-	else if (/^(?:0|[1-9][0-9]*)$/.test(part)) value = parseInt(part, 10);
-	else return null;
-	return Number.isNaN(value) ? null : value;
-}
+// "private" is reachable with ALLOW_LOCAL_PROVIDER_HOSTS; "never" is not.
+type HostClass = 'public' | 'private' | 'never';
 
-// Canonicalize any IPv4 representation to a 32-bit integer, matching how the OS
-// resolver (inet_aton) reads them. Handles the encodings that trivially bypass a
-// naive dotted-decimal check: integer (2130706433), hex (0x7f000001),
-// octal (0177.0.0.1), and short forms (127.1 -> 127.0.0.1). Returns null if the
-// host isn't a numeric IPv4 form.
-export function ipv4ToInt(host: string): number | null {
-	const parts = host.split('.');
-	if (parts.length === 0 || parts.length > 4) return null;
+const METADATA_HOSTS = new Set(['metadata', 'metadata.goog', 'metadata.google.internal', 'instance-data']);
 
-	const nums: number[] = [];
-	for (const part of parts) {
-		const n = parseOctet(part);
-		if (n === null || n < 0) return null;
-		nums.push(n);
-	}
-
-	// inet_aton: the final part absorbs all remaining low-order bytes; earlier
-	// parts must each fit in one byte.
-	const last = nums[nums.length - 1];
-	const leading = nums.slice(0, -1);
-	if (leading.some((n) => n > 0xff)) return null;
-	const maxLast = 2 ** (8 * (4 - leading.length));
-	if (last >= maxLast) return null;
-
-	let result = last;
-	for (let i = 0; i < leading.length; i++) {
-		result += leading[i] * 2 ** (8 * (3 - i));
-	}
-	return result >>> 0;
-}
-
-function isPrivateIPv4Int(ip: number): boolean {
-	const a = (ip >>> 24) & 0xff;
+function classifyIPv4(ip: number): HostClass {
+	const a = ip >>> 24;
 	const b = (ip >>> 16) & 0xff;
-	if (a === 127) return true; // loopback
-	if (a === 10) return true; // private
-	if (a === 172 && b >= 16 && b <= 31) return true; // private
-	if (a === 192 && b === 168) return true; // private
-	if (a === 169 && b === 254) return true; // link-local + cloud metadata
-	if (a === 0) return true; // "this" network
-	return false;
+	const c = (ip >>> 8) & 0xff;
+	if (a === 0) return 'never'; // this network / unspecified
+	if (a === 169 && b === 254) return 'never'; // link-local + cloud metadata
+	if (a >= 224) return 'never'; // multicast, reserved, broadcast
+	if (a === 192 && b === 0 && c === 0) return 'never'; // IETF protocol assignments
+	if (ip === 0x646464c8) return 'never'; // 100.100.100.200, Alibaba metadata
+	if (a === 127 || a === 10) return 'private';
+	if (a === 172 && b >= 16 && b <= 31) return 'private';
+	if (a === 192 && b === 168) return 'private';
+	if (a === 100 && b >= 64 && b <= 127) return 'private'; // CGNAT, also Tailscale
+	if (a === 198 && (b === 18 || b === 19)) return 'private'; // benchmarking
+	return 'public';
 }
 
-// Literal IPv4/IPv6 hosts and hostnames that must not be reachable through the
-// proxy. Covers loopback, private ranges, link-local (incl. 169.254.169.254
-// cloud metadata), and unspecified addresses — across decimal, hex, octal, and
-// short-form IPv4 encodings.
-export function isPrivateHost(hostname: string): boolean {
-	const host = hostname.toLowerCase().replace(/^\[|\]$/g, ''); // strip IPv6 brackets
+// Takes the WHATWG-serialized form (lowercase, compressed, no dotted tail).
+function classifyIPv6(host: string): HostClass {
+	const [head, tail] = host.split('::');
+	const left = head ? head.split(':') : [];
+	const right = tail ? tail.split(':') : [];
+	const fill = tail === undefined ? [] : Array<string>(8 - left.length - right.length).fill('0');
+	const g = [...left, ...fill, ...right].map((part) => parseInt(part, 16));
+	if (g.length !== 8 || g.some(Number.isNaN)) return 'never';
 
-	if (host === 'localhost' || host.endsWith('.localhost')) return true;
-	if (host === '' || host === '::' || host === '::1') return true;
+	const v4 = () => classifyIPv4(((g[6] << 16) | g[7]) >>> 0);
+	const zeroUpTo = (n: number) => g.slice(0, n).every((x) => x === 0);
 
-	// IPv6 loopback/link-local/unique-local. Anchor fc/fd to a hextet boundary so
-	// real hostnames like "fcbanking.com" aren't misclassified.
-	if (host.startsWith('fe80:')) return true;
-	if (/^f[cd][0-9a-f]{0,2}:/.test(host)) return true;
-	// IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1) — fall through to the IPv4 check
-	const mapped = host.startsWith('::ffff:') ? host.slice(7) : host;
+	if (zeroUpTo(7) && g[7] <= 1) return g[7] === 1 ? 'private' : 'never'; // ::1, ::
+	if (zeroUpTo(6)) return v4(); // IPv4-compatible
+	if (zeroUpTo(5) && g[5] === 0xffff) return v4(); // IPv4-mapped
+	if (g[0] === 0x64 && g[1] === 0xff9b) {
+		if (g.slice(2, 6).every((x) => x === 0)) return v4(); // NAT64
+		return 'never'; // 64:ff9b:1::/48 local-use NAT64
+	}
+	if ((g[0] & 0xffc0) === 0xfe80) return 'never'; // link-local
+	if ((g[0] & 0xff00) === 0xff00) return 'never'; // multicast
+	if (g[0] === 0xfd00 && g[1] === 0xec2) return 'never'; // AWS IMDS
+	if ((g[0] & 0xfe00) === 0xfc00) return 'private'; // unique-local
+	if ((g[0] & 0xffc0) === 0xfec0) return 'private'; // deprecated site-local
+	return 'public';
+}
 
-	const ip = ipv4ToInt(mapped);
-	if (ip !== null) return isPrivateIPv4Int(ip);
+function classifyHost(raw: string): HostClass {
+	let host = raw.trim().toLowerCase().replace(/^\[(.*)\]$/, '$1');
+	if (!host) return 'never';
+	// Let the URL parser canonicalize, so 0x7f000001, 0177.0.0.1, 127.1 and
+	// ::ffff:127.0.0.1 are judged in the same form fetch will connect to.
+	try {
+		host = new URL(`http://${host.includes(':') ? `[${host}]` : host}/`).hostname;
+	} catch {
+		return 'never';
+	}
+	host = host.replace(/^\[(.*)\]$/, '$1').replace(/\.+$/, '');
 
-	return false;
+	if (host.includes(':')) return classifyIPv6(host);
+	const v4 = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+	if (v4) return classifyIPv4(((+v4[1] << 24) | (+v4[2] << 16) | (+v4[3] << 8) | +v4[4]) >>> 0);
+	if (METADATA_HOSTS.has(host)) return 'never';
+	if (host === 'localhost' || host.endsWith('.localhost')) return 'private';
+	return 'public';
+}
+
+export function isBlockedHost(host: string, opts: { allowPrivate?: boolean } = {}): boolean {
+	const kind = classifyHost(host);
+	return kind === 'never' || (kind === 'private' && !opts.allowPrivate);
 }
 
 // Validate a resolved provider base URL before the server fetches it. Returns the
-// parsed URL, or throws if it uses a non-HTTP scheme or targets a private host.
-// Set allowPrivate (self-hosters running local models behind the web server) to
-// permit loopback/private targets.
+// parsed URL, or throws if it uses a non-HTTP scheme or targets a blocked host.
+// allowPrivate (self-hosters running local models behind the web server) opens
+// loopback and private ranges, never link-local or metadata.
 export function assertSafeProviderUrl(rawUrl: string, allowPrivate = false): URL {
 	let url: URL;
 	try {
@@ -97,7 +96,7 @@ export function assertSafeProviderUrl(rawUrl: string, allowPrivate = false): URL
 		throw new Error('Provider URL must use http or https');
 	}
 
-	if (!allowPrivate && isPrivateHost(url.hostname)) {
+	if (isBlockedHost(url.hostname, { allowPrivate })) {
 		throw new Error('Provider URL host is not allowed');
 	}
 

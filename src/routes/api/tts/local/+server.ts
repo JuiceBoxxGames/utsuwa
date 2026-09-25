@@ -5,6 +5,7 @@ import {
 	capBytes,
 	validateLocalTtsProxyRequest
 } from '$lib/services/tts/local-proxy';
+import { assertSafeProviderTarget } from '$lib/services/providers/url-guard.server';
 
 // Fallback for local OpenAI-compatible TTS engines that reject the page's
 // origin. The client only lands here after a direct browser fetch failed, and
@@ -23,6 +24,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		request.headers.get('authorization')
 	);
 	if (!target.ok) return Response.json({ message: target.message }, { status: target.status });
+	// Private hosts are fine here, but not names that resolve to link-local or metadata.
+	try {
+		await assertSafeProviderTarget(target.url, true);
+	} catch (e) {
+		return Response.json({ message: e instanceof Error ? e.message : 'Invalid provider URL' }, { status: 400 });
+	}
 
 	try {
 		const upstream = await fetch(target.url, {
