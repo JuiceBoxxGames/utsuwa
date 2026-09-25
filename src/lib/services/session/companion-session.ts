@@ -1,13 +1,10 @@
-import {
-	hydrateWorkingMemory,
-	backfillEmbeddings,
-	getEmbeddingBackfillStatus
-} from '$lib/engine/memory';
+import { backfillEmbeddings, getEmbeddingBackfillStatus } from '$lib/engine/memory';
+import { hydrateWorkingMemory } from '$lib/engine/memory-session';
 import { initEmbeddingModel } from '$lib/services/embeddings';
 import { createReminderFiredHandler } from '$lib/services/chat/reminder-chat';
 import type { SendCompanionMessageOptions } from '$lib/services/chat/companion-chat';
 import { reminderStore } from '$lib/stores/reminders.svelte';
-import { debugEventsStore } from '$lib/stores/debugEvents.svelte';
+import { debugEventsStore } from '$lib/stores/debug-events.svelte';
 import type { EventDefinition } from '$lib/types/events';
 
 interface CompanionSessionHooks {

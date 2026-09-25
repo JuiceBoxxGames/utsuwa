@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import {
 	hasImages,
-	contentToText,
 	toOpenAIContent,
 	toAnthropicContent,
 	type MessageContent
@@ -18,11 +17,6 @@ test('hasImages detects image parts', () => {
 	assert.equal(hasImages('just text'), false);
 	assert.equal(hasImages([{ type: 'text', text: 'x' }]), false);
 	assert.equal(hasImages(mixed), true);
-});
-
-test('contentToText flattens to text, dropping images', () => {
-	assert.equal(contentToText('hello'), 'hello');
-	assert.equal(contentToText(mixed), 'look at this');
 });
 
 test('toOpenAIContent builds image_url data URLs', () => {

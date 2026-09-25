@@ -1,6 +1,6 @@
 import { isTauri } from './platform';
 
-export type HotkeyAction = 'pushToTalk' | 'toggleOverlay' | 'focusChat';
+type HotkeyAction = 'pushToTalk' | 'toggleOverlay' | 'focusChat';
 
 export interface HotkeyConfig {
 	pushToTalk: string;
@@ -61,7 +61,7 @@ export async function registerHotkey(
 /**
  * Unregister a global hotkey (Tauri only, no-op on web)
  */
-export async function unregisterHotkey(action: HotkeyAction): Promise<void> {
+async function unregisterHotkey(action: HotkeyAction): Promise<void> {
 	if (!isTauri()) return;
 
 	const shortcut = registeredShortcuts.get(action);
@@ -84,27 +84,4 @@ export async function unregisterHotkey(action: HotkeyAction): Promise<void> {
 	} catch (e) {
 		console.error(`Failed to unregister hotkey:`, e);
 	}
-}
-
-/**
- * Unregister all global hotkeys (Tauri only, no-op on web)
- */
-export async function unregisterAllHotkeys(): Promise<void> {
-	if (!isTauri()) return;
-
-	try {
-		const { unregisterAll } = await import('@tauri-apps/plugin-global-shortcut');
-		await unregisterAll();
-		handlers.clear();
-		registeredShortcuts.clear();
-	} catch (e) {
-		console.error('Failed to unregister all hotkeys:', e);
-	}
-}
-
-/**
- * Check if global hotkeys are supported in the current environment
- */
-export function isHotkeysSupported(): boolean {
-	return isTauri();
 }

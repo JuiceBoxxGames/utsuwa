@@ -8,7 +8,7 @@
 	import * as THREE from 'three';
 	import localforage from 'localforage';
 	import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
-	import { debugEventsStore, testEvents } from '$lib/stores/debugEvents.svelte';
+	import { debugEventsStore, testEvents } from '$lib/stores/debug-events.svelte';
 	import { goto } from '$app/navigation';
 	import { localPath } from '$lib/config/links';
 

@@ -7,7 +7,8 @@ import { personaStore } from '$lib/stores/persona.svelte';
 import { displayStore } from '$lib/stores/display.svelte';
 import { resolveActiveLLM } from '$lib/services/llm/active-llm';
 import { completeJson } from '$lib/services/llm/transport';
-import { getRecentTurns, memoryApi } from '$lib/engine/memory';
+import { memoryApi } from '$lib/engine/memory';
+import { getRecentTurns } from '$lib/engine/memory-session';
 import { buildMomentPrompt, parseMoment, selectMomentMemories } from '$lib/engine/moments';
 import type { EventDefinition, Scene } from '$lib/types/events';
 

@@ -99,7 +99,7 @@ test('event scenes are named dialogs that hold focus, close with Escape, and com
 	await openApp(page);
 	const input = page.getByRole('textbox', { name: 'Message', exact: true });
 	const fire = () => page.evaluate(async () => {
-		const storePath = '/src/lib/stores/debugEvents.svelte.ts';
+		const storePath = '/src/lib/stores/debug-events.svelte.ts';
 		const eventsPath = '/src/lib/data/events/index.ts';
 		const { debugEventsStore } = await import(/* @vite-ignore */ storePath);
 		const { allEvents } = await import(/* @vite-ignore */ eventsPath);

@@ -1,9 +1,6 @@
 import type { EventDefinition, CompletedEventRecord } from '$lib/types/events';
 import * as eventsStorage from '$lib/services/storage/events';
 
-// Pure matching logic lives in event-matching.ts (no storage dependency, unit-tested).
-export { checkCondition, checkEvent, checkAllEvents } from './event-matching';
-
 // Events API - uses IndexedDB storage directly
 export const eventsApi = {
 	async getCompletedEvents(): Promise<CompletedEventRecord[]> {

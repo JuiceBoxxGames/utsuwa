@@ -3,7 +3,8 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import { liveQuery } from 'dexie';
 	import { db } from '$lib/db';
-	import { memoryApi, getWorkingMemory } from '$lib/engine/memory';
+	import { memoryApi } from '$lib/engine/memory';
+	import { getWorkingMemory } from '$lib/engine/memory-session';
 	import { deleteFact } from '$lib/services/storage/memory';
 	import { characterStore } from '$lib/stores/character.svelte';
 	import type { Fact, FactCategory, SessionSummary, ConversationTurn } from '$lib/types/memory';

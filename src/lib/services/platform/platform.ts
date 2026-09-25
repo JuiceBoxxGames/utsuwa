@@ -9,13 +9,6 @@ export function isTauri(): boolean {
 }
 
 /**
- * Check if running in a web browser (not Tauri)
- */
-export function isWeb(): boolean {
-	return browser && !isTauri();
-}
-
-/**
  * True only in the Tauri desktop build, decided at build time (see
  * vite.config.ts). Prefer this over isTauri() for routing/marketing-gating
  * decisions: isTauri() reads the Tauri globals, which inject after first paint
@@ -23,12 +16,4 @@ export function isWeb(): boolean {
  */
 export function isDesktopBuild(): boolean {
 	return typeof __IS_DESKTOP__ !== 'undefined' && __IS_DESKTOP__;
-}
-
-/**
- * Get the current platform name
- */
-export function getPlatform(): 'tauri' | 'web' | 'server' {
-	if (!browser) return 'server';
-	return isTauri() ? 'tauri' : 'web';
 }

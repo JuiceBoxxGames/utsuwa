@@ -7,7 +7,7 @@
 	import Scene from './Scene.svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import { arStore } from '$lib/stores/ar.svelte';
-	import { preGenerateThumbnails } from '$lib/utils/vrmThumbnail';
+	import { preGenerateThumbnails } from '$lib/utils/vrm-thumbnail';
 	import { isWebGLAvailable } from '$lib/utils/webgl';
 
 	interface Props {

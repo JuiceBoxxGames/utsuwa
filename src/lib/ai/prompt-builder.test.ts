@@ -15,7 +15,6 @@ import { shouldUseSpeechTools } from '../services/tts/tool-definitions.ts';
 import { ensureToolPairs } from '../services/mcp/loop.ts';
 import type { CharacterState } from '$lib/types/character';
 import type { RelevantContext } from '$lib/types/memory';
-import { getMemoryBudget } from '../types/memory.ts';
 
 function makeState(overrides: Partial<CharacterState> = {}): CharacterState {
 	return {
@@ -369,14 +368,6 @@ test('truncateMessagesToContext is a no-op with no messages', () => {
 	const messages: Array<{ role: string; content: string }> = [];
 	truncateMessagesToContext(messages, 2048);
 	assert.equal(messages.length, 0);
-});
-
-test('getMemoryBudget boundary values', () => {
-	assert.deepEqual(getMemoryBudget(4095), { workingMemoryTurns: 6, relevantFacts: 3 });
-	assert.deepEqual(getMemoryBudget(4096), { workingMemoryTurns: 6, relevantFacts: 3 });
-	assert.deepEqual(getMemoryBudget(4097), { workingMemoryTurns: 10, relevantFacts: 5 });
-	assert.deepEqual(getMemoryBudget(8192), { workingMemoryTurns: 10, relevantFacts: 5 });
-	assert.deepEqual(getMemoryBudget(8193), { workingMemoryTurns: 20, relevantFacts: 10 });
 });
 
 test('estimateTokens handles empty, latin and cjk text', () => {

@@ -1,17 +1,46 @@
-// Pure event-matching logic, split out from events.ts so it carries no storage
-// (IndexedDB) dependency and can be unit-tested in isolation. events.ts re-exports
-// these and layers the storage-backed eventsApi on top.
-import type { CharacterState } from '../types/character';
+// Pure event-matching logic: no storage (IndexedDB) dependency, so it can be
+// unit-tested in isolation. Storage-backed records live in events.ts.
+import type { CharacterState, RelationshipStage } from '../types/character';
 import type {
 	EventDefinition,
 	EventCondition,
 	EventCheckResult,
-	CompletedEventRecord
+	CompletedEventRecord,
+	TimeOfDay
 } from '../types/events';
-import { getTimeOfDay, isEventOnCooldown, isStageAtLeast } from '../types/events.ts';
+import { STAGE_ORDER } from './stages.ts';
+
+// Helper function to get time of day
+function getTimeOfDay(date: Date = new Date()): TimeOfDay {
+	const hour = date.getHours();
+	if (hour >= 5 && hour < 12) return 'morning';
+	if (hour >= 12 && hour < 17) return 'afternoon';
+	if (hour >= 17 && hour < 21) return 'evening';
+	return 'night';
+}
+
+// Helper to check if event is on cooldown
+function isEventOnCooldown(event: EventDefinition, completedEvents: CompletedEventRecord[]): boolean {
+	if (event.oneTime) {
+		return completedEvents.some((e) => e.eventId === event.id);
+	}
+
+	if (!event.cooldownDays) return false;
+
+	const lastTrigger = completedEvents.filter((e) => e.eventId === event.id).sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime())[0];
+
+	if (!lastTrigger) return false;
+
+	const daysSince = (Date.now() - lastTrigger.completedAt.getTime()) / (1000 * 60 * 60 * 24);
+	return daysSince < event.cooldownDays;
+}
+
+function isStageAtLeast(current: RelationshipStage, minimum: RelationshipStage): boolean {
+	return STAGE_ORDER.indexOf(current) >= STAGE_ORDER.indexOf(minimum);
+}
 
 // Check if a single condition is met
-export function checkCondition(
+function checkCondition(
 	condition: EventCondition,
 	state: CharacterState,
 	completedEvents: string[],

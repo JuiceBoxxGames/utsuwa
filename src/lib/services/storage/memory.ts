@@ -120,10 +120,6 @@ export async function deleteFact(factId: number): Promise<void> {
 	await db.facts.delete(factId);
 }
 
-export async function deleteAllFacts(): Promise<void> {
-	await db.facts.clear();
-}
-
 export async function updateFactEmbedding(factId: number, embedding: number[]): Promise<void> {
 	await db.facts.update(factId, { embedding, embeddingModel: EMBEDDING_MODEL_ID });
 }
@@ -192,10 +188,6 @@ export async function updateSession(
 	await db.sessions.update(sessionId, serialized);
 }
 
-export async function deleteAllSessions(): Promise<void> {
-	await db.sessions.clear();
-}
-
 // Conversation Turns
 
 export async function getConversationTurns(
@@ -230,14 +222,6 @@ export async function saveConversationTurn(
 
 	const id = await hintOnQuota(db.conversationTurns.add(dbTurn));
 	return id as number;
-}
-
-export async function deleteAllTurns(): Promise<void> {
-	await db.conversationTurns.clear();
-}
-
-export async function deleteTurnsForSession(sessionId: number): Promise<void> {
-	await db.conversationTurns.where('sessionId').equals(sessionId).delete();
 }
 
 // Serialization helpers
