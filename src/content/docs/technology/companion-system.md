@@ -425,7 +425,7 @@ The model replies in character and ends with a fenced JSON block. In Dating Sim 
 
 ### 2. Extraction Fallback
 
-Small and roleplay-tuned models often skip or mangle the block. When no usable block is found, `extractStateUpdates()` in `src/lib/services/chat/client-chat.ts` makes one non-streaming call that returns only JSON: `response_format: json_object` for OpenAI-compatible providers, a dedicated system prompt on Anthropic's `/messages`. It returns mood, the four relationship deltas, and `new_memory`. Models that already produce the block never trigger it.
+Small and roleplay-tuned models often skip or mangle the block. When no usable block is found, `companion-turn.ts` makes one extra call through `completeJson()` in `src/lib/services/llm/transport.ts` with a dedicated extraction prompt. It uses the same transport as chat: direct calls use `response_format: json_object` for OpenAI-compatible providers and Anthropic's `/messages`; on web, cloud providers go through the `/api/chat` route and the streamed reply is read to the end. It returns mood, the four relationship deltas, and `new_memory`. Models that already produce the block never trigger it.
 
 ### Response Parsing and Robustness
 

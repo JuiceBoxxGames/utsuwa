@@ -14,7 +14,7 @@ import { personaStore } from '$lib/stores/persona.svelte';
 import { vrmStore } from '$lib/stores/vrm.svelte';
 import { animationLibraryStore } from '$lib/stores/animation-library.svelte';
 import { STATE_FENCE_OPEN } from '$lib/ai/response-parser';
-import { getLLMProvider, getTTSProvider } from '$lib/services/providers/registry';
+import { getTTSProvider } from '$lib/services/providers/registry';
 import { type TTSOptions } from '$lib/services/tts';
 import {
 	cleanSpeechMarkers,
@@ -23,7 +23,8 @@ import {
 	stripThinkingBlocks,
 	StreamingDisplayCleaner
 } from '$lib/services/tts/chat-text';
-import { streamChatDirect } from '$lib/services/chat/client-chat';
+import { streamChat } from '$lib/services/llm/transport';
+import { missingLLMMessage, resolveActiveLLM } from '$lib/services/llm/active-llm';
 
 import { processCompanionTurn } from '$lib/services/chat/companion-turn';
 import { retrieveRelevantContext } from '$lib/engine/memory';
@@ -32,10 +33,9 @@ import { keepImage, type PreparedImage } from '$lib/services/storage/keepsakes';
 import { extractReminderTags, tryExtractReminderFromUserMessage } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { getWorkingMemory, ensureSession } from '$lib/engine/memory';
-import { toOpenAIContent, type ContentPart } from '$lib/services/chat/content';
+import type { ContentPart } from '$lib/services/chat/content';
 import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { shouldUseSpeechTools } from '$lib/services/tts/tool-definitions';
-import { isTauri } from '$lib/services/platform';
 import { env as publicEnv } from '$env/dynamic/public';
 import { isMcpHardeningEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
 import { mcpStore } from '$lib/stores/mcp.svelte';
@@ -57,7 +57,7 @@ import {
 	type OpenAiToolCall
 } from '$lib/services/mcp/loop';
 import type { McpCollectedToolCall } from '$lib/types/mcp';
-import type { LLMProvider, TTSProvider } from '$lib/types';
+import type { TTSProvider } from '$lib/types';
 import type { EventDefinition } from '$lib/types/events';
 
 /** Message shape used by the chat loop; extends the plain history with the
@@ -141,66 +141,6 @@ function buildMessages(images: PreparedImage[]) {
 		}
 		return { role: m.role as 'user' | 'assistant', content: parts };
 	});
-}
-
-// Buffer partial lines from the server's text, tool-call and error events.
-// Always release the reader lock, including when an error event arrives.
-export async function streamServerRoute(
-	body: unknown,
-	onDelta: (fullContent: string) => void,
-	onToolCall?: (name: string, args: Record<string, unknown>, id?: string) => void,
-	signal?: AbortSignal
-): Promise<string> {
-	const response = await fetch('/api/chat', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(body),
-		signal
-	});
-
-	if (!response.ok) {
-		const errBody = await response.json().catch(() => null);
-		throw new Error(errBody?.error || 'Failed to get response');
-	}
-
-	const reader = response.body?.getReader();
-	if (!reader) throw new Error('No response body');
-
-	const decoder = new TextDecoder();
-	let fullContent = '';
-	const processLine = (line: string) => {
-		if (line.startsWith('0:')) {
-			fullContent += JSON.parse(line.slice(2));
-			onDelta(fullContent);
-		} else if (line.startsWith('t:')) {
-			const { id, name, args } = JSON.parse(line.slice(2)) as {
-				id?: string;
-				name: string;
-				args: Record<string, unknown>;
-			};
-			onToolCall?.(name, args, id);
-		} else if (line.startsWith('e:')) {
-			throw new Error(JSON.parse(line.slice(2)).error);
-		}
-	};
-
-	try {
-		let buffer = '';
-		for (;;) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			buffer += decoder.decode(value, { stream: true });
-			const lines = buffer.split('\n');
-			buffer = lines.pop() || '';
-			for (const line of lines) processLine(line);
-		}
-		buffer += decoder.decode();
-		if (buffer) processLine(buffer);
-	} finally {
-		reader.releaseLock();
-	}
-
-	return fullContent;
 }
 
 /**
@@ -292,19 +232,11 @@ export async function sendCompanionMessage(
 
 	try {
 		const consciousnessSettings = modulesStore.getModuleSettings('consciousness');
-		const provider = consciousnessSettings.activeProvider as string;
-		const model = consciousnessSettings.activeModel as string;
-		if (!provider) {
-			throw new Error('Please configure a provider in Settings > LLM Model');
-		}
+		const llm = resolveActiveLLM();
+		if (!llm) throw new Error(missingLLMMessage());
+		const { provider } = llm;
 
 		const contextSize = (consciousnessSettings.contextSize as number | undefined) || undefined;
-		const providerConfig = settingsStore.getProviderConfig(provider);
-		const apiKey = providerConfig.apiKey;
-		const providerMeta = getLLMProvider(provider);
-		if (providerMeta?.requiresApiKey && !apiKey) {
-			throw new Error(`Please configure API key for ${providerMeta.name} in Settings > LLM Model`);
-		}
 
 		let systemPrompt = await untilAborted(buildCompanionPrompt(
 			content,
@@ -318,8 +250,6 @@ export async function sendCompanionMessage(
 		hooks.setPhase?.(images.length > 0 ? 'seeing' : 'thinking');
 
 		chatStore.addMessage('assistant', '');
-		const selectedModel = model || providerMeta?.models?.[0]?.id || '';
-		const baseURL = providerConfig.baseUrl || providerMeta?.defaultBaseUrl;
 		let messages: ChatLoopMessage[] = buildMessages(images);
 		const currentQuestion = [...messages].reverse().find((message) => message.role === 'user');
 
@@ -482,7 +412,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			mcpTools.length > 0 ? JSON.stringify(mcpTools.map(toOpenAiTool)) : undefined;
 
 		// Advanced parameters are only supported for OpenAI-compatible endpoints.
-		const advancedParams = providerMeta?.custom
+		const advancedParams = llm.custom
 			? {
 					temperature: (consciousnessSettings.temperature as number) ?? 0.7,
 					topP: (consciousnessSettings.topP as number) ?? 1.0,
@@ -612,51 +542,13 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			}
 
 			bumpStall();
-			if (isTauri() || providerMeta?.isLocal) {
-				// Desktop and local providers call the provider API directly.
-				await untilAborted(
-					streamChatDirect(
-						{
-							messages,
-							provider: provider as LLMProvider,
-							model: selectedModel,
-							apiKey: apiKey || undefined,
-							baseURL,
-							systemPrompt,
-							tools: sendTools,
-							signal,
-							...advancedParams
-						},
-						(text) => {
-							roundText += text;
-							onDelta(roundText);
-						},
-						onToolCall
-					)
-				);
-			} else {
-				// Cloud providers on web go through the SvelteKit server route.
-				roundText = await untilAborted(streamServerRoute(
-					{
-						messages: messages.map((m) => ({
-							role: m.role,
-							content: toOpenAIContent(m.content),
-							...(m.tool_calls?.length ? { tool_calls: m.tool_calls } : {}),
-							...(m.tool_call_id && { tool_call_id: m.tool_call_id })
-						})),
-						provider,
-						model: selectedModel,
-						apiKey: apiKey || (providerMeta?.custom ? undefined : 'not-needed'),
-						baseURL,
-						systemPrompt,
-						tools: sendTools,
-						...advancedParams
-					},
+			roundText = await untilAborted(
+				streamChat(
+					{ ...llm, messages, systemPrompt, tools: sendTools, signal, ...advancedParams },
 					onDelta,
-					onToolCall,
-					signal
-				));
-			}
+					onToolCall
+				)
+			);
 			clearTimeout(stallTimer);
 
 			const mcpCalls = mcpCallsOnly(roundCalls, mcpTools);
@@ -774,13 +666,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		const turn = await untilAborted(processCompanionTurn({
 			userMessage: content,
 			companionResponse: cleanedCompanionResponse,
-			llm: {
-				provider,
-				model: selectedModel,
-				apiKey: apiKey || undefined,
-				baseURL,
-				hasImages: images.length > 0
-			},
+			llm: { ...llm, hasImages: images.length > 0 },
 			systemEvent,
 			debug: import.meta.env.DEV
 		}));
