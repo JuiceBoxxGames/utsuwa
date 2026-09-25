@@ -91,8 +91,8 @@ Enabled animations are listed in the prompt's `<avatar>` layer. When a reply set
 
 `src/lib/services/chat/companion-chat.ts` runs one send loop for both the main app and the desktop overlay. `src/lib/services/chat/companion-turn.ts` handles everything after the model replies.
 
-**Transports:**
-- **Direct fetch** (`src/lib/services/chat/client-chat.ts`): used for Ollama, LM Studio, and every provider in the desktop build. Anthropic uses its `/messages` API. Everything else uses `/chat/completions`.
+**Transports** (`src/lib/services/llm/transport.ts` picks one; `active-llm.ts` resolves the provider, model, key, and base URL):
+- **Direct fetch**: used for Ollama, LM Studio, and every provider in the desktop build. Anthropic uses its `/messages` API. Everything else uses `/chat/completions`.
 - **Server route** (`src/routes/api/chat/+server.ts`): used for cloud providers on web. It streams through the xsAI SDK (`@xsai/stream-text`) and sends lines prefixed `0:` (text), `t:` (tool call), and `e:` (error).
 
 **Key files:**
@@ -129,7 +129,7 @@ Apply ─────────────── stats, stage transition, act
                       turn history, event check, speech
 ```
 
-The model ends each reply with a JSON block. When the block is missing, `extractStateUpdates()` in `client-chat.ts` makes a second non-streaming call that returns only JSON. See [Companion System](/docs/technology/companion-system#llm-output-format) for both paths.
+The model ends each reply with a JSON block. When the block is missing, `companion-turn.ts` makes a second call through `completeJson()` in `transport.ts` that returns only JSON. See [Companion System](/docs/technology/companion-system#llm-output-format) for both paths.
 
 **Showing images:** The paperclip button or a drag and drop attaches a photo. `content.ts` serializes it as OpenAI-style `image_url` data URLs or Anthropic base64 `source` blocks. `src/lib/services/providers/vision.ts` gates the feature to vision-capable models. Kept photos go to the `utsuwa-keepsakes` localforage store through `src/lib/services/storage/keepsakes.ts`.
 

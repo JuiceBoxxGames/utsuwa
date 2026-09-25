@@ -119,7 +119,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	});
 	try {
 		const { sendCompanionMessage, cancelActiveTurn } = await server.ssrLoadModule('/src/lib/services/chat/companion-chat.ts');
-		const { streamChatDirect } = await server.ssrLoadModule('/src/lib/services/chat/client-chat.ts');
+		const { streamChat } = await server.ssrLoadModule('/src/lib/services/llm/transport.ts');
 		const { POST } = await server.ssrLoadModule('/src/routes/api/chat/+server.ts');
 		const state = '\n```json\n{"mood_change":{"emotion":"happy","intensity_delta":2},"new_memory":"They are learning Spanish"}\n```\nDuplicate text must stay hidden.';
 		const hooks = { setTyping: () => {}, setLatestResponse: (text: string) => { latest = text; }, setActiveEvent: () => {} };
@@ -820,9 +820,10 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			hints.length = 0; said.length = 0; cancels = 0; chatStore.error = null;
 		};
 
-		await t.test('streamChatDirect rejects instead of resolving silently when the key is missing', async () => {
+		await t.test('the direct transport rejects instead of resolving silently when the key is missing', async () => {
+			direct = true;
 			await assert.rejects(
-				streamChatDirect({ messages: [], provider: 'openai', model: 'm', systemPrompt: '' }, () => {}),
+				streamChat({ messages: [], provider: 'openai', model: 'm', systemPrompt: '' }, () => {}),
 				/API key required/
 			);
 		});
