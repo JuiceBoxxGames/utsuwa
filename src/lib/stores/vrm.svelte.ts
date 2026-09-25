@@ -61,7 +61,6 @@ function createVrmStore() {
 	let vrm = $state<VRM | null>(null);
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
-	let errorTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	// Gallery state
 	let models = $state<VrmModel[]>([...DEFAULT_MODELS]);
@@ -294,10 +293,6 @@ function createVrmStore() {
 	}
 
 	function clearError() {
-		if (errorTimeout) {
-			clearTimeout(errorTimeout);
-			errorTimeout = null;
-		}
 		error = null;
 	}
 
@@ -310,13 +305,6 @@ function createVrmStore() {
 		}
 		error = err;
 		isLoading = false;
-		// Auto-dismiss after 5 seconds if error is set
-		if (err) {
-			errorTimeout = setTimeout(() => {
-				error = null;
-				errorTimeout = null;
-			}, 5000);
-		}
 	}
 
 	async function setActiveModel(id: string) {

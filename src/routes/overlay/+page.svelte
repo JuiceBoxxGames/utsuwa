@@ -11,61 +11,32 @@
 	import HotkeyHandler from '$lib/components/overlay/HotkeyHandler.svelte';
 	import CompanionStats from '$lib/components/ui/CompanionStats.svelte';
 	import { goto } from '$app/navigation';
-	import { tick, untrack } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import CameraSettingsPanel from '$lib/components/ui/CameraSettingsPanel.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
 	import { EventScene } from '$lib/components/events';
 	import { Icon } from '$lib/components/ui';
+	import Toasts from '$lib/components/ui/Toasts.svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import { chatStore } from '$lib/stores/chat.svelte';
-	import { sttStore } from '$lib/stores/stt.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { modulesStore } from '$lib/stores/modules.svelte';
 	import { ttsStore } from '$lib/stores/tts.svelte';
-	import { characterStore } from '$lib/stores/character.svelte';
 	import { personaStore } from '$lib/stores/persona.svelte';
 	import { overlayStore } from '$lib/stores/overlay.svelte';
 	import { isTauri, startDragging } from '$lib/services/platform';
 	import { sendCompanionMessage, type SendCompanionMessageOptions } from '$lib/services/chat/companion-chat';
 	import { type ThinkingPhase } from '$lib/services/chat/chat-phase';
-	import { createReminderFiredHandler } from '$lib/services/chat/reminder-chat';
 	import { type PreparedImage } from '$lib/services/storage/keepsakes';
-	import { eventsApi } from '$lib/engine/events';
-	import { completionMarkers } from '$lib/engine/event-completion';
-	import { reminderStore } from '$lib/stores/reminders.svelte';
-	import type { EventDefinition, Scene } from '$lib/types/events';
-	import { canGenerateMoment, generateMoment } from '$lib/services/events/moment-generator';
-	import type { StateUpdates } from '$lib/types/character';
-
-	import {
-		hydrateWorkingMemory,
-		backfillEmbeddings,
-		getEmbeddingBackfillStatus
-	} from '$lib/engine/memory';
-	import { initEmbeddingModel } from '$lib/services/embeddings';
-	import { debugEventsStore } from '$lib/stores/debugEvents.svelte';
 	import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
+	import { startCompanionSession } from '$lib/services/session/companion-session';
+	import { createEventSession } from '$lib/services/session/event-session.svelte';
 
 	let latestResponse = $state('');
 	let isTyping = $state(false);
 	let thinkingPhase = $state<ThinkingPhase>('thinking');
-	let activeEvent = $state<EventDefinition | null>(null);
+	const events = createEventSession();
 
-	// Generated moments (see app/+page.svelte).
-	let generatedScene = $state<Scene | null>(null);
-	let momentPending = $state(false);
-
-	function openEvent(e: EventDefinition) {
-		activeEvent = e;
-		generatedScene = null;
-		momentPending = canGenerateMoment(e);
-		if (!momentPending) return;
-		void generateMoment(e).then((scene) => {
-			if (activeEvent?.id !== e.id) return;
-			generatedScene = scene;
-			momentPending = false;
-		});
-	}
 	let showCamera = $state(false);
 	let windowError = $state('');
 	let positionLocked = $state(false);
@@ -165,50 +136,12 @@
 		}
 	}
 
-	// Hydrate working memory on start
-	$effect(() => {
-		(async () => {
-			try {
-				await hydrateWorkingMemory();
-			} catch (e) {
-				console.error('Failed to hydrate working memory:', e);
-			}
-		})();
-	});
-
-	// Initialize embedding model and backfill facts without embeddings
-	$effect(() => {
-		initEmbeddingModel().then(async (ready) => {
-			if (ready) {
-				const status = await getEmbeddingBackfillStatus();
-				if (status.withoutEmbeddings > 0) {
-					await backfillEmbeddings();
-				}
-			}
-		}).catch((e) => {
-			console.error('Failed to initialize embedding model:', e);
-		});
-	});
-
-	// Debug events (from developer tools)
-	$effect(() => {
-		const debugEvent = debugEventsStore.consume();
-		if (debugEvent) untrack(() => openEvent(debugEvent));
-	});
-	// Start reminder polling in the overlay too, so timers fire even when the
-	// main app window is hidden. Fired reminders are sent back through the LLM
-	// so the companion can react (speech, search, etc.).
-	$effect(() => {
-		const unsubscribeReminder = reminderStore.addReminderFiredListener(
-			createReminderFiredHandler(handleReminderSend)
-		);
-		reminderStore.startPolling();
-		return () => {
-			reminderStore.stopPolling();
-			unsubscribeReminder();
-		};
-	});
-
+	onMount(() =>
+		startCompanionSession({
+			send: (content, options) => handleSend(content, [], options),
+			onEvent: events.open
+		})
+	);
 
 	// Handle drag for Tauri window
 	function handleDragStart(e: MouseEvent) {
@@ -248,22 +181,15 @@
 
 	// Send a message through the shared companion pipeline. The overlay collapses
 	// its chat on send and has no image path.
-	async function handleSend(content: string, images: PreparedImage[] = []) {
+	async function handleSend(
+		content: string,
+		images: PreparedImage[] = [],
+		options?: SendCompanionMessageOptions
+	) {
 		await sendCompanionMessage(content, images, {
 			setTyping: (v) => (isTyping = v),
 			setLatestResponse: (v) => (latestResponse = v),
-			setActiveEvent: openEvent,
-			setPhase: (p) => (thinkingPhase = p),
-			beforeStream: () => overlayStore.setChatExpanded(false)
-		});
-	}
-
-	// Send a fired reminder through the overlay pipeline as a system event.
-	async function handleReminderSend(content: string, options?: SendCompanionMessageOptions) {
-		await sendCompanionMessage(content, [], {
-			setTyping: (v) => (isTyping = v),
-			setLatestResponse: (v) => (latestResponse = v),
-			setActiveEvent: openEvent,
+			setActiveEvent: events.open,
 			setPhase: (p) => (thinkingPhase = p),
 			beforeStream: () => overlayStore.setChatExpanded(false)
 		}, options);
@@ -275,33 +201,6 @@
 
 	function handleCharacterClick() {
 		overlayStore.activate();
-	}
-
-	function handleEventComplete(choiceIndex?: number, stateChanges?: Partial<StateUpdates>) {
-		if (!activeEvent) return;
-		const event = $state.snapshot(activeEvent);
-		if (stateChanges) {
-			characterStore.applyUpdates(stateChanges as StateUpdates);
-		} else if (event.stateChanges) {
-			characterStore.applyUpdates(event.stateChanges);
-		}
-		// Apply gating markers synchronously before the DB write so a failed write
-		// can't strand a stage unlock (see app/+page.svelte for the full rationale).
-		for (const marker of completionMarkers(event, choiceIndex)) {
-			characterStore.markEventCompleted(marker);
-		}
-		eventsApi
-			.recordCompletedEvent(
-				event,
-				choiceIndex,
-				choiceIndex !== undefined ? `Choice ${choiceIndex + 1}` : undefined
-			)
-			.catch((e) => console.error('Failed to record event:', e));
-		activeEvent = null;
-	}
-
-	function handleEventClose() {
-		activeEvent = null;
 	}
 </script>
 
@@ -398,33 +297,19 @@
 	{/if}
 
 	{#if windowError}<div class="window-error" role="alert"><span>{windowError}</span><button class="btn btn-ghost btn-sm" aria-label="Dismiss window error" onclick={() => windowError = ''}><Icon name="x" size={14} /></button></div>{/if}
-	<!-- Error toasts -->
-	{#if chatStore.error}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="error-toast" out:pop={{ base: 'translateX(-50%)', y: 8, duration: 180 }} onclick={() => chatStore.setError(null)}>
-			<span>{chatStore.error}</span>
-		</div>
-	{/if}
-	{#if sttStore.error}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="error-toast error-toast--stt" out:pop={{ base: 'translateX(-50%)', y: 8, duration: 180 }} onclick={() => sttStore.clearError()}>
-			<span>{sttStore.error}</span>
-		</div>
-	{/if}
+	<Toasts placement="bottom" />
 
 	<!-- Event Scene Overlay -->
-	{#if activeEvent?.scene}
+	{#if events.activeEvent?.scene}
 		<EventScene
-			scene={generatedScene ?? activeEvent.scene}
-			pending={momentPending}
-			eventName={activeEvent?.name}
-			eventType={activeEvent?.type}
+			scene={events.generatedScene ?? events.activeEvent.scene}
+			pending={events.pending}
+			eventName={events.activeEvent.name}
+			eventType={events.activeEvent.type}
 			companionName={personaStore.activeCard.name}
 			overlay={true}
-			onComplete={handleEventComplete}
-			onClose={handleEventClose}
+			onComplete={events.complete}
+			onClose={events.close}
 		/>
 	{/if}
 
@@ -604,58 +489,8 @@
 		}
 	}
 
-	.error-toast {
-		position: fixed;
-		bottom: 5rem;
-		left: 50%;
-		transform: translateX(-50%);
-		padding: 0.5rem 0.875rem;
-		background: var(--color-error);
-		border: 1px solid transparent;
-		border-radius: var(--radius-lg);
-		color: #fff;
-		font-size: 0.75rem;
-		max-width: calc(100% - 2rem);
-		text-align: center;
-		cursor: pointer;
-		z-index: 50;
-		animation: slideUpShake 0.5s ease-out;
-		box-shadow: var(--shadow-lg);
-	}
-
-	/* STT errors stack above chat errors instead of sharing the same slot */
-	.error-toast--stt {
-		bottom: 8.5rem;
-	}
-
-	@keyframes slideUpShake {
-		0% {
-			opacity: 0;
-			transform: translateX(-50%) translateY(8px);
-		}
-		30% {
-			opacity: 1;
-			transform: translateX(-50%) translateY(0);
-		}
-		45% {
-			transform: translateX(calc(-50% + 6px)) translateY(0);
-		}
-		60% {
-			transform: translateX(calc(-50% - 5px)) translateY(0);
-		}
-		75% {
-			transform: translateX(calc(-50% + 3px)) translateY(0);
-		}
-		90% {
-			transform: translateX(calc(-50% - 2px)) translateY(0);
-		}
-		100% {
-			transform: translateX(-50%) translateY(0);
-		}
-	}
-
 	.overlay-wake-status { position: fixed; top: 48px; right: 12px; z-index: 70; }
 	.window-error { position: fixed; top: 12px; left: 12px; right: 64px; padding: 10px; display: flex; align-items: center; gap: 8px; background: var(--control-bg); border: 1px solid var(--color-error); color: var(--text-primary); border-radius: 8px; font-size: 13px; z-index: 100; }
 	@media (hover: none), (pointer: coarse) { .rail-btn { opacity: 1; pointer-events: auto; width: 44px; height: 44px; } .overlay-camera-anchor { right: 68px; } }
-	@media (prefers-reduced-motion: reduce) { .rail-btn, .overlay-frame, .resize-tab { transition: none; } .chat-bar-container, .error-toast { animation: none; } }
+	@media (prefers-reduced-motion: reduce) { .rail-btn, .overlay-frame, .resize-tab { transition: none; } .chat-bar-container { animation: none; } }
 </style>

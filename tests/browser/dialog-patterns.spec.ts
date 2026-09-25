@@ -94,3 +94,49 @@ test('Data uses shared settings groups and previews a save before changing anyth
 	await page.locator('.confirm-actions').getByRole('button', { name: 'Cancel', exact: true }).click();
 	await expect(page.getByRole('button', { name: 'Yes, Delete Everything', exact: true })).toHaveCount(0);
 });
+
+test('event scenes are named dialogs that hold focus, close with Escape, and complete', async ({ page, browserName }) => {
+	await openApp(page);
+	const input = page.getByRole('textbox', { name: 'Message', exact: true });
+	const fire = () => page.evaluate(async () => {
+		const storePath = '/src/lib/stores/debugEvents.svelte.ts';
+		const eventsPath = '/src/lib/data/events/index.ts';
+		const { debugEventsStore } = await import(/* @vite-ignore */ storePath);
+		const { allEvents } = await import(/* @vite-ignore */ eventsPath);
+		debugEventsStore.trigger(allEvents.find((e: { id: string }) => e.id === 'one_week_anniversary'));
+	});
+	const readState = () => page.evaluate(async () => {
+		const path = '/src/lib/stores/character.svelte.ts';
+		const { characterStore } = await import(/* @vite-ignore */ path);
+		const { affection, trust, completedEvents } = characterStore.state;
+		return { affection, trust, completedEvents: [...completedEvents] };
+	});
+
+	await input.focus();
+	await fire();
+	const scene = page.getByRole('dialog', { name: 'One Week Together', exact: true });
+	await expect(scene).toBeVisible();
+	await expect(scene.getByRole('button', { name: 'Continue', exact: true })).toBeFocused();
+	const tabKey = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
+	for (let i = 0; i < 3; i++) {
+		await page.keyboard.press(tabKey);
+		await expect.poll(() => scene.evaluate(el => el.contains(document.activeElement))).toBe(true);
+	}
+	await page.keyboard.press('Escape');
+	await expect(scene).toHaveCount(0);
+	await expect(input).toBeFocused();
+
+	const before = await readState();
+	await fire();
+	await expect(scene.getByRole('button', { name: 'Continue', exact: true })).toBeFocused();
+	await page.keyboard.press('Enter');
+	await expect(scene.getByText(/a whole week/)).toBeVisible();
+	await expect(scene.getByRole('button', { name: 'Continue', exact: true })).toBeFocused();
+	await page.keyboard.press('Enter');
+	await expect(scene).toHaveCount(0);
+	await expect.poll(readState).toEqual({
+		affection: before.affection + 25,
+		trust: before.trust + 10,
+		completedEvents: [...before.completedEvents, 'one_week_anniversary']
+	});
+});
