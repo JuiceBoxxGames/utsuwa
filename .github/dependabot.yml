@@ -23,7 +23,7 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: '@types/three'
         update-types: ['version-update:semver-major']
-      - dependency-name: '@xenova/transformers'
+      - dependency-name: '@huggingface/transformers'
         update-types: ['version-update:semver-major']
 
   # Tauri crate minors must match the @tauri-apps/* packages; see CONTRIBUTING.
