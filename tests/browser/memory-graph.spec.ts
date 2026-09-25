@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openApp, waitForHydration, selectOption } from './helpers';
+import { openApp, waitForHydration, selectOption, snap } from './helpers';
 
 test('brain shortcut opens the graph and empty memories lead to Facts', async ({ page }) => {
 	await openApp(page, { chatDisplayMode: 'sidebar' });
@@ -124,10 +124,7 @@ for (const motion of ['reduce', 'no-preference'] as const) {
 				{ timeout: 15_000 }
 			)
 			.toBe(true);
-		await page.screenshot({
-			path: info.outputPath('memory-graph-overview.png'),
-			animations: 'disabled'
-		});
+		await snap(page, 'memory-graph-overview.png', { animations: 'disabled' });
 		if (info.project.name === 'mobile') {
 			await canvas.tap({ position: point! });
 		} else {
@@ -146,10 +143,7 @@ for (const motion of ['reduce', 'no-preference'] as const) {
 		await selectOption(page, page.getByRole('button', { name: 'Inspect a memory', exact: true }), String(ids[0]));
 		await expect(detail).toContainText('Tea after dinner');
 		await detail.scrollIntoViewIfNeeded();
-		await page.screenshot({
-			path: info.outputPath('memory-graph-details.png'),
-			animations: 'disabled'
-		});
+		await snap(page, 'memory-graph-details.png', { animations: 'disabled' });
 		const expand = page.getByRole('button', { name: 'Expand graph', exact: true });
 		await expand.click();
 		const dialog = page.getByRole('dialog', { name: 'Memory graph', exact: true });
@@ -160,15 +154,9 @@ for (const motion of ['reduce', 'no-preference'] as const) {
 		await expect
 			.poll(async () => (await dialog.locator('canvas').boundingBox())!.width)
 			.toBeGreaterThan(100);
-		await page.screenshot({
-			path: info.outputPath('memory-graph-expanded.png'),
-			animations: 'disabled'
-		});
+		await snap(page, 'memory-graph-expanded.png', { animations: 'disabled' });
 		await dialog.getByRole('complementary', { name: 'Memory details' }).scrollIntoViewIfNeeded();
-		await page.screenshot({
-			path: info.outputPath('memory-graph-expanded-details.png'),
-			animations: 'disabled'
-		});
+		await snap(page, 'memory-graph-expanded-details.png', { animations: 'disabled' });
 		await page.keyboard.press('Escape');
 		await expect(dialog).not.toBeVisible();
 		await expect(expand).toBeFocused();

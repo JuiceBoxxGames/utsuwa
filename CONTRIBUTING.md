@@ -53,9 +53,12 @@ Before pushing:
 pnpm check   # svelte-check, must be 0 errors 0 warnings
 pnpm test    # full unit suite, must be green
 pnpm test:browser  # Playwright browser tests (tests/browser)
+VISUAL_REVIEW=1 pnpm test:browser  # also save review screenshots to test-results/
 ```
 
 CI runs both plus a Rust `cargo check` on every PR. A red check means no review until it's green.
+
+**Bump Tauri JS and Rust together.** The `@tauri-apps/*` packages in `package.json` and the `tauri*` crates in `src-tauri/Cargo.toml` must stay on the same minor versions. Dependabot groups each side, so land the npm and cargo bumps together.
 
 ## Adding a Provider Integration
 

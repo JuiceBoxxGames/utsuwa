@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { T, useThrelte, useTask } from '@threlte/core';
 	import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-	import { VRMLoaderPlugin, VRM, VRMUtils } from '@pixiv/three-vrm';
+	import { VRMLoaderPlugin, VRMUtils, type VRM } from '@pixiv/three-vrm';
 	import { createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 	import { loadVrmAnimation } from '$lib/services/vrm-animations';
 	import { vrmStore } from '$lib/stores/vrm.svelte';

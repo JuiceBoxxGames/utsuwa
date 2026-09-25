@@ -5,9 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -34,8 +39,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+  # Browser suites already ran on the PR; pushes to main only rerun web and tauri.
   browser:
     name: browser (${{ matrix.project }})
+    if: github.event_name == 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +55,7 @@ jobs:
             platform: macos-latest
             browser: webkit
     runs-on: ${{ matrix.platform }}
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -81,6 +88,7 @@ jobs:
 
   tauri:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 

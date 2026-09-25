@@ -1,4 +1,10 @@
-import { expect, type Page, type Locator } from '@playwright/test';
+import { expect, test, type Page, type Locator, type PageScreenshotOptions } from '@playwright/test';
+
+// Review-only captures; nothing compares them. Set VISUAL_REVIEW=1 to write them.
+export async function snap(page: Page, name: string, options: PageScreenshotOptions = {}) {
+	if (!process.env.VISUAL_REVIEW) return;
+	await page.screenshot({ ...options, path: test.info().outputPath(name) });
+}
 
 // These tests run against Vite in a fresh browser context, never a user's save.
 export async function openApp(page: Page, display: Record<string, unknown> = {}, completeOnboarding = true) {
@@ -45,6 +51,11 @@ export async function setLoading(page: Page, loading: boolean) {
 export async function waitForHydration(page: Page, waitForAvatar = true) {
 	const pathname = new URL(page.url()).pathname;
 	const hasAvatar = waitForAvatar && (pathname === '/app' || pathname === '/overlay');
+	await page.waitForFunction(
+		() => document.readyState === 'complete' && '__SVELTEKIT_APP_VERSION__' in globalThis,
+		undefined,
+		{ timeout: 20_000 }
+	);
 	await expect
 		.poll(
 			() =>
@@ -69,7 +80,8 @@ export async function waitForHydration(page: Page, waitForAvatar = true) {
 					}
 					return !!app;
 				}, hasAvatar),
-			{ timeout: hasAvatar ? 20_000 : 15_000 }
+			// The no-avatar path still waits behind avatar and embedding startup on CI.
+			{ timeout: 20_000 }
 		)
 		.toBe(true);
 }

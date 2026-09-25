@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { openApp, waitForHydration } from './helpers';
+import { openApp, waitForHydration, snap } from './helpers';
 
-test('app dialogs trap focus, close with Escape, and nested photos leave the board open', async ({ page, browserName }, info) => {
+test('app dialogs trap focus, close with Escape, and nested photos leave the board open', async ({ page, browserName }) => {
 	test.setTimeout(90_000);
 	await openApp(page);
 	await page.getByRole('button', { name: 'App info', exact: true }).click();
@@ -14,7 +14,7 @@ test('app dialogs trap focus, close with Escape, and nested photos leave the boa
 		await page.keyboard.press(tabKey);
 		await expect.poll(() => about.evaluate(el => el.contains(document.activeElement))).toBe(true);
 	}
-	await page.screenshot({ path: info.outputPath('about-dialog.png') });
+	await snap(page, 'about-dialog.png');
 	await page.keyboard.press('Escape');
 	await expect(about).toHaveCount(0);
 	await expect(page.getByRole('button', { name: 'App info', exact: true })).toBeFocused();
@@ -53,7 +53,7 @@ test('app dialogs trap focus, close with Escape, and nested photos leave the boa
 	await expect(photo).toHaveCount(0);
 	await expect(board).toBeVisible();
 	await expect(board.getByRole('button', { name: 'View photo', exact: true })).toBeFocused();
-	await page.screenshot({ path: info.outputPath('photoboard-dialog.png') });
+	await snap(page, 'photoboard-dialog.png');
 	await page.keyboard.press('Escape');
 	await expect(board).toHaveCount(0);
 	await expect(page.getByRole('button', { name: 'Photoboard', exact: true })).toBeFocused();
@@ -66,13 +66,13 @@ test('app dialogs trap focus, close with Escape, and nested photos leave the boa
 	await expect(dialog).toBeVisible();
 	await page.keyboard.press(tabKey);
 	await expect.poll(() => dialog.evaluate(el => el.contains(document.activeElement))).toBe(true);
-	await page.screenshot({ path: info.outputPath('upload-dialog.png') });
+	await snap(page, 'upload-dialog.png');
 	await page.keyboard.press('Escape');
 	await expect(dialog).toHaveCount(0);
 	await expect(upload).toBeFocused();
 });
 
-test('Data uses shared settings groups and previews a save before changing anything', async ({ page }, info) => {
+test('Data uses shared settings groups and previews a save before changing anything', async ({ page }) => {
 	await openApp(page);
 	const save = await page.evaluate(async () => {
 		const path = '/src/lib/db/export.ts';
@@ -86,7 +86,7 @@ test('Data uses shared settings groups and previews a save before changing anyth
 	const merge = page.getByRole('radio', { name: /Merge Add to existing data/ });
 	await merge.check();
 	await expect(merge).toBeChecked();
-	await page.screenshot({ path: info.outputPath('data-import-preview.png') });
+	await snap(page, 'data-import-preview.png');
 	await page.locator('.import-actions').getByRole('button', { name: 'Cancel', exact: true }).click();
 	await expect(page.getByText('Save File Preview', { exact: true })).toHaveCount(0);
 	await page.getByRole('button', { name: 'Clear All Data', exact: true }).click();

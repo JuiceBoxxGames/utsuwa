@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { openApp, waitForHydration } from './helpers';
+import { openApp, waitForHydration, snap } from './helpers';
 
-test('overlay controls work with keyboard and touch and theme changes sync between windows', async ({ page, context }, info) => {
+test('overlay controls work with keyboard and touch and theme changes sync between windows', async ({ page, context }) => {
 	test.setTimeout(90_000);
 	await openApp(page);
 	await page.goto('/app/settings/display');
@@ -38,7 +38,7 @@ test('overlay controls work with keyboard and touch and theme changes sync betwe
 	await overlay.getByRole('button', { name: 'Companion stats', exact: true }).click();
 	const stats = overlay.getByRole('dialog', { name: 'Companion stats' });
 	await expect(stats.locator('.companion-state-summary')).toBeVisible();
-	await overlay.screenshot({ path: info.outputPath('overlay-stats-dark.png') });
+	await snap(overlay, 'overlay-stats-dark.png');
 	await stats.getByRole('link', { name: 'Character settings' }).click();
 	await expect(overlay).toHaveURL(/app\/settings\/persona\?view=state$/);
 	expect(await overlay.locator('body').evaluate(el => el.style.background)).toBe('');
