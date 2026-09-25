@@ -4,6 +4,7 @@
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import { pop } from '$lib/utils/motion';
 	import BottomChatBar from '$lib/components/chat/BottomChatBar.svelte';
+	import McpConfirmDialog from '$lib/components/mcp/McpConfirmDialog.svelte';
 	import SpeechBubble from '$lib/components/chat/SpeechBubble.svelte';
 	import FloatingChatIcon from '$lib/components/overlay/FloatingChatIcon.svelte';
 	import FloatingMicButton from '$lib/components/overlay/FloatingMicButton.svelte';
@@ -310,6 +311,7 @@
 	else if (chatExpanded) { event.preventDefault(); overlayStore.setChatExpanded(false); await tick(); document.querySelector<HTMLButtonElement>('[aria-label="Open chat"]')?.focus(); }
 }} />
 <ScreenWakeLock />
+<McpConfirmDialog />
 <div class="overlay-wake-status"><WakeLockIndicator /></div>
 <div class="overlay-container">
 	<!-- VRM Scene (fills the overlay) - locked to prevent rotation when dragging -->

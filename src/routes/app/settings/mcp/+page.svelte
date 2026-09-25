@@ -19,6 +19,7 @@
 	let formAuthType = $state<'none' | 'bearer'>('none');
 	let formAuthToken = $state('');
 	let formInjectResultsAsUser = $state(false);
+	let formAskBeforeRun = $state(true);
 	let formError = $state('');
 
 	const isEditing = $derived(editingId !== null);
@@ -32,6 +33,7 @@
 		formAuthType = 'none';
 		formAuthToken = '';
 		formInjectResultsAsUser = false;
+		formAskBeforeRun = true;
 		formError = '';
 		editingId = null;
 		showForm = false;
@@ -58,6 +60,7 @@
 		formAuthType = server.auth?.type === 'bearer' ? 'bearer' : 'none';
 		formAuthToken = server.auth?.type === 'bearer' ? server.auth.token : '';
 		formInjectResultsAsUser = server.injectResultsAsUser ?? false;
+		formAskBeforeRun = server.askBeforeRun !== false;
 		formError = '';
 		showForm = true;
 	}
@@ -94,7 +97,8 @@
 			args: formTransport === 'stdio' ? args : undefined,
 			env: formTransport === 'stdio' ? env : undefined,
 			auth: formTransport === 'http' ? auth : undefined,
-			injectResultsAsUser: formInjectResultsAsUser
+			injectResultsAsUser: formInjectResultsAsUser,
+			askBeforeRun: formAskBeforeRun
 		};
 
 		if (isEditing) {
@@ -182,8 +186,10 @@
 
 					{#if formTransport === 'stdio'}
 						<p class="form-hint">
-							stdio is fail-closed: set <code>MCP_STDIO_ALLOWED_COMMANDS</code> (e.g.
-							<code>npx</code>) in the server environment, otherwise this server stays disabled.
+							stdio is fail-closed: the full command line must be listed in
+							<code>MCP_STDIO_ALLOWED_COMMANDS</code> (e.g.
+							<code>npx -y @brave/brave-search-mcp-server</code>), and env vars must be named in
+							<code>MCP_STDIO_ENV_ALLOWLIST</code>, otherwise this server stays disabled.
 						</p>
 					{/if}
 
@@ -269,6 +275,12 @@
 					{/if}
 
 					<label class="checkbox-row">
+						<input type="checkbox" bind:checked={formAskBeforeRun} />
+						<span>Ask before running tools</span>
+						<span class="form-hint">Shows each tool call with its arguments so you can run or skip it.</span>
+					</label>
+
+					<label class="checkbox-row">
 						<input type="checkbox" bind:checked={formInjectResultsAsUser} />
 						<span>Inject text tool results as user messages</span>
 						<span class="form-hint">Helps with local/SLIM models that ignore strict tool-role messages.</span>
@@ -303,6 +315,9 @@
 						<div class="server-actions">
 							{#if server.transport === 'http' && server.auth?.type === 'bearer'}
 								<span class="ui-badge">auth</span>
+							{/if}
+							{#if server.askBeforeRun === false}
+								<span class="ui-badge" title="Tools run without asking">auto-run</span>
 							{/if}
 							<span class="ui-badge">{server.transport}</span>
 							<Switch

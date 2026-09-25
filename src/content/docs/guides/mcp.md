@@ -35,7 +35,7 @@ Works the same for every deployment style: Docker Compose (`environment:` / an o
 
 When MCP is disabled, the **MCP entry is hidden from the settings navigation** on web (the page probes the server once and disappears if the route answers 404). A direct link still shows a notice explaining that the administrator has not enabled MCP.
 
-Optional hardening switches (prompt hardening, never-auto-execute tool list) are documented under [Optional hardening](#optional-hardening-env-gated).
+Tool confirmation, prompt hardening, and the stdio allowlist are documented under [Hardening](#hardening).
 
 ## The MCP settings page
 
@@ -84,7 +84,7 @@ Brave publishes an official MCP server (`@brave/brave-search-mcp-server`) that n
 
 Requires Node.js 22+ on the Utsuwa host. The first request downloads the package via `npx`; if the cold start exceeds the 15-second stdio timeout, press **Refresh** again. The cache is warm afterwards.
 
-> stdio is fail-closed: set `MCP_STDIO_ALLOWED_COMMANDS=npx` in the Utsuwa server environment, otherwise this server shows a "stdio is disabled" error.
+> stdio is fail-closed: set `MCP_STDIO_ALLOWED_COMMANDS=npx -y @brave/brave-search-mcp-server` and `MCP_STDIO_ENV_ALLOWLIST=BRAVE_API_KEY` in the Utsuwa server environment, otherwise this server shows a "stdio is disabled" error.
 
 > The URL `https://api.search.brave.com/res/v1/web/search` is Brave's REST API, **not** an MCP endpoint. Pointing an HTTP MCP server at it fails with a `422` asking for `x-subscription-token`, because MCP clients speak JSON-RPC with a bearer token. Use the stdio server above instead.
 
@@ -112,7 +112,7 @@ Any MCP server that speaks stdio can be spawned by the server build. Example wit
   SEARXNG_URL=http://your-searxng-host:8080
   ```
 
-stdio servers are spawned per request with a 15-second timeout and run with the server's environment plus the variables you configure here. Only enable MCP on a deployment you control, and allowlist the command with `MCP_STDIO_ALLOWED_COMMANDS` (stdio is fail-closed).
+stdio servers are spawned per request with a 15-second timeout and run with a minimal slice of the server's environment plus the variables you configure here. Only enable MCP on a deployment you control, and allowlist the command line with `MCP_STDIO_ALLOWED_COMMANDS=npx -y mcp-searxng` and the variable with `MCP_STDIO_ENV_ALLOWLIST=SEARXNG_URL` (stdio is fail-closed).
 
 ## Desktop builds (Tauri)
 
@@ -142,15 +142,14 @@ Known limitations:
 - Tools from all servers share one flat namespace. If two servers expose the same tool name, the first server in the list wins, so keep names unique.
 - Authentication supports `none` and `bearer` only. Servers that need custom headers (for example `X-Api-Key`) are not supported yet.
 
-## Optional hardening (env-gated)
+## Hardening
 
-Two opt-in switches cover the baseline of a tool-approval policy, and a third variable controls stdio. The two `PUBLIC_` switches default to off and change nothing until set. On web they are read at runtime; in the desktop build they are fixed at build time. Each works on its own.
-
-- **`PUBLIC_MCP_PROMPT_HARDENING`** (`true` or `1`): adds a security layer to the system prompt on turns with MCP tools: tool results are untrusted data (never instructions), and state-changing or destructive actions require an explicit user request.
+- **Ask before running tools** (per server, on by default): every tool call opens a dialog with the server, tool name, and arguments. **Run** executes it; **Skip** (or closing the dialog) feeds back a "declined" result so the model can answer without it. Parallel calls queue one dialog at a time. Turn it off in the server's edit form for servers you trust to run unattended; those show an **auto-run** badge.
+- **`PUBLIC_MCP_PROMPT_HARDENING`** (on by default; `false`, `0`, or `off` opts out): adds a security layer to the system prompt on turns with MCP tools: tool results are untrusted data (never instructions), and state-changing or destructive actions require an explicit user request. On web the `PUBLIC_` variables are read at runtime; in the desktop build they are fixed at build time.
 - **`PUBLIC_MCP_CONFIRM_TOOLS`**: comma-separated, case-sensitive tool names (blank entries are ignored), for example `unlock_door,set_alarm`. Listed tools are **never executed automatically**: the chat loop feeds back a "requires manual user confirmation" result so the model asks you first, and the `/api/mcp/call` route rejects direct calls with `403`. The tools stay visible to the model, and the block applies even when prompt hardening is off.
-- **`MCP_STDIO_ALLOWED_COMMANDS`** (server builds only): comma-separated allowlist of stdio commands, for example `npx,node,uvx`. **stdio is fail-closed**: without this variable no stdio server runs (per-server error in the tool list, `403` on `/api/mcp/call`); with it, only the listed commands pass. `*` explicitly allows any command and makes the server log a startup warning.
-
-A full interactive approval dialog (per-tool metadata such as `read-only` / `requires-confirmation`) is future work.
+- **`MCP_STDIO_ALLOWED_COMMANDS`** (server builds only): comma-separated list of full command lines, for example `npx -y @brave/brave-search-mcp-server,npx -y mcp-searxng`. **stdio is fail-closed**: without this variable no stdio server runs (per-server error in the tool list, `403` on `/api/mcp/call`). A server runs only if its command equals an entry's command and its arguments equal the entry's arguments. End an entry with ` *` to allow extra arguments after the listed ones (`npx -y @modelcontextprotocol/server-filesystem *`). A bare command name like `npx` allows it only with no arguments, so `npx,node,uvx`-style lists no longer work: the server config comes from the browser, and `node -e ...` would be arbitrary code. A bare `*` allows every command line and logs a startup warning.
+- **`MCP_STDIO_ENV_ALLOWLIST`** (server builds only): comma-separated variable names a stdio server config may set, for example `BRAVE_API_KEY,SEARXNG_URL`. Other variables from the config are dropped. Variables that change how code loads (`PATH`, `HOME`, `NODE_OPTIONS`, `NODE_PATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_INSERT_LIBRARIES`, `DYLD_LIBRARY_PATH`, `BASH_ENV`, `PYTHONPATH`, `NPM_CONFIG_*`) are dropped even when listed.
+- Limits: one tools request spawns at most 4 stdio processes at a time, and a server that writes more than 4 MB to stdout without a newline is killed.
 
 ## Troubleshooting
 
@@ -163,16 +162,18 @@ A full interactive approval dialog (per-tool metadata such as `read-only` / `req
 | `MCP stdio timeout` | Command too slow to start. The first `npx` run downloads the package; press **Refresh** again. |
 | `spawn ... ENOENT` | Command not found on the Utsuwa host (check the command name and Node.js version). |
 | Empty tool list, no error | The server is reachable but exposes no tools (or all are filtered server-side). |
-| stdio server shows "stdio is disabled" | No stdio allowlist is set. Add `MCP_STDIO_ALLOWED_COMMANDS` (e.g. `npx`) to the Utsuwa server environment and restart it. |
+| stdio server shows "stdio is disabled" | No stdio allowlist is set. Add the full command line to `MCP_STDIO_ALLOWED_COMMANDS` (e.g. `npx -y mcp-searxng`) in the Utsuwa server environment and restart it. |
+| stdio server shows "is not allowed" | The command and arguments do not match an allowlist entry exactly. Copy them into `MCP_STDIO_ALLOWED_COMMANDS`, or end the entry with ` *` to allow extra arguments. |
+| stdio server ignores its env vars | The variable names are not in `MCP_STDIO_ENV_ALLOWLIST`. |
 | Tool result says "requires manual user confirmation" | The tool is listed in `PUBLIC_MCP_CONFIRM_TOOLS`. Confirm the action with the user, or remove the name from the list. |
 
 ## Security notes
 
-- Tool results are treated as untrusted data: they are never executed, only passed to the model. `PUBLIC_MCP_PROMPT_HARDENING` states the same rule to the model, and `PUBLIC_MCP_CONFIRM_TOOLS` can block selected tools from ever running automatically.
+- Tool results are treated as untrusted data: they are never executed, only passed to the model. Prompt hardening states the same rule to the model, **Ask before running tools** puts every call in front of you, and `PUBLIC_MCP_CONFIRM_TOOLS` can block selected tools from running at all.
 - Tokens never reach the model and are never logged by Utsuwa. They do travel to your own server inside the proxy request body, so a reverse proxy or body-logging layer in front of the deployment could capture them. Keep access logs clean.
 - On the server-side HTTP path, link-local and cloud-metadata addresses (`169.254.0.0/16`, `fe80::/10`, `fd00:ec2::/32`, `100.100.100.200`, `metadata.google.internal`, also via DNS resolution) are rejected before any request. Only same-origin 307/308 redirects are followed, and every destination is checked before sending credentials or tool arguments. Cross-origin redirects, including HTTPS-to-HTTP changes, are rejected. 301/302/303 are reported as errors instead of changing the JSON-RPC POST into a GET. IPv4-mapped IPv6 addresses are checked against the same blocked ranges. Loopback and RFC1918 stay reachable by design, because self-hosted MCP servers like Home Assistant live on the local network. Never enable MCP on a deployment untrusted users can reach.
 - HTTP servers may only use `http:`/`https:` URLs; other schemes are rejected before any request is made (web proxy and desktop transport alike). The desktop transport additionally blocks literal link-local/metadata hosts; hostname resolution checks exist only where DNS is available (server build).
-- stdio servers run commands on the Utsuwa host and receive only a minimal, allowlisted slice of the app environment (`PATH`, `HOME`, `LANG`, temp/cert vars) plus the variables you configure per server. App secrets like `DATABASE_URL` or provider keys are never inherited. They are **fail-closed**: nothing runs unless `MCP_STDIO_ALLOWED_COMMANDS` lists the command (or `*`). Critical variables such as `PATH` and `NODE_OPTIONS` from a server config are ignored.
+- stdio servers run commands on the Utsuwa host and receive only a minimal, allowlisted slice of the app environment (`PATH`, `HOME`, `LANG`, temp/cert vars) plus the per-server variables named in `MCP_STDIO_ENV_ALLOWLIST`. App secrets like `DATABASE_URL` or provider keys are never inherited. They are **fail-closed**: nothing runs unless `MCP_STDIO_ALLOWED_COMMANDS` lists the exact command line (or `*`). Critical variables such as `PATH` and `NODE_OPTIONS` from a server config are always ignored.
 - The `/api/mcp/*` routes are **unauthenticated**, like the rest of the app: Utsuwa has no per-user accounts, so anyone who can reach the deployment can add servers and trigger tool calls. Because the client supplies the server config, the HTTP path also works as a proxy into loopback/RFC1918 (that is what makes self-hosted Home Assistant possible). Never expose an MCP-enabled deployment without an authenticating reverse proxy. Utsuwa logs a startup warning whenever MCP is enabled, and another when stdio is disabled or allows every command.
 - The model can call any tool you expose. Expose only what you are comfortable with (Home Assistant's MCP integration lets you pick which entities are exposed).
 - Disabling a server (or all servers) takes effect immediately: no further requests are made and its tools leave the chat.

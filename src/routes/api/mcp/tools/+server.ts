@@ -7,7 +7,8 @@ import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 import type { McpServerConfig } from '$lib/types/mcp';
 import { listTools } from '$lib/services/mcp/client.server';
-import { combineServerResults, isServerMcpEnabled, parseToolNameList, stdioDenyReason } from '$lib/services/mcp/protocol';
+import { combineServerResults, isServerMcpEnabled } from '$lib/services/mcp/protocol';
+import { applyStdioPolicy, createLimiter, STDIO_MAX_CONCURRENT } from '$lib/services/mcp/stdio-policy';
 
 export const POST: RequestHandler = async ({ request }) => {
 	if (!isServerMcpEnabled(env.MCP_ENABLED)) {
@@ -22,12 +23,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		? body.servers.filter((s) => s?.enabled && (s.transport === 'http' || s.transport === 'stdio'))
 		: [];
 
-	const stdioAllowed = parseToolNameList(env.MCP_STDIO_ALLOWED_COMMANDS);
+	const limitStdio = createLimiter(STDIO_MAX_CONCURRENT);
 	const settled = await Promise.allSettled(
-		enabled.map((server) => {
-			const denyReason =
-				server.transport === 'stdio' ? stdioDenyReason(server.command, stdioAllowed) : null;
-			return denyReason ? Promise.reject(new Error(denyReason)) : listTools(server);
+		enabled.map(async (server) => {
+			if (server.transport !== 'stdio') return listTools(server);
+			const policy = applyStdioPolicy(server, env);
+			if ('error' in policy) throw new Error(policy.error);
+			return limitStdio(() => listTools(policy.server));
 		})
 	);
 	const { values, errors } = combineServerResults(settled, enabled);

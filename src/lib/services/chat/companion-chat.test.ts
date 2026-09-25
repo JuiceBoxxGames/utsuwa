@@ -58,7 +58,13 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			ensureTools: async () => {},
 			hasActiveTools: false,
 			tools: [],
-			servers: []
+			servers: [],
+			confirmations: [] as Array<{ serverName: string; toolName: string; args: Record<string, unknown> }>,
+			confirmAnswer: true,
+			async confirmToolCall(request: { serverName: string; toolName: string; args: Record<string, unknown> }) {
+				fixtures.mcpStore.confirmations.push(request);
+				return fixtures.mcpStore.confirmAnswer;
+			}
 		},
 		publicEnv: {} as Record<string, string>,
 		privateEnv: {} as Record<string, string>,
@@ -532,6 +538,27 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			assert.equal(providerRound, 2, 'the model runs again after the mixed tool round');
 			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
 		});
+		await t.test('a command-line allowlist rejects node -e even though node is listed', async () => {
+			fixtures.privateEnv.MCP_ENABLED = 'server';
+			fixtures.privateEnv.MCP_STDIO_ALLOWED_COMMANDS = 'node ./.e2e-tmp/echo-server.mjs';
+			const { POST: callPOST } = await server.ssrLoadModule('/src/routes/api/mcp/call/+server.ts');
+			const response = await callPOST({
+				request: new Request('http://localhost/api/mcp/call', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						server: { id: 'x', name: 'X', transport: 'stdio', command: 'node', args: ['-e', 'process.exit(0)'], enabled: true },
+						toolName: 'echo',
+						args: {}
+					})
+				})
+			});
+			assert.equal(response.status, 403);
+			const body = (await response.json()) as { error?: string };
+			assert.match(body.error ?? '', /not allowed/);
+			delete fixtures.privateEnv.MCP_ENABLED;
+			delete fixtures.privateEnv.MCP_STDIO_ALLOWED_COMMANDS;
+		});
 		await t.test('the MCP call route disables stdio without an allowlist', async () => {
 			fixtures.privateEnv.MCP_ENABLED = 'server';
 			const { POST: callPOST } = await server.ssrLoadModule('/src/routes/api/mcp/call/+server.ts');
@@ -621,6 +648,68 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			assert.equal(mcpCalls, 0, 'a disabled server is never contacted');
 			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
 		});
+		for (const [label, server, answer] of [
+			['a declined confirmation skips the tool', {}, false],
+			['an approved confirmation runs the tool', {}, true],
+			['a server with ask-before-run off never prompts', { askBeforeRun: false }, false]
+		] as const) {
+			await t.test(label, async (t) => {
+				direct = false; llmProvider = 'openai-compatible';
+				speechEnabled = false; messages.length = 0; spoken = []; turns.length = 0;
+				const mcp = fixtures.mcpStore;
+				mcp.confirmations.length = 0;
+				mcp.confirmAnswer = answer;
+				(mcp as { hasActiveTools: boolean }).hasActiveTools = true;
+				(mcp as { tools: unknown[] }).tools = [{
+					serverId: 'ha', serverName: 'Home Assistant', name: 'unlock_door',
+					description: 'Unlock a door', inputSchema: { type: 'object' }
+				}];
+				(mcp as { servers: unknown[] }).servers = [{
+					id: 'ha', name: 'Home Assistant', transport: 'http', url: 'http://ha.local/api/mcp', enabled: true, ...server
+				}];
+
+				const prompts = !('askBeforeRun' in server);
+				const runs = !prompts || answer;
+				let providerRound = 0;
+				let mcpCalls = 0;
+				let toolResult = '';
+				const toolCallWire = `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'unlock_door', arguments: '{"door":"front"}' } }] } }] })}\n\n` + 'data: [DONE]\n\n';
+				const answerWire = `data: ${JSON.stringify({ choices: [{ delta: { content: 'Done.' } }] })}\n\n` + 'data: [DONE]\n\n';
+
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/mcp/call') {
+						mcpCalls++;
+						return new Response(JSON.stringify({ toolName: 'unlock_door', content: 'unlocked', isError: false }), {
+							headers: { 'Content-Type': 'application/json' }
+						});
+					}
+					if (url === '/api/chat') {
+						if (providerRound === 1) {
+							const body = JSON.parse(String(init.body));
+							toolResult = body.messages.find((m: { role: string }) => m.role === 'tool')?.content ?? '';
+						}
+						return POST({ request: new Request('http://localhost/api/chat', init) });
+					}
+					const wire = providerRound === 0 ? toolCallWire : answerWire;
+					providerRound++;
+					return new Response(new TextEncoder().encode(wire), { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+
+				await sendCompanionMessage('Open the front door', [], hooks);
+				assert.equal(chatStore.error, null);
+				assert.deepEqual(
+					mcp.confirmations,
+					prompts ? [{ serverName: 'Home Assistant', toolName: 'unlock_door', args: { door: 'front' } }] : []
+				);
+				assert.equal(mcpCalls, runs ? 1 : 0);
+				assert.match(toolResult, runs ? /unlocked/ : /declined.*NOT executed/);
+				assert.equal(providerRound, 2, 'the model answers after the tool round');
+				mcp.confirmAnswer = true;
+				(mcp as { hasActiveTools: boolean }).hasActiveTools = false;
+				(mcp as { tools: unknown[] }).tools = [];
+				(mcp as { servers: unknown[] }).servers = [];
+			});
+		}
 		await t.test('tool errors are prefixed for the model', async (t) => {
 			direct = false; llmProvider = 'openai-compatible';
 			speechEnabled = false; messages.length = 0; spoken = []; turns.length = 0;

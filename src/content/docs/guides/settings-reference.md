@@ -202,11 +202,12 @@ Settings > MCP connects Model Context Protocol servers so she can call their too
 | Control | What it does | Default |
 |---|---|---|
 | Name | A label for the server. Required. | Empty |
-| Transport | **HTTP** or **stdio**. stdio only runs on self-hosted web builds that allowlist the command with `MCP_STDIO_ALLOWED_COMMANDS`. | HTTP |
+| Transport | **HTTP** or **stdio**. stdio only runs on self-hosted web builds that allowlist the full command line with `MCP_STDIO_ALLOWED_COMMANDS`. | HTTP |
 | URL | HTTP only. The server endpoint. Required. | Empty |
 | Auth | HTTP only. **None** or **Bearer**. | None |
 | Token | Bearer only. Required when Bearer is chosen. | Empty |
 | Command, Arguments, Env Vars | stdio only. Env Vars take one `KEY=value` per line. | Empty |
+| Ask before running tools | Shows each tool call with its arguments and waits for **Run** or **Skip**. | On |
 | Inject text tool results as user messages | Helps local models that ignore tool-role messages. | Off |
 
 Each saved server has an enable switch, **Edit server**, and **Remove server**.
