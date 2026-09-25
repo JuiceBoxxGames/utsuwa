@@ -163,6 +163,9 @@ export class AvatarAnimator {
 			mixer.removeEventListener('finished', onDone);
 			this.emotePlaying = false;
 			this.emote = null;
+			// clampWhenFinished keeps the last frame at full weight; release it
+			// or the idle blends against it and the arms hang between poses
+			action.fadeOut(0.3);
 			idle?.reset().fadeIn(0.3).play();
 			onFinished();
 		};

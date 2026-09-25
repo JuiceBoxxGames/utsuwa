@@ -163,6 +163,9 @@ test('emote plays once at 1.5x, then returns to idle and reports it', async () =
 	assert.equal(animator.emote, null);
 	animator.update(0.3);
 	near(weight(animator.idle), 1);
+	// The clamped last frame must let go, or the idle blends against it
+	// and the arms hang halfway between the two poses
+	near(weight(emote), 0);
 });
 
 test('no emote requested restarts a stopped idle', async () => {
