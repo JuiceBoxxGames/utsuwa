@@ -2,6 +2,8 @@
 	import { Icon } from '$lib/components/ui';
 	import { sttStore } from '$lib/stores/stt.svelte';
 	import { chatDraftStore } from '$lib/stores/chat-draft.svelte';
+	import { chatStore } from '$lib/stores/chat.svelte';
+	import { cancelActiveTurn } from '$lib/services/chat/companion-chat';
 	import { queueFiles, showVisionHint } from './attach-files';
 	import { unlockAudioContext } from '$lib/services/tts';
 	import { type PreparedImage } from '$lib/services/storage/keepsakes';
@@ -175,15 +177,27 @@
 				>
 					<Icon name="mic" size={20} />
 				</button>
-				<button
-					type="submit"
-					class="mic-btn send-btn"
-					disabled={disabled || !hasContent}
-					aria-label="Send message"
-					title="Send message"
-				>
-					<Icon name="send" size={20} />
-				</button>
+				{#if chatStore.isLoading}
+					<button
+						type="button"
+						class="mic-btn send-btn"
+						onclick={cancelActiveTurn}
+						aria-label="Stop reply"
+						title="Stop reply"
+					>
+						<Icon name="stop" size={16} />
+					</button>
+				{:else}
+					<button
+						type="submit"
+						class="mic-btn send-btn"
+						disabled={disabled || !hasContent}
+						aria-label="Send message"
+						title="Send message"
+					>
+						<Icon name="send" size={20} />
+					</button>
+				{/if}
 			{/if}
 		</div>
 	</form>
