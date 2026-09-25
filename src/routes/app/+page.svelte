@@ -2,7 +2,8 @@
 	import WakeLockIndicator from '$lib/components/display/WakeLockIndicator.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
-	import { TopRightButtons, TopLeftButtons, InfoModal, Icon } from '$lib/components/ui';
+	import { TopRightButtons, TopLeftButtons, InfoModal } from '$lib/components/ui';
+	import Toasts from '$lib/components/ui/Toasts.svelte';
 	import BottomChatBar from '$lib/components/chat/BottomChatBar.svelte';
 	import McpConfirmDialog from '$lib/components/mcp/McpConfirmDialog.svelte';
 	import PhotoModeDock from '$lib/components/photomode/PhotoModeDock.svelte';
@@ -43,53 +44,22 @@
 	import { personaStore } from '$lib/stores/persona.svelte';
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { startWaitTone, stopWaitTone, destroyWaitTone } from '$lib/utils/wait-tone';
-	import { debugEventsStore } from '$lib/stores/debugEvents.svelte';
 	import { getLLMProvider, providerSupportsVision } from '$lib/services/providers/registry';
 	import { isLocalLLMProvider } from '$lib/services/providers/local-endpoints';
 	import { canShowImages } from '$lib/services/providers/vision';
-	import { onDestroy, untrack } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { sendCompanionMessage, type SendCompanionMessageOptions } from '$lib/services/chat/companion-chat';
-	import { createReminderFiredHandler } from '$lib/services/chat/reminder-chat';
 	import { reminderStore } from '$lib/stores/reminders.svelte';
 	import { type PreparedImage } from '$lib/services/storage/keepsakes';
 	import { isTauri } from '$lib/services/platform';
 	import { browser } from '$app/environment';
-	import type { StateUpdates } from '$lib/types/character';
-	import type { EventDefinition, Scene } from '$lib/types/events';
-	import { canGenerateMoment, generateMoment } from '$lib/services/events/moment-generator';
-	import { pop, fadeFast } from '$lib/utils/motion';
-
-	// V2 companion system imports
-	import {
-		hydrateWorkingMemory,
-		backfillEmbeddings,
-		getEmbeddingBackfillStatus
-	} from '$lib/engine/memory';
-	import { initEmbeddingModel } from '$lib/services/embeddings';
-	import { eventsApi } from '$lib/engine/events';
-	import { completionMarkers } from '$lib/engine/event-completion';
+	import { fadeFast } from '$lib/utils/motion';
+	import { startCompanionSession } from '$lib/services/session/companion-session';
+	import { createEventSession } from '$lib/services/session/event-session.svelte';
 
 	let canvasRef: HTMLCanvasElement | null = null;
 
-	// Event scene state
-	let activeEvent = $state<EventDefinition | null>(null);
-
-	// Generated moments: the event stays the source of truth for structure and
-	// completion; generatedScene only swaps the words when the model delivers.
-	let generatedScene = $state<Scene | null>(null);
-	let momentPending = $state(false);
-
-	function openEvent(e: EventDefinition) {
-		activeEvent = e;
-		generatedScene = null;
-		momentPending = canGenerateMoment(e);
-		if (!momentPending) return;
-		void generateMoment(e).then((scene) => {
-			if (activeEvent?.id !== e.id) return;
-			generatedScene = scene;
-			momentPending = false;
-		});
-	}
+	const events = createEventSession();
 
 	// Info modal state
 	let showInfoModal = $state(false);
@@ -161,31 +131,6 @@
 		};
 	});
 
-	// Hydrate working memory on start
-	$effect(() => {
-		(async () => {
-			try {
-				await hydrateWorkingMemory();
-			} catch (e) {
-				console.error('Failed to hydrate working memory:', e);
-			}
-		})();
-	});
-
-	// Initialize embedding model and backfill any facts without embeddings
-	$effect(() => {
-		initEmbeddingModel().then(async (ready) => {
-			if (ready) {
-				const status = await getEmbeddingBackfillStatus();
-				if (status.withoutEmbeddings > 0) {
-					await backfillEmbeddings();
-				}
-			}
-		}).catch((e) => {
-			console.error('Failed to initialize embedding model:', e);
-		});
-	});
-
 	// Check for first-run (onboarding). ?onboarding=1 force-opens it for testing
 	// without resetting the companion.
 	$effect(() => {
@@ -198,25 +143,12 @@
 		}
 	});
 
-	// Check for debug events (from developer tools)
-	$effect(() => {
-		const debugEvent = debugEventsStore.consume();
-		if (debugEvent) untrack(() => openEvent(debugEvent));
-	});
-
-	// Start reminder polling and react to fired reminders by sending them back
-	// through the companion pipeline. This lets the LLM decide the action
-	// (speech, web search, etc.) instead of showing a passive toast.
-	$effect(() => {
-		const unsubscribeReminder = reminderStore.addReminderFiredListener(
-			createReminderFiredHandler((content, options) => handleSend(content, [], options))
-		);
-		reminderStore.startPolling();
-		return () => {
-			reminderStore.stopPolling();
-			unsubscribeReminder();
-		};
-	});
+	onMount(() =>
+		startCompanionSession({
+			send: (content, options) => handleSend(content, [], options),
+			onEvent: events.open
+		})
+	);
 
 	// Shown-image previews are blob: URLs (shared between the chat history and the
 	// thinking overlay). Free them all when leaving the app so a long session's
@@ -240,7 +172,7 @@
 		await sendCompanionMessage(content, images, {
 			setTyping: (v) => (isTyping = v),
 			setLatestResponse: (v) => (latestResponse = v),
-			setActiveEvent: openEvent,
+			setActiveEvent: events.open,
 			setPhase: (p) => (thinkingPhase = p),
 			onShownImages: (shown) => (thinkingImages = shown),
 			onNewMemory: (m) => (lastNewMemory = m)
@@ -250,44 +182,6 @@
 	// Handle speech bubble hide
 	function handleBubbleHide() {
 		latestResponse = '';
-	}
-
-	// Handle event completion
-	function handleEventComplete(choiceIndex?: number, stateChanges?: Partial<StateUpdates>) {
-		if (!activeEvent) return;
-
-		const event = $state.snapshot(activeEvent);
-
-		if (stateChanges) {
-			characterStore.applyUpdates(stateChanges as StateUpdates);
-		} else if (event.stateChanges) {
-			characterStore.applyUpdates(event.stateChanges);
-		}
-
-		// Apply the gating markers first and synchronously — the event id plus the
-		// chosen outcome marker (e.g. confession_accepted) drive stage progression
-		// and are persisted via the character store. Doing this before the DB write
-		// means a failed write can't silently strand a hard-won stage unlock.
-		for (const marker of completionMarkers(event, choiceIndex)) {
-			characterStore.markEventCompleted(marker);
-		}
-
-		// Then record the durable history entry (also carries cooldown timestamps).
-		eventsApi
-			.recordCompletedEvent(
-				event,
-				choiceIndex,
-				choiceIndex !== undefined ? `Choice ${choiceIndex + 1}` : undefined
-			)
-			.catch((e) => {
-				console.error('Failed to record event completion:', e);
-			});
-
-		activeEvent = null;
-	}
-
-	function handleEventClose() {
-		activeEvent = null;
 	}
 </script>
 
@@ -326,20 +220,6 @@
 					<span class="dot"></span>
 					<span class="dot"></span>
 					<span class="dot"></span>
-				</div>
-			{/if}
-
-			{#if vrmStore.error}
-				<div
-					class="error-toast"
-					out:pop={{ base: 'translateX(-50%)' }}
-					role="button"
-					tabindex="0"
-					onclick={() => vrmStore.setError(null)}
-					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); vrmStore.setError(null); } }}
-				>
-					<span>{vrmStore.error}</span>
-					<button type="button" class="toast-dismiss" aria-label="Dismiss"><Icon name="x" size={14} /></button>
 				</div>
 			{/if}
 
@@ -423,31 +303,18 @@
 			<PhotoModeDock />
 		{/if}
 
-		<!-- Error toast for chat errors -->
-		{#if chatStore.error}
-			<div
-				class="chat-error-toast"
-				out:pop={{ base: 'translateX(-50%)' }}
-				role="button"
-				tabindex="0"
-				onclick={() => chatStore.setError(null)}
-				onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chatStore.setError(null); } }}
-			>
-				<span>{chatStore.error}</span>
-				<button type="button" class="toast-dismiss" aria-label="Dismiss"><Icon name="x" size={14} /></button>
-			</div>
-		{/if}
+		<Toasts />
 
 		<!-- Event Scene Overlay (deferred while posing; renders on exit) -->
-		{#if activeEvent?.scene && !photomodeStore.active}
+		{#if events.activeEvent?.scene && !photomodeStore.active}
 			<EventScene
-				scene={generatedScene ?? activeEvent.scene}
-				pending={momentPending}
-				eventName={activeEvent?.name}
-				eventType={activeEvent?.type}
+				scene={events.generatedScene ?? events.activeEvent.scene}
+				pending={events.pending}
+				eventName={events.activeEvent.name}
+				eventType={events.activeEvent.type}
 				companionName={personaStore.activeCard.name}
-				onComplete={handleEventComplete}
-				onClose={handleEventClose}
+				onComplete={events.complete}
+				onClose={events.close}
 			/>
 		{/if}
 	</main>
@@ -567,94 +434,6 @@
 		40% {
 			opacity: 1;
 			transform: scale(1);
-		}
-	}
-
-	.error-toast,
-	.chat-error-toast {
-		position: fixed;
-		top: 4.5rem;
-		left: 50%;
-		transform: translateX(-50%);
-		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
-		width: fit-content;
-		max-width: 600px;
-		padding: 0.75rem 1rem;
-		background: var(--color-error);
-		border: 1px solid transparent;
-		border-radius: var(--radius-lg);
-		color: #fff;
-		font-size: 0.875rem;
-		cursor: pointer;
-		z-index: 50;
-		animation: errorSlideDownShake 0.5s ease-out;
-		box-shadow: var(--shadow-lg);
-	}
-
-	.error-toast span,
-	.chat-error-toast span {
-		flex: 1;
-		word-wrap: break-word;
-	}
-
-	.toast-dismiss {
-		background: rgba(255, 255, 255, 0.2);
-		border: none;
-		padding: 0.25rem;
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		color: white;
-		opacity: 0.9;
-		font-size: 0.875rem;
-		line-height: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.15s ease;
-	}
-
-	.toast-dismiss:hover {
-		opacity: 1;
-		background: rgba(255, 255, 255, 0.3);
-	}
-
-	@keyframes errorSlideDownShake {
-		0% {
-			opacity: 0;
-			transform: translateX(-50%) translateY(-8px);
-		}
-		30% {
-			opacity: 1;
-			transform: translateX(-50%) translateY(0);
-		}
-		45% {
-			transform: translateX(calc(-50% + 6px)) translateY(0);
-		}
-		60% {
-			transform: translateX(calc(-50% - 5px)) translateY(0);
-		}
-		75% {
-			transform: translateX(calc(-50% + 3px)) translateY(0);
-		}
-		90% {
-			transform: translateX(calc(-50% - 2px)) translateY(0);
-		}
-		100% {
-			transform: translateX(-50%) translateY(0);
-		}
-	}
-
-	.chat-error-toast {
-		top: 5.5rem;
-	}
-
-	@media (max-width: 640px) {
-		.error-toast,
-		.chat-error-toast {
-			width: fit-content;
-			max-width: calc(100vw - 1.5rem);
 		}
 	}
 

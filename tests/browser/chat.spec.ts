@@ -91,6 +91,12 @@ test('sending through the real chat flow keeps focus before and after a streamed
 			activeModel: 'gpt-4o-mini'
 		});
 		await modulesStore.setModuleEnabled('consciousness', true);
+		// The first-meeting scene is a modal that rightly takes focus; this test is about the composer
+		const eventsPath = '/src/lib/engine/events.ts';
+		const dataPath = '/src/lib/data/events/index.ts';
+		const { eventsApi } = await import(/* @vite-ignore */ eventsPath);
+		const { allEvents } = await import(/* @vite-ignore */ dataPath);
+		await eventsApi.recordCompletedEvent(allEvents.find((e: { id: string }) => e.id === 'first_conversation'));
 	});
 	const input = page.getByRole('textbox', { name: 'Message', exact: true });
 	await input.fill('Hello there');
@@ -244,4 +250,39 @@ test('replies are spoken with Fish Audio through the web proxy', async ({ page }
 		format: 'mp3',
 		prosody: { speed: 1 }
 	});
+});
+
+test('chat errors are dismissable alerts and a stopped reply leaves no empty bubble', async ({ page }) => {
+	await openApp(page, { chatDisplayMode: 'sidebar' });
+	let fail = true;
+	await page.route('**/api/chat', async (route) => {
+		if (fail) return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Upstream exploded"}' });
+		await new Promise(() => {});
+	});
+	await page.evaluate(async () => {
+		const modulesPath = '/src/lib/stores/modules.svelte.ts';
+		const settingsPath = '/src/lib/stores/settings.svelte.ts';
+		const { modulesStore } = await import(/* @vite-ignore */ modulesPath);
+		const { settingsStore } = await import(/* @vite-ignore */ settingsPath);
+		settingsStore.setProviderConfig('openai', { apiKey: 'browser-test-only' });
+		await modulesStore.setModuleSettings('consciousness', { activeProvider: 'openai', activeModel: 'gpt-4o-mini' });
+		await modulesStore.setModuleEnabled('consciousness', true);
+	});
+	const input = page.getByRole('textbox', { name: 'Message', exact: true });
+	await input.fill('Hello there');
+	await page.getByRole('button', { name: 'Send message', exact: true }).click();
+	const alert = page.getByRole('alert');
+	await expect(alert).toBeVisible();
+	await expect(page.locator('.message.assistant')).toHaveCount(0);
+	await alert.getByRole('button', { name: 'Dismiss', exact: true }).press('Enter');
+	await expect(alert).toHaveCount(0);
+
+	fail = false;
+	await input.fill('Are you there?');
+	await page.getByRole('button', { name: 'Send message', exact: true }).click();
+	await page.getByRole('button', { name: 'Stop reply', exact: true }).click();
+	await expect(page.getByRole('status').filter({ hasText: 'Stopped' })).toBeVisible();
+	await expect(input).not.toHaveAttribute('readonly', '');
+	await expect(page.locator('.message.user')).toHaveCount(2);
+	await expect(page.locator('.message.assistant')).toHaveCount(0);
 });

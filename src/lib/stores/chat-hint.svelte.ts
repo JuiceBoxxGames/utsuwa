@@ -5,19 +5,20 @@ import { isQuotaError, STORAGE_FULL_MESSAGE } from '$lib/services/storage/quota'
 const PRIVACY_ACK_KEY = STORAGE_INVENTORY.localStorage.imagePrivacyAck;
 
 /**
- * Transient chat toasts (image hints, TTS errors) plus the one-time photo
- * privacy disclosure. Lives in a store so any input surface can raise them
- * while BottomChatBar, which is always mounted, renders them.
+ * Transient chat hints (image hints, TTS errors) plus the one-time photo
+ * privacy disclosure. Lives in a store so any input surface can raise them;
+ * Toasts renders the hint and BottomChatBar the disclosure.
  */
 function createChatHintStore() {
 	let hint = $state<string | null>(null);
 	let showPrivacy = $state(false);
-	let hintTimer: ReturnType<typeof setTimeout> | null = null;
 
 	function showHint(message: string) {
 		hint = message;
-		if (hintTimer) clearTimeout(hintTimer);
-		hintTimer = setTimeout(() => (hint = null), 6000);
+	}
+
+	function clearHint() {
+		hint = null;
 	}
 
 	/** Raises the storage-full hint for quota errors; false for anything else. */
@@ -38,10 +39,6 @@ function createChatHintStore() {
 		showPrivacy = false;
 	}
 
-	function destroy() {
-		if (hintTimer) clearTimeout(hintTimer);
-	}
-
 	return {
 		get hint() {
 			return hint;
@@ -50,10 +47,10 @@ function createChatHintStore() {
 			return showPrivacy;
 		},
 		showHint,
+		clearHint,
 		reportStorageError,
 		requestPrivacyNotice,
-		ackPrivacy,
-		destroy
+		ackPrivacy
 	};
 }
 

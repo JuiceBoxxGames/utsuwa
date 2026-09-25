@@ -13,7 +13,6 @@ function createSttStore() {
 	let interimTranscript = $state('');
 	let error = $state<string | null>(null);
 	let audioLevel = $state(0);
-	let errorTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	// Which OpenAI-compatible STT provider to use, if any. A configured local
 	// server wins over Groq (mirrors how a Groq key wins over Web Speech), and
@@ -178,21 +177,10 @@ function createSttStore() {
 	}
 
 	function setError(message: string) {
-		if (errorTimeout) {
-			clearTimeout(errorTimeout);
-		}
 		error = message;
-		errorTimeout = setTimeout(() => {
-			error = null;
-			errorTimeout = null;
-		}, 4000);
 	}
 
 	function clearError() {
-		if (errorTimeout) {
-			clearTimeout(errorTimeout);
-			errorTimeout = null;
-		}
 		error = null;
 	}
 

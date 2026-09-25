@@ -1,21 +1,24 @@
 import type { EventDefinition } from '$lib/types/events';
 
-// Debug event store for triggering test events
-let pendingEvent = $state<EventDefinition | null>(null);
+// Developer-tools events. The developer page triggers one and navigates home;
+// it opens right away if a page is listening, otherwise when the next one mounts.
+let pendingEvent: EventDefinition | null = null;
+let listener: ((event: EventDefinition) => void) | null = null;
 
 export const debugEventsStore = {
-	get pendingEvent() {
-		return pendingEvent;
-	},
-
 	trigger(event: EventDefinition) {
-		pendingEvent = event;
+		if (listener) listener(event);
+		else pendingEvent = event;
 	},
 
-	consume() {
+	listen(fn: (event: EventDefinition) => void): () => void {
+		listener = fn;
 		const event = pendingEvent;
 		pendingEvent = null;
-		return event;
+		if (event) fn(event);
+		return () => {
+			if (listener === fn) listener = null;
+		};
 	}
 };
 
