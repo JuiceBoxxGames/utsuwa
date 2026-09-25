@@ -43,6 +43,7 @@ interface ChatOptions {
 	frequencyPenalty?: number;
 	/** Native tool definitions for providers that support function calling. */
 	tools?: Record<string, unknown>[];
+	signal?: AbortSignal;
 }
 
 function getCurrentSiteOrigin(): string | undefined {
@@ -52,12 +53,11 @@ function getCurrentSiteOrigin(): string | undefined {
 /**
  * Stream chat completions directly from provider APIs.
  * Used for local providers and Tauri builds where SvelteKit server routes aren't available.
+ * Resolves when the stream ends; rejects with a user-facing message on any failure.
  */
 export async function streamChatDirect(
 	options: ChatOptions,
 	onChunk: (text: string) => void,
-	onError: (error: string) => void,
-	onDone: () => void,
 	onToolCall?: (name: string, args: Record<string, unknown>, id: string) => void
 ): Promise<void> {
 	const { messages, provider, model, apiKey, baseURL, systemPrompt } = options;
@@ -65,8 +65,7 @@ export async function streamChatDirect(
 	const isLocal = isLocalLLMProvider(provider);
 	// Custom OpenAI-compatible endpoints may or may not need a key, so don't force one.
 	if (!apiKey && !isLocal && provider !== 'openai-compatible') {
-		onError('API key required');
-		return;
+		throw new Error('API key required');
 	}
 
 	// Custom endpoints get the same /v1 normalization as model discovery, so a
@@ -77,8 +76,7 @@ export async function streamChatDirect(
 			? ensureOpenAIPath(baseURL)
 			: baseURL || DEFAULT_CHAT_BASE_URLS[provider];
 	if (!providerBaseURL) {
-		onError(`Unknown provider: ${provider}`);
-		return;
+		throw new Error(`Unknown provider: ${provider}`);
 	}
 
 	const messagesWithSystem: ChatMessage[] = [
@@ -132,75 +130,73 @@ export async function streamChatDirect(
 		? `${providerBaseURL.replace(/\/+$/, '')}/messages`
 		: `${providerBaseURL.replace(/\/+$/, '')}/chat/completions`;
 
+	let response: Response;
 	try {
-		const response = await fetch(url, { method: 'POST', headers, body });
-
-		if (!response.ok) {
-			const bodyText = await response.text().catch(() => '');
-			let msg = `Provider error (${response.status})`;
-			if (looksLikeHtml(bodyText)) {
-				msg = htmlEndpointError(providerBaseURL);
-			} else {
-				try {
-					msg = JSON.parse(bodyText)?.error?.message || msg;
-				} catch {
-					// Not JSON — keep the status-based message
-				}
-			}
-			msg = sanitizeProviderError(msg, providerBaseURL);
-			onError(isLocal && response.status === 404 ? `${msg}. Pull or select an installed model.` : msg);
-			return;
-		}
-
-		// A 200 with an HTML content-type means the URL points at a website, not an API
-		const contentType = response.headers.get('content-type') || '';
-		if (contentType.includes('text/html')) {
-			onError(htmlEndpointError(providerBaseURL));
-			return;
-		}
-
-		const reader = response.body?.getReader();
-		if (!reader) {
-			onError('No response body');
-			return;
-		}
-
-		const decoder = new TextDecoder();
-		let buffer = '';
-
-		// Collect tool-call deltas across chunks (OpenAI-compatible only).
-		// Each delta contains one index/fragment; we aggregate by index and
-		// fire the callback when the function name + arguments are complete.
-		const toolCallBuffers: Map<number, ToolCallBuffer> = new Map();
-
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-
-			buffer += decoder.decode(value, { stream: true });
-			const lines = buffer.split('\n');
-			buffer = lines.pop() || '';
-
-			for (const line of lines) {
-				processStreamLine(line, onChunk, onToolCall, toolCallBuffers);
-			}
-		}
-
-		// Flush the decoder and any final line that arrived without a trailing newline
-		buffer += decoder.decode();
-		processStreamLine(buffer, onChunk, onToolCall, toolCallBuffers);
-
-		// Fire onToolCall for each collected tool call after the stream ends
-		emitToolCalls(toolCallBuffers, onToolCall);
-
-		onDone();
+		response = await fetch(url, { method: 'POST', headers, body, signal: options.signal });
 	} catch (err) {
+		if (options.signal?.aborted) throw err;
 		const rawMessage = err instanceof Error ? err.message : 'Failed to connect to provider';
-		const msg = isLocal
-			? getLocalProviderConnectionHint(provider, providerBaseURL, getCurrentSiteOrigin())
-			: rawMessage;
-		onError(msg);
+		throw new Error(
+			isLocal
+				? getLocalProviderConnectionHint(provider, providerBaseURL, getCurrentSiteOrigin())
+				: rawMessage
+		);
 	}
+
+	if (!response.ok) {
+		const bodyText = await response.text().catch(() => '');
+		let msg = `Provider error (${response.status})`;
+		if (looksLikeHtml(bodyText)) {
+			msg = htmlEndpointError(providerBaseURL);
+		} else {
+			try {
+				msg = JSON.parse(bodyText)?.error?.message || msg;
+			} catch {
+				// Not JSON, keep the status-based message
+			}
+		}
+		msg = sanitizeProviderError(msg, providerBaseURL);
+		throw new Error(isLocal && response.status === 404 ? `${msg}. Pull or select an installed model.` : msg);
+	}
+
+	// A 200 with an HTML content-type means the URL points at a website, not an API
+	const contentType = response.headers.get('content-type') || '';
+	if (contentType.includes('text/html')) {
+		throw new Error(htmlEndpointError(providerBaseURL));
+	}
+
+	const reader = response.body?.getReader();
+	if (!reader) {
+		throw new Error('No response body');
+	}
+
+	const decoder = new TextDecoder();
+	let buffer = '';
+
+	// Collect tool-call deltas across chunks (OpenAI-compatible only).
+	// Each delta contains one index/fragment; we aggregate by index and
+	// fire the callback when the function name + arguments are complete.
+	const toolCallBuffers: Map<number, ToolCallBuffer> = new Map();
+
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+
+		buffer += decoder.decode(value, { stream: true });
+		const lines = buffer.split('\n');
+		buffer = lines.pop() || '';
+
+		for (const line of lines) {
+			processStreamLine(line, onChunk, onToolCall, toolCallBuffers);
+		}
+	}
+
+	// Flush the decoder and any final line that arrived without a trailing newline
+	buffer += decoder.decode();
+	processStreamLine(buffer, onChunk, onToolCall, toolCallBuffers);
+
+	// Fire onToolCall for each collected tool call after the stream ends
+	emitToolCalls(toolCallBuffers, onToolCall);
 }
 
 function processStreamLine(

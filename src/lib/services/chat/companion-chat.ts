@@ -39,6 +39,7 @@ import { isTauri } from '$lib/services/platform';
 import { env as publicEnv } from '$env/dynamic/public';
 import { isMcpHardeningEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
 import { mcpStore } from '$lib/stores/mcp.svelte';
+import { chatHintStore } from '$lib/stores/chat-hint.svelte';
 import { callTool } from '$lib/services/mcp/capability';
 import {
 	MCP_MAX_ROUNDS,
@@ -211,6 +212,17 @@ export async function streamServerRoute(
 export interface SendCompanionMessageOptions {
 	/** When true, the message is delivered as a system event instead of a user turn. */
 	systemEvent?: boolean;
+	/** Give up when the model sends nothing for this long. */
+	stallTimeoutMs?: number;
+	/** Hard cap on the whole turn. */
+	turnTimeoutMs?: number;
+}
+
+let activeTurn: AbortController | null = null;
+
+/** Stop the reply in flight, if any. */
+export function cancelActiveTurn() {
+	activeTurn?.abort(new Error('Stopped'));
 }
 
 export async function sendCompanionMessage(
@@ -219,7 +231,7 @@ export async function sendCompanionMessage(
 	hooks: CompanionChatHooks,
 	options: SendCompanionMessageOptions = {}
 ): Promise<void> {
-	const { systemEvent = false } = options;
+	const { systemEvent = false, stallTimeoutMs = 90_000, turnTimeoutMs = 600_000 } = options;
 	if ((!content.trim() && images.length === 0) || chatStore.isLoading) return;
 
 	if (!modulesStore.isModuleEnabled('consciousness')) {
@@ -240,6 +252,26 @@ export async function sendCompanionMessage(
 
 	chatStore.setLoading(true);
 	chatStore.setError(null);
+
+	// Stop, stall and the hard cap all abort the same controller. Awaits that
+	// may hang are raced against it, so the turn always settles promptly.
+	const controller = new AbortController();
+	activeTurn = controller;
+	const { signal } = controller;
+	const timeOut = () => controller.abort(new Error('Reply timed out'));
+	const aborted = new Promise<never>((_, reject) =>
+		signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+	);
+	aborted.catch(() => {});
+	const untilAborted = <T>(work: Promise<T>) => Promise.race([work, aborted]);
+	const turnTimer = setTimeout(timeOut, turnTimeoutMs);
+	let stallTimer: ReturnType<typeof setTimeout> | undefined;
+	// ponytail: counts visible text and tool calls only, so a reasoning model that
+	// thinks silently past the stall limit gets cut off; bump on raw bytes if that bites.
+	const bumpStall = () => {
+		clearTimeout(stallTimer);
+		stallTimer = setTimeout(timeOut, stallTimeoutMs);
+	};
 	hooks.setTyping(true);
 	vrmStore.setThinking(true);
 	hooks.setLatestResponse('');
@@ -274,13 +306,13 @@ export async function sendCompanionMessage(
 			throw new Error(`Please configure API key for ${providerMeta.name} in Settings > LLM Model`);
 		}
 
-		let systemPrompt = await buildCompanionPrompt(
+		let systemPrompt = await untilAborted(buildCompanionPrompt(
 			content,
 			images.length > 0,
 			provider,
 			contextSize,
 			systemEvent ? content : undefined
-		);
+		));
 
 		// Prompt building (memory retrieval) is done; the model call starts now
 		hooks.setPhase?.(images.length > 0 ? 'seeing' : 'thinking');
@@ -347,6 +379,8 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		let displayCapped = false;
 
 		const onDelta = (roundFull: string) => {
+			if (signal.aborted) return;
+			bumpStall();
 			if (roundFull) vrmStore.setThinking(false);
 			if (displayTtsProvider !== 'omnivoice') {
 				// Across MCP rounds the message shows everything produced so far.
@@ -552,6 +586,8 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			}
 
 			const onToolCall = (name: string, args: Record<string, unknown>, id?: string) => {
+				if (signal.aborted) return;
+				bumpStall();
 				roundCalls.push({ id: id ?? `call_${round}_${roundCalls.length}`, name, args });
 				// An MCP tool that happens to be named like a speech tool must not
 				// be treated as one.
@@ -575,9 +611,10 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 				});
 			}
 
+			bumpStall();
 			if (isTauri() || providerMeta?.isLocal) {
 				// Desktop and local providers call the provider API directly.
-				await new Promise<void>((resolve, reject) => {
+				await untilAborted(
 					streamChatDirect(
 						{
 							messages,
@@ -587,20 +624,19 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 							baseURL,
 							systemPrompt,
 							tools: sendTools,
+							signal,
 							...advancedParams
 						},
 						(text) => {
 							roundText += text;
 							onDelta(roundText);
 						},
-						(error) => reject(new Error(error)),
-						() => resolve(),
 						onToolCall
-					);
-				});
+					)
+				);
 			} else {
 				// Cloud providers on web go through the SvelteKit server route.
-				roundText = await streamServerRoute(
+				roundText = await untilAborted(streamServerRoute(
 					{
 						messages: messages.map((m) => ({
 							role: m.role,
@@ -617,9 +653,11 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 						...advancedParams
 					},
 					onDelta,
-					onToolCall
-				);
+					onToolCall,
+					signal
+				));
 			}
+			clearTimeout(stallTimer);
 
 			const mcpCalls = mcpCallsOnly(roundCalls, mcpTools);
 			// Final round: no MCP calls left, or the round budget is spent.
@@ -640,7 +678,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			const { run, skipped } = splitToolCalls(roundCalls);
 			// allSettled: one unexpected failure must not abort the whole turn —
 			// the model gets an error result and can still answer.
-			const settled = await Promise.allSettled(
+			const settled = await untilAborted(Promise.allSettled(
 				run.map(async (call) => {
 					if (!mcpToolNames.has(call.name)) {
 						// Speech tools (speak/pause/gesture) are acknowledged; a
@@ -678,7 +716,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 					const content = result.isError ? `Error: ${result.content}` : result.content;
 					return { call, content: capToolResult(content), injectAsUser: server.injectResultsAsUser };
 				})
-			);
+			));
 			const results = [
 				...settled.map((entry, index) =>
 					entry.status === 'fulfilled'
@@ -733,7 +771,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 				? cleanSpeechMarkers(fullContent, { keepStateFences: true })
 				: fullContent;
 
-		const turn = await processCompanionTurn({
+		const turn = await untilAborted(processCompanionTurn({
 			userMessage: content,
 			companionResponse: cleanedCompanionResponse,
 			llm: {
@@ -745,7 +783,7 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 			},
 			systemEvent,
 			debug: import.meta.env.DEV
-		});
+		}));
 
 		// Schedule a direct fallback only when the LLM did not emit any reminder
 		// tag itself. This prevents duplicate reminders when the model correctly
@@ -773,15 +811,6 @@ classTemperature: (displaySpeechSettings.classTemperature as number) ?? undefine
 		hooks.onNewMemory?.(turn.newMemory);
 		if (turn.triggeredEvent) hooks.setActiveEvent(turn.triggeredEvent);
 
-		// She's seen the images and responded; keep them as local keepsakes.
-		if (images.length > 0) {
-			await Promise.all(
-				images.map((img) =>
-					keepImage(img.id, img.blob, { mimeType: img.mimeType, note: turn.newMemory })
-				)
-			);
-		}
-
 		// turn.dialogue is already clean for OmniVoice because companionResponse
 		// was stripped of speak()/gesture() syntax before processCompanionTurn.
 		const displayDialogue = turn.dialogue;
@@ -801,12 +830,34 @@ if (speechState?.enabled && !streamingTTS) {
 				ttsStore.speak(turn.dialogue, ttsOptions);
 			}
 		}
+
+		// She's seen the images and responded; keep them as local keepsakes.
+		// A failed save (quota, decode) must not fail a turn that already landed.
+		if (images.length > 0) {
+			try {
+				await Promise.all(
+					images.map((img) =>
+						keepImage(img.id, img.blob, { mimeType: img.mimeType, note: turn.newMemory })
+					)
+				);
+			} catch (e) {
+				console.debug('[Keepsake] save failed:', e);
+				chatHintStore.showHint("Couldn't save that photo to the board.");
+			}
+		}
 	} catch (err) {
 		if (streamingTTS) ttsStore.cancelStreaming();
-		chatStore.setError(err instanceof Error ? err.message : 'Unknown error');
+		if (signal.aborted) {
+			chatHintStore.showHint(signal.reason instanceof Error ? signal.reason.message : 'Stopped');
+		} else {
+			chatStore.setError(err instanceof Error ? err.message : 'Unknown error');
+		}
 		hooks.setTyping(false);
 		vrmStore.setThinking(false);
 	} finally {
+		clearTimeout(turnTimer);
+		clearTimeout(stallTimer);
+		if (activeTurn === controller) activeTurn = null;
 		chatStore.setLoading(false);
 	}
 }
