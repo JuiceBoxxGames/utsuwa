@@ -16,8 +16,8 @@ export interface ProviderMetadata {
 	// base-URL field and a manual model input for these.
 	custom?: boolean;
 	// Whether this provider's models are broadly vision-capable. Coarse, cloud
-	// only. Local providers (Ollama/LM Studio) leave this unset and rely on a
-	// per-model heuristic, since vision depends on the installed model.
+	// only. Local and custom providers leave this unset and rely on a per-model
+	// heuristic, since vision depends on whatever model sits behind them.
 	supportsVision?: boolean;
 	models?: Array<{ id: string; name: string }>;
 	voices?: Array<{ id: string; name: string }>;
@@ -312,4 +312,10 @@ export function getSTTProvider(id: string): ProviderMetadata | undefined {
 /** Whether an LLM provider's models are broadly vision-capable (cloud providers). */
 export function providerSupportsVision(id: string): boolean {
 	return getLLMProvider(id)?.supportsVision === true;
+}
+
+/** Local and custom endpoints can serve anything, so the model id decides vision. */
+export function visionDependsOnModel(id: string): boolean {
+	const p = getLLMProvider(id);
+	return p?.isLocal === true || p?.custom === true;
 }
