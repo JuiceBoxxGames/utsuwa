@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.1] - 2026-09-25
+
+### Fixed
+- After a gesture the avatar never fully returned to idle: the finished clip stayed at full weight and blended with the idle, so the arms hung between the two poses. The finished emote now fades out as the idle fades in ([#238](https://github.com/JuiceBoxxGames/utsuwa/pull/238)).
+- The desktop overlay and the main window held separate conversations after startup. Every recorded turn is now shared between windows, so both show the same transcript and the model sees the same history ([#238](https://github.com/JuiceBoxxGames/utsuwa/pull/238)).
+
 ## [0.19.0] - 2026-09-25
 
 This release is the codebase audit: three tranches of hardening, cleanup, and structure work with no new features. Every change was verified live before merging.
