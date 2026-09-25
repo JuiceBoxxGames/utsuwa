@@ -290,7 +290,7 @@ The web build has five server routes. None of them store data.
 | `/api/tts/local` | Relays Local TTS and OmniVoice speech | `ALLOW_LOCAL_PROVIDER_HOSTS=true` |
 | `/api/mcp/tools`, `/api/mcp/call` | MCP proxy | `MCP_ENABLED=server` |
 
-`src/lib/services/providers/url-guard.ts` checks every client-supplied base URL before the server fetches it. It rejects non-HTTP schemes and private hosts: loopback, RFC 1918 ranges, link-local and cloud metadata, and IPv6 local ranges, in decimal, hex, octal, and short IPv4 forms. Setting `ALLOW_LOCAL_PROVIDER_HOSTS=true` lets self-hosters reach private hosts, for example an OpenAI-compatible server on their LAN.
+`src/lib/services/providers/url-guard.ts` checks every client-supplied base URL before the server fetches it. It rejects non-HTTP schemes and private hosts: loopback, RFC 1918, CGNAT, link-local and cloud metadata, multicast, and IPv6 local ranges, including IPv4-mapped and NAT64 forms and every IPv4 spelling the URL parser accepts. `url-guard.server.ts` then resolves the hostname and applies the same check to every address, and its fetch wrapper re-checks each request and refuses redirects. Setting `ALLOW_LOCAL_PROVIDER_HOSTS=true` lets self-hosters reach loopback and private hosts, for example an OpenAI-compatible server on their LAN; link-local, metadata, unspecified, and multicast addresses stay blocked.
 
 The MCP routes answer `404` unless `MCP_ENABLED` is `server` (or `both`). stdio servers also need `MCP_STDIO_ALLOWED_COMMANDS`. At startup, `src/hooks.server.ts` logs a warning whenever MCP is on.
 

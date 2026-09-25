@@ -78,7 +78,9 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			export const getWorkingMemory = () => ({}); export const ensureSession = async () => null;`,
 		'src/lib/services/storage/keepsakes': 'export const keepImage = async () => {};',
 		'src/lib/services/platform': 'export const isTauri = () => globalThis.__utsuwaChatIntegration.isTauri();',
-		'src/lib/services/chat/companion-turn': 'export const processCompanionTurn = (...args) => globalThis.__utsuwaChatIntegration.processCompanionTurn(...args);'
+		'src/lib/services/chat/companion-turn': 'export const processCompanionTurn = (...args) => globalThis.__utsuwaChatIntegration.processCompanionTurn(...args);',
+		// The chat route's SSRF guard resolves the provider host; keep it offline.
+		'node:dns/promises': "export const lookup = async () => [{ address: '203.0.113.10', family: 4 }];"
 	};
 	for (const [path, name] of Object.entries({
 		chat: 'chatStore', character: 'characterStore', persona: 'personaStore', settings: 'settingsStore',
@@ -126,6 +128,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 					t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
 						if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
 						assert.equal(String(url), 'https://provider.invalid/v1/chat/completions');
+						if (!direct) assert.equal(init.redirect, 'manual');
 						return new Response(new ReadableStream({ start(controller) {
 							// Split both SSE lines and UTF-8 characters across network chunks.
 							const bytes = new TextEncoder().encode(wire);

@@ -141,3 +141,9 @@ test('capBytes passes bodies at or under the cap through untouched', async () =>
 test('capBytes errors the stream once the cap is exceeded', async () => {
 	await assert.rejects(drain(chunks(4, 6, 1).pipeThrough(capBytes(10))), /exceeded/);
 });
+
+test('the flag still refuses link-local, metadata, and unspecified hosts', () => {
+	for (const baseUrl of ['http://169.254.169.254/', 'http://[fe80::1]:8880/', 'http://metadata.google.internal/', 'http://0.0.0.0:8880/', 'http://[::ffff:a9fe:a9fe]/']) {
+		assert.equal(rejected(validateLocalTtsProxyRequest(request({ baseUrl }), true)).status, 400, baseUrl);
+	}
+});
