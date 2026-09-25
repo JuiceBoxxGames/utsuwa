@@ -4,10 +4,10 @@ import {
 	type RelationshipStage,
 	type PersonaExtensions,
 	type AppMode,
-	createDefaultCharacterState,
 	RELATIONSHIP_STAGE_INFO,
 	MOOD_INFO
 } from '$lib/types/character';
+import { createDefaultCharacterState } from '$lib/engine/character-defaults';
 import { browser } from '$app/environment';
 import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import {
@@ -15,7 +15,7 @@ import {
 	saveCharacterState,
 	deleteCharacterState
 } from '$lib/services/storage/character';
-import { statChangesStore } from './statChanges.svelte';
+import { statChangesStore } from './stat-changes.svelte';
 import { chatHintStore } from './chat-hint.svelte';
 import { resolveTimeDecayOnLoad } from '$lib/engine/state-updates';
 import { reconcileLegacyMarkers } from '$lib/engine/event-completion';

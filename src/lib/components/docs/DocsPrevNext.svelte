@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getPrevNext } from '$lib/utils/docs-nav';
+	import { docsNav } from '$lib/config/docs-nav';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { localPath } from '$lib/config/links';
 
@@ -9,7 +9,10 @@
 
 	let { slug }: Props = $props();
 
-	const { prev, next } = $derived(getPrevNext(slug));
+	const flat = docsNav.flatMap((section) => section.items);
+	const index = $derived(flat.findIndex((item) => item.slug === slug));
+	const prev = $derived(index > 0 ? flat[index - 1] : null);
+	const next = $derived(index < flat.length - 1 ? flat[index + 1] : null);
 </script>
 
 <nav class="prev-next" aria-label="Page navigation">

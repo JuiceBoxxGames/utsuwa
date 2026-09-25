@@ -1,6 +1,6 @@
 import type { CharacterState } from '$lib/types/character';
 import type { Fact, SessionSummary, RelevantContext, MemoryBudget } from '../types/memory.ts';
-import { getMemoryBudget } from '../types/memory.ts';
+import { getMemoryBudget } from '../engine/memory-budget.ts';
 import type { PersonaCard } from '$lib/stores/persona.svelte';
 // Relative import keeps this module runnable under the node test runner
 import { stripAngleBrackets } from './response-parser.ts';

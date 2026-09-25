@@ -182,12 +182,14 @@ The active provider is chosen automatically: a configured local server first, th
 ### Memory System
 
 **Key files:**
-- `src/lib/engine/memory.ts`: working memory, retrieval, session handling, and embedding backfill
+- `src/lib/engine/memory.ts`: retrieval, scoring, and embedding backfill
+- `src/lib/engine/memory-session.ts`: working memory, per-run sessions, and hydration on load
 - `src/lib/engine/fact-dedup.ts`: duplicate detection by normalized text or cosine similarity of at least 0.9
 - `src/lib/engine/embedding-version.ts`: tags each vector with its model id so old vectors get re-embedded
 - `src/lib/services/embeddings.ts`: loads the embedding model and ranks facts
 - `src/lib/services/storage/memory.ts`: fact, session, and turn storage, including write-side dedup
-- `src/lib/types/memory.ts`: types and the context-window memory budget
+- `src/lib/engine/memory-budget.ts`: scales injected turns and facts to the model's context window
+- `src/lib/types/memory.ts`: memory types and limits
 
 Embeddings come from `Xenova/paraphrase-multilingual-MiniLM-L12-v2` running in the browser through `@huggingface/transformers`. Vectors have 384 dimensions. Retrieval scores up to 500 of the most important facts. See [Companion System](/docs/technology/companion-system#memory-system) and [Memory Graph](/docs/technology/memory-graph).
 
@@ -378,8 +380,8 @@ The desktop app wraps the same SvelteKit build with Tauri v2. It uses the static
 ### Platform Layer
 
 **Key files:**
-- `src/lib/services/platform/platform.ts`: `isTauri()` and `isWeb()`
-- `src/lib/services/platform/window.ts`: position, visibility, dragging, always-on-top, click-through
+- `src/lib/services/platform/platform.ts`: `isTauri()` and `isDesktopBuild()`
+- `src/lib/services/platform/window.ts`: window dragging for the overlay
 - `src/lib/services/platform/hotkeys.ts`: global shortcuts for push-to-talk, toggling the overlay, and focusing chat
 
 ```typescript

@@ -5,9 +5,7 @@ import {
 	isProviderReadyForFetch,
 	createFetchSignature,
 	buildInstructions,
-	buildPresetInstructions,
-	parseInstructions,
-	DEFAULT_OMNI_VOICE_DESIGN
+	buildPresetInstructions
 } from './ai-services-settings-logic.ts';
 import type { ProviderMetadata } from '$lib/services/providers/registry';
 import type { ProviderConfig } from '$lib/types';
@@ -131,26 +129,4 @@ test('buildPresetInstructions omits accent for English when preset accent is neu
 		neutral: { gender: 'male', age: 'middle-aged', pitch: 'low', accent: 'neutral' }
 	};
 	assert.equal(buildPresetInstructions('neutral', 'en', presets), 'male, middle-aged, low pitch');
-});
-
-test('parseInstructions falls back to defaults for empty strings', () => {
-	assert.deepEqual(parseInstructions(''), DEFAULT_OMNI_VOICE_DESIGN);
-});
-
-test('parseInstructions extracts all design attributes', () => {
-	assert.deepEqual(parseInstructions('male, elderly, very low pitch, british accent'), {
-		gender: 'male',
-		age: 'elderly',
-		pitch: 'very low',
-		accent: 'british'
-	});
-});
-
-test('parseInstructions ignores unsupported accent values', () => {
-	assert.deepEqual(parseInstructions('female, young adult, high pitch, martian accent'), {
-		gender: 'female',
-		age: 'young adult',
-		pitch: 'high',
-		accent: DEFAULT_OMNI_VOICE_DESIGN.accent
-	});
 });

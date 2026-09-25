@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { statChangesStore } from '$lib/stores/statChanges.svelte';
+	import { statChangesStore } from '$lib/stores/stat-changes.svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import FloatingStatIndicator from './FloatingStatIndicator.svelte';
 

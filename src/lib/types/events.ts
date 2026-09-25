@@ -92,39 +92,3 @@ export interface EventCheckResult {
 	event?: EventDefinition;
 	failedConditions?: EventCondition[];
 }
-
-// Helper function to get time of day
-export function getTimeOfDay(date: Date = new Date()): TimeOfDay {
-	const hour = date.getHours();
-	if (hour >= 5 && hour < 12) return 'morning';
-	if (hour >= 12 && hour < 17) return 'afternoon';
-	if (hour >= 17 && hour < 21) return 'evening';
-	return 'night';
-}
-
-// Helper to check if event is on cooldown
-export function isEventOnCooldown(event: EventDefinition, completedEvents: CompletedEventRecord[]): boolean {
-	if (event.oneTime) {
-		return completedEvents.some((e) => e.eventId === event.id);
-	}
-
-	if (!event.cooldownDays) return false;
-
-	const lastTrigger = completedEvents.filter((e) => e.eventId === event.id).sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime())[0];
-
-	if (!lastTrigger) return false;
-
-	const daysSince = (Date.now() - lastTrigger.completedAt.getTime()) / (1000 * 60 * 60 * 24);
-	return daysSince < event.cooldownDays;
-}
-
-// Stage ordering for comparison
-export const STAGE_ORDER: RelationshipStage[] = ['stranger', 'acquaintance', 'friend', 'close_friend', 'romantic_interest', 'dating', 'committed', 'soulmate'];
-
-export function getStageIndex(stage: RelationshipStage): number {
-	return STAGE_ORDER.indexOf(stage);
-}
-
-export function isStageAtLeast(current: RelationshipStage, minimum: RelationshipStage): boolean {
-	return getStageIndex(current) >= getStageIndex(minimum);
-}

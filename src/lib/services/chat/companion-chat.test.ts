@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
-import { createDefaultCharacterState } from '../../types/character.ts';
+import { createDefaultCharacterState } from '../../engine/character-defaults.ts';
 import { parseResponse } from '../../ai/response-parser.ts';
 import { StreamingSpeechBuffer } from '../tts/streaming-speech-buffer.ts';
 import type { SpeechSegment } from '../voice-orchestrator.ts';
@@ -86,8 +86,8 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	const replacements: Record<string, string> = {
 		'$env/dynamic/private': 'export const env = globalThis.__utsuwaChatIntegration.privateEnv;',
 		'$env/dynamic/public': 'export const env = globalThis.__utsuwaChatIntegration.publicEnv;',
-		'src/lib/engine/memory': `export const retrieveRelevantContext = async () => ({ recentTurns: [], relevantFacts: [], triggeredMemories: [], recentSessions: [] });
-			export const getWorkingMemory = () => ({}); export const ensureSession = async () => null;`,
+		'src/lib/engine/memory': 'export const retrieveRelevantContext = async () => ({ recentTurns: [], relevantFacts: [], triggeredMemories: [], recentSessions: [] });',
+		'src/lib/engine/memory-session': 'export const getWorkingMemory = () => ({}); export const ensureSession = async () => null;',
 		'src/lib/services/storage/keepsakes': 'export const keepImage = (...args) => globalThis.__utsuwaChatIntegration.keepImage(...args);',
 		'src/lib/services/platform': 'export const isTauri = () => globalThis.__utsuwaChatIntegration.isTauri();',
 		'src/lib/services/chat/companion-turn': 'export const processCompanionTurn = (...args) => globalThis.__utsuwaChatIntegration.processCompanionTurn(...args);',

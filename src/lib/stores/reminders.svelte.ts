@@ -240,10 +240,6 @@ export function addReminderFiredListener(callback: (reminder: Reminder) => void)
 	};
 }
 
-export function removeReminderFiredListener(callback: (reminder: Reminder) => void) {
-	onReminderFiredCallbacks.delete(callback);
-}
-
 export const reminderStore = {
 	get upcoming() {
 		return upcoming;
@@ -256,6 +252,5 @@ export const reminderStore = {
 	addReminder,
 	deleteReminder,
 	dismissRecentFired,
-	addReminderFiredListener,
-	removeReminderFiredListener
+	addReminderFiredListener
 };

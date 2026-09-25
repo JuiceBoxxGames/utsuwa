@@ -4,18 +4,14 @@ import { parseResponse, validateStateUpdates, extractPotentialFacts } from '$lib
 import { buildExtractionSystemPrompt } from '$lib/ai/prompt-builder';
 import { calculateBaselineUpdates, analyzeMessage } from '$lib/engine/heuristics';
 import { mergeUpdates, checkAndApplyStageTransition } from '$lib/engine/state-updates';
-import {
-	recordTurn,
-	memoryApi,
-	determineFactCategory,
-	calculateFactImportance
-} from '$lib/engine/memory';
-import { checkAllEvents, checkEvent, eventsApi } from '$lib/engine/events';
+import { memoryApi, determineFactCategory, calculateFactImportance } from '$lib/engine/memory';
+import { recordTurn, ensureSession } from '$lib/engine/memory-session';
+import { checkAllEvents, checkEvent } from '$lib/engine/event-matching';
+import { eventsApi } from '$lib/engine/events';
 import { allEvents, relationshipStrainEvent } from '$lib/data/events';
 import { completeJson, type LLMTarget } from '$lib/services/llm/transport';
 import { extractReminderTags } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
-import { ensureSession } from '$lib/engine/memory';
 import { requestAvatarAction } from '$lib/services/animation-actions';
 import type { EventDefinition } from '$lib/types/events';
 

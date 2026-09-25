@@ -22,15 +22,6 @@ export function hasImages(content: MessageContent): boolean {
 	return Array.isArray(content) && content.some((p) => p.type === 'image');
 }
 
-/** Flatten to just the text, dropping images. Used for display and fallbacks. */
-export function contentToText(content: MessageContent): string {
-	if (typeof content === 'string') return content;
-	return content
-		.filter((p): p is TextPart => p.type === 'text')
-		.map((p) => p.text)
-		.join('\n');
-}
-
 type OpenAIContentPart =
 	| { type: 'text'; text: string }
 	| { type: 'image_url'; image_url: { url: string } };

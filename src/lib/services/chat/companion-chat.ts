@@ -32,7 +32,7 @@ import { buildSystemPrompt, buildMcpSecurityInstructions, truncateChatHistory, t
 import { keepImage, type PreparedImage } from '$lib/services/storage/keepsakes';
 import { extractReminderTags, tryExtractReminderFromUserMessage } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
-import { getWorkingMemory, ensureSession } from '$lib/engine/memory';
+import { getWorkingMemory, ensureSession } from '$lib/engine/memory-session';
 import type { ContentPart } from '$lib/services/chat/content';
 import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { shouldUseSpeechTools } from '$lib/services/tts/tool-definitions';

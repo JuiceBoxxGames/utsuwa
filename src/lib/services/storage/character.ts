@@ -1,5 +1,6 @@
 import { db, type DBCharacterState } from '$lib/db';
-import { createDefaultCharacterState, type CharacterState } from '$lib/types/character';
+import type { CharacterState } from '$lib/types/character';
+import { createDefaultCharacterState } from '$lib/engine/character-defaults';
 import { mergeCharacterStates } from './character-merge';
 
 /**
