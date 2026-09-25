@@ -3,6 +3,7 @@
 import type { ConversationTurn, WorkingMemory } from '$lib/types/memory';
 import { MAX_WORKING_MEMORY_TURNS } from '$lib/types/memory';
 import * as memoryStorage from '$lib/services/storage/memory';
+import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import { summarizeTurns } from './session-summary';
 
 // Working memory store (single instance for the session)
@@ -30,6 +31,51 @@ function addTurnToWorkingMemory(turn: Omit<ConversationTurn, 'id'>): void {
 	}
 
 	workingMemory.messageCount++;
+}
+
+// The app and the overlay are separate windows with separate RAM, so a turn
+// recorded in one is broadcast and appended in the other; otherwise the two
+// windows hold different conversations until the next reload.
+export interface RemoteTurn {
+	role: ConversationTurn['role'];
+	content: string;
+	createdAt: string;
+}
+
+let channel: BroadcastChannel | null = null;
+const remoteListeners = new Set<(turn: RemoteTurn) => void>();
+
+function isRemoteTurn(data: unknown): data is RemoteTurn {
+	if (!data || typeof data !== 'object') return false;
+	const t = data as Partial<RemoteTurn>;
+	return (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string' && typeof t.createdAt === 'string';
+}
+
+function openChannel(): BroadcastChannel | null {
+	if (channel || typeof BroadcastChannel === 'undefined') return channel;
+	channel = new BroadcastChannel(STORAGE_INVENTORY.broadcast.memory);
+	// Node keeps the loop alive for an open channel; browsers have no unref
+	(channel as { unref?: () => void }).unref?.();
+	channel.onmessage = (event) => {
+		if (!isRemoteTurn(event.data)) return;
+		addTurnToWorkingMemory({ role: event.data.role, content: event.data.content, createdAt: new Date(event.data.createdAt) });
+		for (const fn of remoteListeners) fn(event.data);
+	};
+	return channel;
+}
+
+/** Hear turns recorded in other windows. Working memory follows them either way. */
+export function onRemoteTurn(fn: (turn: RemoteTurn) => void): () => void {
+	openChannel();
+	remoteListeners.add(fn);
+	return () => {
+		remoteListeners.delete(fn);
+	};
+}
+
+export function closeMemoryChannel(): void {
+	channel?.close();
+	channel = null;
 }
 
 // How many turns have been persisted under the current session.
@@ -68,6 +114,7 @@ export async function recordTurn(
 	const full: Omit<ConversationTurn, 'id'> = { ...turn, sessionId, createdAt: new Date() };
 
 	addTurnToWorkingMemory(full);
+	openChannel()?.postMessage({ role: full.role, content: full.content, createdAt: full.createdAt.toISOString() } satisfies RemoteTurn);
 
 	try {
 		await memoryStorage.saveConversationTurn(full);

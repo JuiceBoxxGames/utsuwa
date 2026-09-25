@@ -45,6 +45,18 @@ function createChatStore() {
 		if (!loading && last?.role === 'assistant' && !last.content && !last.images?.length) {
 			messages = messages.slice(0, -1);
 		}
+		if (!loading && remoteQueue.length) {
+			const queued = remoteQueue.splice(0);
+			for (const m of queued) addMessage(m.role, m.content);
+		}
+	}
+
+	// Turns from the other window (app or overlay). While a reply streams here
+	// they wait, or the streamed text would land on the wrong bubble.
+	const remoteQueue: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+	function addRemoteMessage(role: 'user' | 'assistant', content: string) {
+		if (isLoading) remoteQueue.push({ role, content });
+		else addMessage(role, content);
 	}
 
 	function setError(err: string | null) {
@@ -66,6 +78,7 @@ function createChatStore() {
 			return error;
 		},
 		addMessage,
+		addRemoteMessage,
 		updateLastMessage,
 		setLoading,
 		setError,
