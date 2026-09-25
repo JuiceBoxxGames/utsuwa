@@ -1,5 +1,4 @@
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { VRMAnimationLoaderPlugin, type VRMAnimation } from '@pixiv/three-vrm-animation';
+import type { VRMAnimation } from '@pixiv/three-vrm-animation';
 
 // Animation files are small, fixed, and requested over and over: the idle cycle
 // alone was refetching the same five .vrma files thousands of times a day, which
@@ -15,7 +14,12 @@ export type VrmAnimationFetcher = (url: string) => Promise<VRMAnimation>;
 
 const cache = new Map<string, Promise<VRMAnimation>>();
 
-function loadFromNetwork(url: string): Promise<VRMAnimation> {
+// Loaders import lazily so stores that only evict (settings pages) don't pull in three.
+async function loadFromNetwork(url: string): Promise<VRMAnimation> {
+	const [{ GLTFLoader }, { VRMAnimationLoaderPlugin }] = await Promise.all([
+		import('three/addons/loaders/GLTFLoader.js'),
+		import('@pixiv/three-vrm-animation')
+	]);
 	return new Promise<VRMAnimation>((resolve, reject) => {
 		const loader = new GLTFLoader();
 		loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
