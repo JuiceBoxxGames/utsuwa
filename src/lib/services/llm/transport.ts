@@ -13,6 +13,7 @@ import { DEFAULT_CHAT_BASE_URLS } from '$lib/services/providers/provider-default
 import {
 	htmlEndpointError,
 	looksLikeHtml,
+	providerBodyMessage,
 	sanitizeProviderError
 } from '$lib/services/providers/provider-errors';
 import { type MessageContent, toOpenAIContent, toAnthropicContent } from '$lib/services/chat/content';
@@ -247,17 +248,10 @@ async function streamDirect(
 
 	if (!response.ok) {
 		const bodyText = await response.text().catch(() => '');
-		let msg = `Provider error (${response.status})`;
-		if (looksLikeHtml(bodyText)) {
-			msg = htmlEndpointError(providerBaseURL);
-		} else {
-			try {
-				msg = JSON.parse(bodyText)?.error?.message || msg;
-			} catch {
-				// Not JSON, keep the status-based message
-			}
-		}
-		msg = sanitizeProviderError(msg, providerBaseURL);
+		const msg = sanitizeProviderError(
+			looksLikeHtml(bodyText) ? bodyText : providerBodyMessage(response.status, bodyText),
+			providerBaseURL
+		);
 		throw new ProviderError(
 			isLocal && response.status === 404 ? `${msg}. Pull or select an installed model.` : msg,
 			isTransientStatus(response.status),
@@ -405,14 +399,14 @@ async function streamServer(
 		throw new ProviderError(err instanceof Error ? err.message : 'Failed to reach the server', true);
 	}
 
-	// The route says whether the provider failure was temporary; a bare gateway
-	// error page (no JSON) falls back to the status.
+	// The route flags temporary provider failures itself, so its other JSON
+	// errors are final. Only a bare gateway page falls back to the status.
 	if (!response.ok) {
 		const errBody = await response.json().catch(() => null);
 		throw new ProviderError(
 			errBody?.error || 'Failed to get response',
-			errBody?.transient ?? isTransientStatus(response.status),
-			errBody?.retryAfterMs
+			errBody ? errBody.transient === true : isTransientStatus(response.status),
+			errBody ? errBody.retryAfterMs : parseRetryAfter(response.headers.get('retry-after'))
 		);
 	}
 

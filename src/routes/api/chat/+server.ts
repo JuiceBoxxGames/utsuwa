@@ -122,7 +122,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			});
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : 'Failed to connect to provider';
-			return new Response(JSON.stringify({ error: sanitizeProviderError(msg), ...providerFailure(err) }), {
+			return new Response(JSON.stringify({ error: sanitizeProviderError(msg, providerBaseURL), ...providerFailure(err) }), {
 				status: 502,
 				headers: { 'Content-Type': 'application/json' }
 			});
@@ -151,7 +151,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : 'Failed to start stream';
 					controller.enqueue(
-						encoder.encode(`e:${JSON.stringify({ error: sanitizeProviderError(msg), ...providerFailure(err) })}\n`)
+						encoder.encode(`e:${JSON.stringify({ error: sanitizeProviderError(msg, providerBaseURL), ...providerFailure(err) })}\n`)
 					);
 					controller.close();
 					return;
@@ -193,7 +193,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 					controller.enqueue(
 						encoder.encode(
-							`e:${JSON.stringify({ error: sanitizeProviderError(errorMessage), ...providerFailure(error) })}\n`
+							`e:${JSON.stringify({ error: sanitizeProviderError(errorMessage, providerBaseURL), ...providerFailure(error) })}\n`
 						)
 					);
 					controller.close();

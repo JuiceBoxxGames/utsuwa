@@ -948,12 +948,33 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				const image = { id: 'img-1', mimeType: 'image/png', base64: 'eA==', blob: new Blob(['x'], { type: 'image/png' }) };
 				await sendCompanionMessage('Remember this long message?', [image], hooks);
 				assert.equal(upstream, 1);
-				assert.ok(chatStore.error);
+				// Same readable message on both paths, not xsai's raw "Remote sent 401 response: {...}"
+				assert.equal(chatStore.error, 'Invalid API key');
 				assert.equal(messages.some((m) => m.role === 'user'), false, 'the failed bubble is taken back');
 				assert.equal(fixtures.chatDraftStore.draft, 'Remember this long message?');
 				assert.equal(fixtures.chatDraftStore.pending.length, 1);
 			});
 		}
+		await t.test('route errors without a transient flag are not retried; bare gateway errors are', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			let calls = 0;
+			t.mock.method(globalThis, 'fetch', async () => {
+				calls++;
+				return new Response('{"error":"Model is required"}', { status: 500, headers: { 'Content-Type': 'application/json' } });
+			});
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.equal(calls, 1, 'our own route errors are final');
+			assert.equal(chatStore.error, 'Model is required');
+
+			resetTurn(); calls = 0;
+			t.mock.method(globalThis, 'fetch', async () => {
+				if (calls++ === 0) return new Response('<html>502 Bad Gateway</html>', { status: 502, headers: { 'Retry-After': '0' } });
+				return new Response('0:"Back."\n', { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.equal(calls, 2, 'a gateway page is retried');
+			assert.equal(chatStore.error, null);
+		});
 		await t.test('a reply that drops mid-stream is not retried and stays on screen', { timeout: 5000 }, async (t) => {
 			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
 			t.mock.method(console, 'error', () => {});

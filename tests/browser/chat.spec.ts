@@ -252,7 +252,7 @@ test('replies are spoken with Fish Audio through the web proxy', { tag: '@avatar
 	});
 });
 
-test('chat errors are dismissable alerts and a stopped reply leaves no empty bubble', async ({ page }) => {
+test('chat errors are dismissable alerts, return the message, and a stopped reply leaves no empty bubble', async ({ page }) => {
 	await openApp(page, { chatDisplayMode: 'sidebar' });
 	let fail = true;
 	await page.route('**/api/chat', async (route) => {
@@ -274,6 +274,9 @@ test('chat errors are dismissable alerts and a stopped reply leaves no empty bub
 	const alert = page.getByRole('alert');
 	await expect(alert).toBeVisible();
 	await expect(page.locator('.message.assistant')).toHaveCount(0);
+	// The failed message goes back to the composer instead of staying as a bubble
+	await expect(input).toHaveValue('Hello there');
+	await expect(page.locator('.message.user')).toHaveCount(0);
 	await alert.getByRole('button', { name: 'Dismiss', exact: true }).press('Enter');
 	await expect(alert).toHaveCount(0);
 
@@ -283,6 +286,7 @@ test('chat errors are dismissable alerts and a stopped reply leaves no empty bub
 	await page.getByRole('button', { name: 'Stop reply', exact: true }).click();
 	await expect(page.getByRole('status').filter({ hasText: 'Stopped' })).toBeVisible();
 	await expect(input).not.toHaveAttribute('readonly', '');
-	await expect(page.locator('.message.user')).toHaveCount(2);
+	// Stopping is deliberate, so that message stays put
+	await expect(page.locator('.message.user')).toHaveCount(1);
 	await expect(page.locator('.message.assistant')).toHaveCount(0);
 });
