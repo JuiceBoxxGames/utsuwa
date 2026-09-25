@@ -26,7 +26,8 @@ export const STORAGE_INVENTORY = {
 	localStorageModulePrefix: 'utsuwa-module-',
 	broadcast: {
 		character: 'utsuwa-character-state',
-		reminders: 'utsuwa-reminders'
+		reminders: 'utsuwa-reminders',
+		memory: 'utsuwa-memory'
 	}
 } as const;
 

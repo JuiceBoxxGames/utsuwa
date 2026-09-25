@@ -1,8 +1,9 @@
 import { backfillEmbeddings, getEmbeddingBackfillStatus } from '$lib/engine/memory';
-import { hydrateWorkingMemory } from '$lib/engine/memory-session';
+import { hydrateWorkingMemory, onRemoteTurn } from '$lib/engine/memory-session';
 import { initEmbeddingModel } from '$lib/services/embeddings';
 import { createReminderFiredHandler } from '$lib/services/chat/reminder-chat';
 import type { SendCompanionMessageOptions } from '$lib/services/chat/companion-chat';
+import { chatStore } from '$lib/stores/chat.svelte';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { debugEventsStore } from '$lib/stores/debug-events.svelte';
 import type { EventDefinition } from '$lib/types/events';
@@ -31,6 +32,9 @@ export function startCompanionSession({ send, onEvent }: CompanionSessionHooks):
 
 	const stopDebugEvents = debugEventsStore.listen(onEvent);
 
+	// The other window's turns show up here too, so app and overlay stay one conversation
+	const stopRemoteTurns = onRemoteTurn((turn) => chatStore.addRemoteMessage(turn.role, turn.content));
+
 	// Fired reminders go back through the companion pipeline so the model
 	// decides how to react. The overlay polls too, so timers fire while the
 	// main window is hidden.
@@ -43,5 +47,6 @@ export function startCompanionSession({ send, onEvent }: CompanionSessionHooks):
 		reminderStore.stopPolling();
 		unsubscribeReminder();
 		stopDebugEvents();
+		stopRemoteTurns();
 	};
 }
