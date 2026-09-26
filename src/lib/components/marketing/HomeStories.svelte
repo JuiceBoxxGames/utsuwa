@@ -257,7 +257,7 @@
 		display: block;
 	}
 
-	/* Her comment, in the app's speech bubble */
+	/* The companion's comment, in the app's speech bubble */
 	.story-comment {
 		position: absolute;
 		top: 18px;

@@ -3,7 +3,7 @@
 
 	// Head-and-shoulders companion standing in the room's light. Each character
 	// has a 5x3 grid of prerendered head turns (row by row from up-left; the
-	// middle of row 1 looks straight at you). On desktop she turns toward the
+	// middle of row 1 looks straight at you). On desktop they turn toward the
 	// cursor.
 	let {
 		characters,
@@ -40,7 +40,7 @@
 		let y = 0;
 		const aim = () => {
 			frame = 0;
-			// Her eyes sit about 40% of the way down the frame
+			// The eyes sit about 40% of the way down the frame
 			const r = figure.getBoundingClientRect();
 			const dx = (x - (r.left + r.width / 2)) / (window.innerWidth * 0.36);
 			const dy = (y - (r.top + r.height * 0.4)) / (window.innerHeight * 0.32);
@@ -76,7 +76,7 @@
 
 <div class="bust" bind:this={figure}>
 	<div class="figure">
-		<!-- Her shadow on the wall: the window is to the left, so it falls right -->
+		<!-- The figure's shadow on the wall: the window is to the left, so it falls right -->
 		{#each characters as c, i}
 			<img class="shade" class:is-on={i === active} src={c.frames[CENTER]} alt="" width="1800" height="1500" aria-hidden="true" />
 		{/each}

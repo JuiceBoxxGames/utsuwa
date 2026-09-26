@@ -145,8 +145,8 @@
 	   hero and sized by its height, so the face lands at the same spot on any
 	   laptop screen. */
 	/* Large and centered, cut by the fold. Everything is a percentage of the
-	   hero's height so her eyes sit 42% down on any screen (they are 40% down
-	   the frame). A little right of center keeps the headline off her face. */
+	   hero's height so the eyes sit 42% down on any screen (they are 40% down
+	   the frame). A little right of center keeps the headline off the face. */
 	.hero-figure {
 		--h: min(108%, 1600px);
 		position: absolute;
@@ -286,7 +286,7 @@
 	}
 
 	/* Big monitors: scale the composition up instead of leaving a small island */
-	/* Narrow desktops: step her further right so the headline clears her face */
+	/* Narrow desktops: step the figure further right so the headline clears the face */
 	@media (max-width: 1180px) {
 		.hero-figure :global(.bust) {
 			left: 62%;
@@ -317,7 +317,7 @@
 			font-size: 15px;
 		}
 
-		/* A touch smaller and lower, so her bows stay under the nav */
+		/* A touch smaller and lower, so the hair stays under the nav */
 		.hero-figure :global(.bust) {
 			--h: 96%;
 			top: calc(46% - 0.4 * var(--h));
@@ -368,7 +368,7 @@
 		}
 
 		/* Stacked: the figure gets its own band under the copy, bleeding to
-		   the screen edges. A higher eye line than desktop, so her hair starts
+		   the screen edges. A higher eye line than desktop, so the hair starts
 		   right under the copy instead of leaving a gap of empty wall. */
 		.hero-figure {
 			position: relative;

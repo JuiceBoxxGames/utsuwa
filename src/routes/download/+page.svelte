@@ -102,7 +102,7 @@
 						<p class="dl-eyebrow">Download</p>
 						<h1 id="dl-title" class="dl-title">Utsuwa for your desktop</h1>
 						<p class="dl-lead">
-							A transparent overlay you can pin over anything, and a global hotkey to summon her. Free
+							A transparent overlay you can pin over anything, and a global hotkey to summon your companion. Free
 							and open source on every platform.
 						</p>
 						<a href={downloadFor(os)} download class="btn btn-hero">
@@ -149,9 +149,9 @@
 		<section class="overlay" aria-labelledby="overlay-title">
 			<p class="overlay-note">Desktop overlay</p>
 			<div class="overlay-head">
-				<h2 id="overlay-title" class="overlay-title">Pin her over anything</h2>
+				<h2 id="overlay-title" class="overlay-title">Pin them over anything</h2>
 				<p class="overlay-sub">
-					A transparent, always-on-top window you can drag anywhere. Hit the global hotkey and she is
+					A transparent, always-on-top window you can drag anywhere. Hit the global hotkey and they are
 					there, over your browser, your code, or your game.
 				</p>
 			</div>
