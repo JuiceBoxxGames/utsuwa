@@ -45,7 +45,7 @@
 	<link rel="alternate" hreflang="en" href={SITE_URL} />
 	<link rel="alternate" hreflang="ja" href={`${SITE_URL}/ja`} />
 	<link rel="alternate" hreflang="x-default" href={SITE_URL} />
-	<link rel="preload" as="image" href="/landing-page/hero-body.webp" type="image/webp" />
+	<link rel="preload" as="image" href="/landing-page/bust/tsuki-1-2.webp" type="image/webp" />
 
 	<!-- Open Graph -->
 	<meta property="og:type" content="website" />

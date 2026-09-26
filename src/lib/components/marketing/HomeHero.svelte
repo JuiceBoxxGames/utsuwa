@@ -3,44 +3,25 @@
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import SiteNav from './SiteNav.svelte';
 	import PlatformLine from './PlatformLine.svelte';
-	import HeroCard from './HeroCard.svelte';
+	import HeroBust from './HeroBust.svelte';
 	import { m } from '$lib/paraglide/messages';
 
-	// One beat per phrase: the headline word, the companion in the glass card,
-	// what she says, and a status line under her message that backs it up.
+	// Two companions trade places as the headline turns over. Each has a 5x3
+	// grid of prerendered head turns (see HeroBust).
+	const turns = (key: string) =>
+		Array.from({ length: 15 }, (_, i) => `/landing-page/bust/${key}-${Math.floor(i / 5)}-${i % 5}.webp`);
+	const characters = [
+		{ alt: m.hero_alt_tsuki(), frames: turns('tsuki') },
+		{ alt: m.hero_alt_avatar_c(), frames: turns('avatar-c') }
+	];
+
+	// One beat per phrase: the headline word, who is standing there, what they
+	// say, and a status line under the message that backs it up.
 	const beats = [
-		{
-			key: 'body',
-			word: m.hero_word_body(),
-			img: '/landing-page/hero-body.webp',
-			alt: m.hero_alt_body(),
-			bubble: m.hero_bubble_body(),
-			meta: m.hero_meta_body()
-		},
-		{
-			key: 'voice',
-			word: m.hero_word_voice(),
-			img: '/landing-page/hero-voice.webp',
-			alt: m.hero_alt_voice(),
-			bubble: m.hero_bubble_voice(),
-			meta: m.hero_meta_voice()
-		},
-		{
-			key: 'memory',
-			word: m.hero_word_memory(),
-			img: '/landing-page/hero-memory.webp',
-			alt: m.hero_alt_memory(),
-			bubble: m.hero_bubble_memory(),
-			meta: m.hero_meta_memory()
-		},
-		{
-			key: 'home',
-			word: m.hero_word_home(),
-			img: '/landing-page/hero-home.webp',
-			alt: m.hero_alt_home(),
-			bubble: m.hero_bubble_home(),
-			meta: m.hero_meta_home()
-		}
+		{ word: m.hero_word_body(), who: 0, bubble: m.hero_bubble_body(), meta: m.hero_meta_body() },
+		{ word: m.hero_word_voice(), who: 1, bubble: m.hero_bubble_voice(), meta: m.hero_meta_voice() },
+		{ word: m.hero_word_memory(), who: 0, bubble: m.hero_bubble_memory(), meta: m.hero_meta_memory() },
+		{ word: m.hero_word_home(), who: 1, bubble: m.hero_bubble_home(), meta: m.hero_meta_home() }
 	];
 
 	let active = $state(0);
@@ -101,16 +82,9 @@
 				</div>
 			</div>
 
-			<HeroCard
-				images={beats.map((b) => ({
-					src: b.img,
-					alt: b.alt,
-					gaze: Array.from({ length: 9 }, (_, i) => `/landing-page/gaze/${b.key}-${i}.webp`)
-				}))}
-				{active}
-				bubble={beats[active].bubble}
-				meta={beats[active].meta}
-			/>
+			<div class="hero-figure">
+				<HeroBust {characters} active={beats[active].who} bubble={beats[active].bubble} meta={beats[active].meta} />
+			</div>
 
 			<a href="/download" class="btn btn-hero hero-cta-mobile">
 				<DownloadIcon size={18} strokeWidth={2.25} />
@@ -144,25 +118,41 @@
 		color: #fff;
 	}
 
-	/* The card scales with the window, by width and by height, so the whole
-	   composition (and the download button) fits on short laptop screens */
+	/* --wrap is the copy's column; it grows with the copy's zoom on big
+	   monitors so the figure beside it stays clear of the headline */
 	.hero-wrap {
-		--card-w: clamp(290px, min(29vw, calc((100svh - 250px) * 0.658)), 400px);
+		--wrap: 1130px;
+		--figure-max: 1040px;
 		display: flex;
 		justify-content: space-between;
 		gap: clamp(32px, 4vw, 56px);
 		width: 100%;
-		max-width: 1130px;
+		max-width: var(--wrap);
 		margin: auto 0;
 	}
 
+	/* The copy holds the left side, over the figure where they meet */
 	.hero-copy {
+		position: relative;
+		z-index: 2;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		gap: 8px;
 		min-width: 0;
-		min-height: calc(var(--card-w) * 1.52);
+		min-height: min(620px, calc(100svh - 240px));
+	}
+
+	/* Head and shoulders, standing in the room: anchored to the bottom of the
+	   hero and sized by its height, so the face lands at the same spot on any
+	   laptop screen. */
+	/* The 5vw floor leaves room for her speech bubble on narrow laptops */
+	.hero-figure {
+		position: absolute;
+		right: max(5vw, calc((100% - var(--wrap)) / 2 - 60px));
+		bottom: 0;
+		z-index: 1;
+		height: min(calc(100% - 88px), var(--figure-max));
 	}
 
 	/* Headline and the one plain sentence that says what Utsuwa is */
@@ -287,12 +277,22 @@
 	/* Big monitors: scale the composition up instead of leaving a small island */
 	@media (min-width: 1800px) and (min-height: 1000px) {
 		.hero-wrap {
+			--wrap: 1300px;
+			--figure-max: 1200px;
+		}
+
+		.hero-copy {
 			zoom: 1.15;
 		}
 	}
 
 	@media (min-width: 2200px) and (min-height: 1250px) {
 		.hero-wrap {
+			--wrap: 1582px;
+			--figure-max: 1460px;
+		}
+
+		.hero-copy {
 			zoom: 1.4;
 		}
 	}
@@ -303,7 +303,6 @@
 		}
 
 		.hero-wrap {
-			--card-w: clamp(280px, 44vw, 380px);
 			flex-direction: column;
 			align-items: center;
 			flex-grow: 1;
@@ -312,6 +311,14 @@
 		.hero-copy {
 			min-height: 0;
 			align-items: center;
+		}
+
+		.hero-figure {
+			position: relative;
+			right: auto;
+			width: min(460px, 100%);
+			height: auto;
+			margin-top: 28px;
 		}
 
 		.hero-title {
