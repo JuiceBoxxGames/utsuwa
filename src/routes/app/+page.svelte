@@ -45,7 +45,7 @@
 	import { personaStore } from '$lib/stores/persona.svelte';
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { startWaitTone, stopWaitTone, destroyWaitTone } from '$lib/utils/wait-tone';
-	import { getLLMProvider, providerSupportsVision } from '$lib/services/providers/registry';
+	import { getLLMProvider, providerSupportsVision, visionDependsOnModel } from '$lib/services/providers/registry';
 	import { isLocalLLMProvider } from '$lib/services/providers/local-endpoints';
 	import { canShowImages } from '$lib/services/providers/vision';
 	import { onDestroy, onMount } from 'svelte';
@@ -120,7 +120,7 @@
 		const provider = cs.activeProvider;
 		const model = cs.activeModel;
 		if (!provider) return false;
-		return canShowImages(providerSupportsVision(provider), isLocalLLMProvider(provider), model);
+		return canShowImages(providerSupportsVision(provider), visionDependsOnModel(provider), model);
 	});
 
 	// Provider info for the one-time "where do photos go" disclosure.

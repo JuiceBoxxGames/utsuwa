@@ -1,7 +1,7 @@
 // Can she actually see what you show her? Vision support is two-layered:
 // cloud providers carry a coarse `supportsVision` flag (see providerSupportsVision
-// in registry.ts), while local providers (Ollama/LM Studio) depend on the
-// installed model, so we sniff the model id here. Kept import-free so it stays
+// in registry.ts), while local and custom OpenAI-compatible providers depend on
+// the model behind them, so we sniff the model id here. Kept import-free so it stays
 // unit-testable on its own.
 
 /** Substrings that strongly imply a model can accept images. Lowercased. */
@@ -56,14 +56,14 @@ export function modelSupportsVision(modelId: string | undefined | null): boolean
 /**
  * The gate the UI uses to decide whether "showing her something" is possible
  * right now. The provider must at least potentially do vision (a flagged cloud
- * provider, or a local one), AND the selected model must look vision-capable.
+ * provider, or a local/custom one), AND the selected model must look vision-capable.
  * So a text-only model on any provider returns false, prompting the user.
  */
 export function canShowImages(
 	providerHasVision: boolean,
-	isLocalProvider: boolean,
+	modelDecides: boolean,
 	modelId?: string | null
 ): boolean {
-	if (!providerHasVision && !isLocalProvider) return false;
+	if (!providerHasVision && !modelDecides) return false;
 	return modelSupportsVision(modelId);
 }

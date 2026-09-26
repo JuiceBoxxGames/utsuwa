@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { LLM_PROVIDERS, TTS_PROVIDERS, getTTSProvider, providerSupportsVision } from './registry.ts';
+import { LLM_PROVIDERS, TTS_PROVIDERS, getTTSProvider, providerSupportsVision, visionDependsOnModel } from './registry.ts';
 
 test('local LLM providers rely on discovered installed models', () => {
 	const localProviders = LLM_PROVIDERS.filter((provider) => provider.isLocal);
@@ -46,4 +46,13 @@ test('vision-capable cloud providers are flagged; text-only and local are not', 
 	assert.equal(providerSupportsVision('deepseek'), false);
 	assert.equal(providerSupportsVision('ollama'), false);
 	assert.equal(providerSupportsVision('lmstudio'), false);
+});
+
+test('local and custom endpoints leave vision to the model; fixed cloud providers do not', () => {
+	assert.equal(visionDependsOnModel('ollama'), true);
+	assert.equal(visionDependsOnModel('lmstudio'), true);
+	// #237: aggregators behind the OpenAI-compatible provider can serve Gemini etc.
+	assert.equal(visionDependsOnModel('openai-compatible'), true);
+	assert.equal(visionDependsOnModel('openai'), false);
+	assert.equal(visionDependsOnModel('deepseek'), false);
 });

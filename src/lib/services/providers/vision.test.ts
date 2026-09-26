@@ -16,6 +16,8 @@ test('model heuristic catches vision models and rejects text-only ones', () => {
 	assert.equal(modelSupportsVision('claude-sonnet-4-6'), true);
 	assert.equal(modelSupportsVision('claude-opus-4-8'), true);
 	assert.equal(modelSupportsVision('claude-3-5-haiku-latest'), true);
+	// Aggregators often prefix the vendor
+	assert.equal(modelSupportsVision('google/gemini-3.8-flash'), true);
 	assert.equal(modelSupportsVision('llama3.1:8b'), false);
 	assert.equal(modelSupportsVision('mistral'), false);
 	assert.equal(modelSupportsVision('gpt-3.5-turbo'), false);

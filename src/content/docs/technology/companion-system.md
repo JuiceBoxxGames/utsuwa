@@ -233,7 +233,7 @@ Settings > LLM Model has a **Context Window** control: a switch for context wind
 
 Users show the companion an image with the paperclip button in the chat bar or by dropping a photo on it. It is framed as showing her something, not attaching a file.
 
-- **Vision gating.** `canShowImages()` in `src/lib/services/providers/vision.ts` combines a provider flag (OpenAI, Anthropic, Google, xAI) with a model-name check for local providers, where it depends on the installed model (LLaVA, gemma3, qwen2.5-vl, and similar). Text-only models get a prompt to switch instead of a silent failure.
+- **Vision gating.** `canShowImages()` in `src/lib/services/providers/vision.ts` combines a provider flag (OpenAI, Anthropic, Google, xAI) with a model-name check. Local and custom OpenAI-compatible providers rely on the model name alone, since vision depends on whatever model sits behind them (LLaVA, gemma3, qwen2.5-vl, Gemini through an aggregator, and similar). Text-only models get a prompt to switch instead of a silent failure.
 - **Format handling.** Images are downscaled so the longest edge is at most 1568 px. Formats the browser can decode but the APIs reject (such as HEIC on Safari) are converted to JPEG. Formats the browser cannot decode are rejected with a message. The wire formats are JPEG, PNG, GIF, and WebP.
 - **Wire formats.** `toOpenAIContent` and `toAnthropicContent` in `src/lib/services/chat/content.ts` serialize the same image as `image_url` data URLs or Anthropic base64 `source` blocks.
 - **Keepsakes.** A shown image is kept locally with a thumbnail and her memory note, and appears on the photoboard.
