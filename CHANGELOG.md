@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.2] - 2026-09-26
+
+### Changed
+- Temporary provider failures are retried automatically. Rate limits, overloaded servers, and dropped connections get up to two retries, after 2 and 4 seconds or after the provider's own `Retry-After` when it is 20 seconds or less, with a short "retrying" notice while it waits. Bad keys and bad requests are never retried, and neither is a reply that has already started. Stop cancels the wait ([#241](https://github.com/JuiceBoxxGames/utsuwa/pull/241)).
+- A message that fails before she answers goes back into the chat box, photos included, so you can resend it without retyping and without the question landing in the history twice ([#241](https://github.com/JuiceBoxxGames/utsuwa/pull/241)).
+
+### Fixed
+- Custom OpenAI-compatible endpoints could never attach images, even with a vision model like Gemini through an aggregator. The paperclip now checks the model name for these endpoints, the same way it does for Ollama and LM Studio ([#240](https://github.com/JuiceBoxxGames/utsuwa/pull/240), fixes [#237](https://github.com/JuiceBoxxGames/utsuwa/issues/237)).
+- Provider errors on the web app showed raw text like `Remote sent 401 response: {...}`. They now show the provider's own message, the same as the desktop app ([#241](https://github.com/JuiceBoxxGames/utsuwa/pull/241)).
+
 ## [0.19.1] - 2026-09-25
 
 ### Fixed
