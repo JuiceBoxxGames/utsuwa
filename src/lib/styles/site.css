@@ -149,12 +149,6 @@ html[lang='ja'] .own-title {
 	}
 }
 
-/* Page transitions: the hero card glides between pages */
-::view-transition-group(hero-card) {
-	animation-duration: 0.55s;
-	animation-timing-function: var(--ease-brand);
-}
-
 @media (prefers-reduced-motion: reduce) {
 	::view-transition-old(root),
 	::view-transition-new(root) {
