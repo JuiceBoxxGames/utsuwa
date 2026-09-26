@@ -390,6 +390,12 @@ When MCP tools are active, an `<mcp_tool_security>` block is appended unless `PU
 
 The send loop reports progress through a small hooks interface, so the main app and the desktop overlay can each render it. `setPhase` narrates the real pipeline: `remembering` while memory retrieval builds the prompt, then `seeing` on image turns or `thinking` once the model call starts. The UI shows these as a shimmer label instead of anonymous typing dots.
 
+### Failed Requests
+
+`streamChat()` retries temporary provider failures (408, 429, 5xx, dropped connections) up to twice, waiting 2 s then 4 s, or the provider's `Retry-After` when it is 20 s or less. A longer `Retry-After` usually means a quota window, so it fails right away. Bad keys and bad requests are never retried, and neither is a reply that has already started streaming, since a retry would repeat it. Stop cancels the wait. On the web path, `/api/chat` forwards whether the failure was temporary alongside the error. The logic lives in `src/lib/services/llm/retry.ts`.
+
+If a turn still fails before she says anything, the message goes back into the composer (text and photos) and its bubble is removed, so resending does not put the question in the history twice. A draft typed while the turn was running is left alone.
+
 ### System Events and Reminders
 
 The companion can schedule reminders with a `[reminder:5min]content[/reminder]` tag in her reply. If the user phrases a reminder naturally ("remind me in 10 minutes") and the model emits no tag, a client-side fallback schedules it. Reminders persist in the `reminders` table, fire from a poll loop that survives reloads, and ones missed while the app was closed surface on the next launch.

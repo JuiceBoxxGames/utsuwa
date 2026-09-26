@@ -5,6 +5,7 @@ import type { LLMProvider } from '$lib/types';
 import { ensureOpenAIPath, getChatBaseUrl } from '$lib/services/providers/local-endpoints';
 import { assertSafeProviderTarget, createGuardedFetch } from '$lib/services/providers/url-guard.server';
 import { sanitizeProviderError } from '$lib/services/providers/provider-errors';
+import { providerFailure } from '$lib/services/llm/retry';
 import { DEFAULT_CHAT_BASE_URLS } from '$lib/services/providers/provider-defaults';
 
 // Providers that don't require API keys
@@ -121,7 +122,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			});
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : 'Failed to connect to provider';
-			return new Response(JSON.stringify({ error: sanitizeProviderError(msg) }), {
+			return new Response(JSON.stringify({ error: sanitizeProviderError(msg, providerBaseURL), ...providerFailure(err) }), {
 				status: 502,
 				headers: { 'Content-Type': 'application/json' }
 			});
@@ -150,7 +151,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : 'Failed to start stream';
 					controller.enqueue(
-						encoder.encode(`e:${JSON.stringify({ error: sanitizeProviderError(msg) })}\n`)
+						encoder.encode(`e:${JSON.stringify({ error: sanitizeProviderError(msg, providerBaseURL), ...providerFailure(err) })}\n`)
 					);
 					controller.close();
 					return;
@@ -192,7 +193,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 					controller.enqueue(
 						encoder.encode(
-							`e:${JSON.stringify({ error: sanitizeProviderError(errorMessage) })}\n`
+							`e:${JSON.stringify({ error: sanitizeProviderError(errorMessage, providerBaseURL), ...providerFailure(error) })}\n`
 						)
 					);
 					controller.close();
