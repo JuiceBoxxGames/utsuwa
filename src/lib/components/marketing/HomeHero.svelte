@@ -3,44 +3,24 @@
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import SiteNav from './SiteNav.svelte';
 	import PlatformLine from './PlatformLine.svelte';
-	import HeroCard from './HeroCard.svelte';
+	import HeroBust from './HeroBust.svelte';
 	import { m } from '$lib/paraglide/messages';
 
-	// One beat per phrase: the headline word, the companion in the glass card,
-	// what she says, and a status line under her message that backs it up.
+	// Two companions trade places as the headline turns over. Each has a 5x3
+	// grid of prerendered head turns (see HeroBust).
+	const turns = (key: string) =>
+		Array.from({ length: 15 }, (_, i) => `/landing-page/bust/${key}-${Math.floor(i / 5)}-${i % 5}.webp`);
+	const characters = [
+		{ alt: m.hero_alt_tsuki(), frames: turns('tsuki') },
+		{ alt: m.hero_alt_avatar_c(), frames: turns('avatar-c') }
+	];
+
+	// One beat per headline word, alternating who is standing there
 	const beats = [
-		{
-			key: 'body',
-			word: m.hero_word_body(),
-			img: '/landing-page/hero-body.webp',
-			alt: m.hero_alt_body(),
-			bubble: m.hero_bubble_body(),
-			meta: m.hero_meta_body()
-		},
-		{
-			key: 'voice',
-			word: m.hero_word_voice(),
-			img: '/landing-page/hero-voice.webp',
-			alt: m.hero_alt_voice(),
-			bubble: m.hero_bubble_voice(),
-			meta: m.hero_meta_voice()
-		},
-		{
-			key: 'memory',
-			word: m.hero_word_memory(),
-			img: '/landing-page/hero-memory.webp',
-			alt: m.hero_alt_memory(),
-			bubble: m.hero_bubble_memory(),
-			meta: m.hero_meta_memory()
-		},
-		{
-			key: 'home',
-			word: m.hero_word_home(),
-			img: '/landing-page/hero-home.webp',
-			alt: m.hero_alt_home(),
-			bubble: m.hero_bubble_home(),
-			meta: m.hero_meta_home()
-		}
+		{ word: m.hero_word_body(), who: 0 },
+		{ word: m.hero_word_voice(), who: 1 },
+		{ word: m.hero_word_memory(), who: 0 },
+		{ word: m.hero_word_home(), who: 1 }
 	];
 
 	let active = $state(0);
@@ -101,16 +81,9 @@
 				</div>
 			</div>
 
-			<HeroCard
-				images={beats.map((b) => ({
-					src: b.img,
-					alt: b.alt,
-					gaze: Array.from({ length: 9 }, (_, i) => `/landing-page/gaze/${b.key}-${i}.webp`)
-				}))}
-				{active}
-				bubble={beats[active].bubble}
-				meta={beats[active].meta}
-			/>
+			<div class="hero-figure">
+				<HeroBust {characters} active={beats[active].who} />
+			</div>
 
 			<a href="/download" class="btn btn-hero hero-cta-mobile">
 				<DownloadIcon size={18} strokeWidth={2.25} />
@@ -144,25 +117,53 @@
 		color: #fff;
 	}
 
-	/* The card scales with the window, by width and by height, so the whole
-	   composition (and the download button) fits on short laptop screens */
+	/* --wrap is the copy's column; it grows with the copy's zoom on big
+	   monitors so the figure beside it stays clear of the headline */
 	.hero-wrap {
-		--card-w: clamp(290px, min(29vw, calc((100svh - 250px) * 0.658)), 400px);
+		--wrap: 1130px;
 		display: flex;
 		justify-content: space-between;
 		gap: clamp(32px, 4vw, 56px);
 		width: 100%;
-		max-width: 1130px;
+		max-width: var(--wrap);
 		margin: auto 0;
 	}
 
+	/* The copy holds the left side, in front of the figure */
 	.hero-copy {
+		position: relative;
+		z-index: 2;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		gap: 8px;
 		min-width: 0;
-		min-height: calc(var(--card-w) * 1.52);
+		min-height: min(620px, calc(100svh - 240px));
+	}
+
+	/* Head and shoulders, standing in the room: anchored to the bottom of the
+	   hero and sized by its height, so the face lands at the same spot on any
+	   laptop screen. */
+	/* Large and centered, cut by the fold. Everything is a percentage of the
+	   hero's height so the eyes sit 42% down on any screen (they are 40% down
+	   the frame). A little right of center keeps the headline off the face. */
+	.hero-figure {
+		--h: min(108%, 1600px);
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		overflow: hidden;
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+	}
+
+	.hero-figure :global(.bust) {
+		position: absolute;
+		top: calc(42% - 0.4 * var(--h));
+		left: 57%;
+		height: var(--h);
+		translate: -50% 0;
 	}
 
 	/* Headline and the one plain sentence that says what Utsuwa is */
@@ -178,7 +179,7 @@
 		align-items: center;
 		margin: 0;
 		color: #fff;
-		font-size: clamp(64px, 8.2vw, 110px);
+		font-size: clamp(56px, 6.4vw, 96px);
 		font-weight: 700;
 		line-height: 0.86;
 		letter-spacing: -0.066em;
@@ -285,25 +286,73 @@
 	}
 
 	/* Big monitors: scale the composition up instead of leaving a small island */
+	/* Narrow desktops: step the figure further right so the headline clears the face */
+	@media (max-width: 1180px) {
+		.hero-figure :global(.bust) {
+			left: 62%;
+		}
+	}
+
+	@media (max-width: 1060px) {
+		.hero-figure :global(.bust) {
+			left: 66%;
+		}
+	}
+
+	/* Landscape phones: side by side, with type small enough to fit the height */
+	@media (max-width: 956px) and (max-height: 520px) and (orientation: landscape) {
+		.hero {
+			gap: 16px;
+			padding-top: 20px;
+			padding-bottom: 20px;
+		}
+
+		.hero-title {
+			font-size: 44px;
+		}
+
+		.hero-lede {
+			max-width: 340px;
+			margin-top: 14px;
+			font-size: 15px;
+		}
+
+		/* A touch smaller and lower, so the hair stays under the nav */
+		.hero-figure :global(.bust) {
+			--h: 96%;
+			top: calc(46% - 0.4 * var(--h));
+			left: 68%;
+		}
+	}
+
 	@media (min-width: 1800px) and (min-height: 1000px) {
 		.hero-wrap {
+			--wrap: 1300px;
+		}
+
+		.hero-copy {
 			zoom: 1.15;
 		}
 	}
 
 	@media (min-width: 2200px) and (min-height: 1250px) {
 		.hero-wrap {
+			--wrap: 1582px;
+		}
+
+		.hero-copy {
 			zoom: 1.4;
 		}
 	}
 
-	@media (max-width: 956px) {
+	/* Stack on portrait tablets and phones. Landscape phones keep the side
+	   by side layout: stacked, their whole first screen was headline. */
+	@media (max-width: 956px) and (orientation: portrait), (max-width: 600px) {
 		.hero {
 			min-height: auto;
 		}
 
 		.hero-wrap {
-			--card-w: clamp(280px, 44vw, 380px);
 			flex-direction: column;
 			align-items: center;
 			flex-grow: 1;
@@ -312,6 +361,28 @@
 		.hero-copy {
 			min-height: 0;
 			align-items: center;
+		}
+
+		.hero-head {
+			align-items: center;
+		}
+
+		/* Stacked: the figure gets its own band under the copy, bleeding to
+		   the screen edges. A higher eye line than desktop, so the hair starts
+		   right under the copy instead of leaving a gap of empty wall. */
+		.hero-figure {
+			position: relative;
+			inset: auto;
+			width: 100vw;
+			/* Grows on tablets, but never pushes the download button off a short screen */
+			height: clamp(min(100vw, 260px), 100svh - 440px, min(100vw, 640px));
+			margin-top: 12px;
+		}
+
+		.hero-figure :global(.bust) {
+			--h: 118%;
+			top: calc(32% - 0.4 * var(--h));
+			left: 50%;
 		}
 
 		.hero-title {

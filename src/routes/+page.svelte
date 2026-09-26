@@ -45,7 +45,7 @@
 	<link rel="alternate" hreflang="en" href={SITE_URL} />
 	<link rel="alternate" hreflang="ja" href={`${SITE_URL}/ja`} />
 	<link rel="alternate" hreflang="x-default" href={SITE_URL} />
-	<link rel="preload" as="image" href="/landing-page/hero-body.webp" type="image/webp" />
+	<link rel="preload" as="image" href="/landing-page/bust/tsuki-1-2.webp" type="image/webp" />
 
 	<!-- Open Graph -->
 	<meta property="og:type" content="website" />
@@ -222,10 +222,10 @@
 				</div>
 				<div class="cta-image">
 					<img
-						src="/landing-page/cta-floor.webp"
+						src="/landing-page/cta-pair.webp"
 						alt={m.cta_alt()}
-						width="1240"
-						height="821"
+						width="843"
+						height="962"
 						loading="lazy"
 					/>
 				</div>
@@ -508,16 +508,19 @@
 	}
 
 	.cta-image {
+		display: flex;
+		justify-content: center;
 		flex: 1 1 50%;
 		min-width: 0;
 	}
 
-	/* Mirrored so she turns toward the headline */
+	/* The pair is portrait, so cap it by height */
 	.cta-image img {
 		display: block;
-		width: 100%;
+		width: auto;
+		max-width: 100%;
 		height: auto;
-		transform: scaleX(-1);
+		max-height: min(600px, 72vh);
 	}
 
 	.cta-content {

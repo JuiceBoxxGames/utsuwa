@@ -4,18 +4,18 @@
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 
-	// "hero" folds the header into a sky hero (logo, links, glass pill). Every
-	// other marketing page gets the sticky header with a soft fade.
+	// One header everywhere: logo, the capsule of section links, and Try it
+	// live. "hero" sits over a sky hero in white; "page" is the sticky header
+	// with a soft fade, in ink, for the white pages.
 	let { variant = 'page' }: { variant?: 'hero' | 'page' } = $props();
 
-	const back = $derived(page.url.pathname.startsWith('/blog/') ? '/blog' : '/');
 	// Only the landing page is translated, so the switch only shows there
 	const translated = $derived(['/', '/ja'].includes(page.url.pathname));
 	const locale = getLocale();
 </script>
 
-{#if variant === 'hero'}
-	<header class="hero-header">
+<header class="site-header" class:on-page={variant === 'page'}>
+	<div class="site-header-inner">
 		<a href="/" class="brand" aria-label={m.nav_home()}>
 			<img src="/brand-assets/logo.svg" alt="Utsuwa" class="brand-logo" />
 		</a>
@@ -40,32 +40,21 @@
 			{/if}
 			<a href={sectionUrl('app')} class="glass-pill">{m.nav_try()}</a>
 		</div>
-	</header>
-{:else}
-	<header class="page-header">
-		<div class="page-header-inner">
-			<div class="page-left">
-				<a href={back} class="light-pill back-pill">{m.nav_back()}</a>
-				<a href="/" class="brand" aria-label={m.nav_home()}>
-					<img src="/brand-assets/logo.svg" alt="Utsuwa" class="brand-logo brand-logo--ink" />
-				</a>
-			</div>
-			<nav class="page-links" aria-label={m.nav_main()}>
-				<a href={sectionUrl('docs')} class="light-pill">{m.nav_docs()}</a>
-				<a href="/blog" class="light-pill">{m.nav_blog()}</a>
-				<a href="/download" class="light-pill">{m.nav_download()}</a>
-				<a href={sectionUrl('app')} class="accent-pill">{m.nav_try()}</a>
-			</nav>
-		</div>
-	</header>
-{/if}
+	</div>
+</header>
 
 <style>
-	/* Home: sits in the hero's flow, over the sky. Three columns keep the link
-	   capsule centered however wide the right side gets. */
-	.hero-header {
+	/* Three columns keep the link capsule centered however wide the right
+	   side gets. Over a hero it sits in the hero's flow. */
+	.site-header {
 		position: relative;
 		z-index: 2;
+		display: flex;
+		justify-content: center;
+		width: 100%;
+	}
+
+	.site-header-inner {
 		display: grid;
 		grid-template-columns: 1fr auto 1fr;
 		align-items: start;
@@ -133,10 +122,6 @@
 		filter: brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0, 40, 100, 0.2));
 	}
 
-	.brand-logo--ink {
-		filter: brightness(0);
-		opacity: 0.9;
-	}
 
 	/* Glass capsule of section links, centered between logo and CTA */
 	.hero-links {
@@ -194,13 +179,13 @@
 
 	/* Big monitors: scale the composition up instead of leaving a small island */
 	@media (min-width: 1800px) and (min-height: 1000px) {
-		.hero-header {
+		.site-header-inner {
 			zoom: 1.15;
 		}
 	}
 
 	@media (min-width: 2200px) and (min-height: 1250px) {
-		.hero-header {
+		.site-header-inner {
 			zoom: 1.4;
 		}
 	}
@@ -213,14 +198,14 @@
 	}
 
 	@media (max-width: 768px) {
-		.hero-header {
+		.site-header-inner {
 			display: flex;
 			align-items: center;
 			justify-content: center;
 		}
 
 		/* With the switch showing, logo left and switch right */
-		.hero-header:has(.lang-switch) {
+		.site-header-inner:has(.lang-switch) {
 			justify-content: space-between;
 		}
 
@@ -245,27 +230,29 @@
 		}
 	}
 
-	/* Everywhere else: sticky, with the page color fading in behind it */
-	.page-header {
+	/* White pages: sticky, with the page color fading in behind it, and the
+	   same header in ink instead of white */
+	/* Starts at the same height as the hero pages' header, so it doesn't jump
+	   between pages, then slides up to 10px from the top once stuck */
+	.site-header.on-page {
+		--stuck-offset: 54px;
 		position: sticky;
-		top: 0;
+		top: calc(var(--stuck-offset) * -1);
 		z-index: 50;
-		display: flex;
-		justify-content: center;
-		width: 100%;
-		padding: 0.625rem 2rem;
+		padding: 64px clamp(24px, 5.9vw, 85px) 10px;
 	}
 
-	.page-header::after {
+	/* The fade starts where the header sits once stuck */
+	.site-header.on-page::after {
 		content: '';
 		position: absolute;
-		top: -24px;
+		top: calc(var(--stuck-offset) - 24px);
 		left: 0;
 		z-index: -1;
 		width: 100%;
 		height: 200px;
 		pointer-events: none;
-		opacity: 0.85;
+		opacity: 1;
 		background: linear-gradient(
 			180deg,
 			var(--bg-page) 0,
@@ -278,67 +265,41 @@
 		);
 	}
 
-	.page-header-inner {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		width: 100%;
-		max-width: 1268px;
+	.on-page .brand-logo {
+		filter: brightness(0);
+		opacity: 0.9;
 	}
 
-	.page-left,
-	.page-links {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+	.on-page .hero-links {
+		border-color: color-mix(in srgb, var(--text-primary) 8%, transparent);
+		background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
 	}
 
-	.page-left {
-		gap: 1.25rem;
-	}
-
-	.page-left .brand {
-		min-width: 0;
-	}
-
-	.light-pill,
-	.accent-pill {
-		display: inline-block;
-		padding: 1rem 1.25rem;
-		border-radius: 110px;
-		font-size: 1rem;
-		line-height: 1.25rem;
-		letter-spacing: -0.02em;
-		text-decoration: none;
-		transition: background 0.3s ease;
-	}
-
-	.light-pill {
-		background: var(--bg-secondary);
+	.on-page .hero-links a {
 		color: var(--text-primary);
+		text-shadow: none;
 	}
 
-	.light-pill:hover {
+	.on-page .hero-links a:hover {
 		background: var(--bg-tertiary);
 	}
 
-	.accent-pill {
-		background: var(--accent);
-		box-shadow: inset 0 -4px 24px 0 rgba(222, 249, 255, 0.55);
-		color: #fff;
+	.on-page .glass-pill {
+		border-color: color-mix(in srgb, var(--text-primary) 6%, transparent);
+		background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+		box-shadow: none;
+		color: var(--text-primary);
+		text-shadow: none;
 	}
 
-	.accent-pill:hover {
-		background: var(--accent-hover);
+	.on-page .glass-pill:hover {
+		background: var(--bg-tertiary);
 	}
 
 	@media (max-width: 768px) {
-		.page-header {
-			padding: 0.625rem 1.125rem;
-		}
-
-		.page-links .light-pill {
-			display: none;
+		.site-header.on-page {
+			--stuck-offset: 10px;
+			padding: 20px 1.125rem 10px;
 		}
 	}
 </style>

@@ -41,7 +41,7 @@
 			<Icon name="download" size={14} />
 			<span class="download-label">Download</span>
 		</a>
-		<a href={sectionUrl('app')} class="btn btn-primary btn-sm">Try Live</a>
+		<a href={sectionUrl('app')} class="btn btn-primary btn-sm">Try it live</a>
 	</div>
 </header>
 

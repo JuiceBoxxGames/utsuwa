@@ -11,7 +11,6 @@
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
 	import SkyZone from '$lib/components/marketing/SkyZone.svelte';
-	import HeroCard from '$lib/components/marketing/HeroCard.svelte';
 	import PlatformLine from '$lib/components/marketing/PlatformLine.svelte';
 	import SiteLetter from '$lib/components/marketing/SiteLetter.svelte';
 	import OsIcon from '$lib/components/marketing/OsIcon.svelte';
@@ -36,10 +35,6 @@
 	});
 
 	const downloadFor = (key: string) => assets[key] || GITHUB_RELEASES;
-	const fallbackFile: Record<Os, string> = { macOS: 'Utsuwa.dmg', Windows: 'Utsuwa-setup.exe', Linux: 'Utsuwa.AppImage' };
-	const fileName = $derived(
-		assets[os] ? decodeURIComponent(assets[os].split('/').pop() ?? '') : fallbackFile[os]
-	);
 
 	const platforms: { name: Os; icon: 'macos' | 'windows' | 'linux'; note: string; tone: string }[] = [
 		{ name: 'macOS', icon: 'macos', note: 'Apple Silicon and Intel, universal .dmg', tone: '#1c2b33' },
@@ -91,12 +86,23 @@
 			<section class="dl-hero" aria-labelledby="dl-title">
 				<SiteNav variant="hero" />
 
+				<!-- Standing in the room behind the copy, cut off by the fold -->
+				<div class="dl-figure">
+					<img
+						src="/landing-page/download-avatar-c.webp"
+						alt="A 3D VRM companion with dark hair and a high-collared jacket, arms crossed"
+						width="1200"
+						height="1500"
+						fetchpriority="high"
+					/>
+				</div>
+
 				<div class="dl-wrap">
 					<div class="dl-copy">
 						<p class="dl-eyebrow">Download</p>
 						<h1 id="dl-title" class="dl-title">Utsuwa for your desktop</h1>
 						<p class="dl-lead">
-							A transparent overlay you can pin over anything, and a global hotkey to summon her. Free
+							A transparent overlay you can pin over anything, and a global hotkey to summon your companion. Free
 							and open source on every platform.
 						</p>
 						<a href={downloadFor(os)} download class="btn btn-hero">
@@ -108,12 +114,6 @@
 							or try it in your browser <ArrowRightIcon size={14} strokeWidth={2.25} />
 						</a>
 					</div>
-
-					<HeroCard
-						images={[{ src: '/landing-page/hero-home.webp', alt: 'Yuki, a 3D VRM companion, sitting and hugging her knees' }]}
-						bubble="save me a spot on your desktop?"
-						meta={fileName}
-					/>
 				</div>
 			</section>
 		</SkyZone>
@@ -149,9 +149,9 @@
 		<section class="overlay" aria-labelledby="overlay-title">
 			<p class="overlay-note">Desktop overlay</p>
 			<div class="overlay-head">
-				<h2 id="overlay-title" class="overlay-title">Pin her over anything</h2>
+				<h2 id="overlay-title" class="overlay-title">Pin them over anything</h2>
 				<p class="overlay-sub">
-					A transparent, always-on-top window you can drag anywhere. Hit the global hotkey and she is
+					A transparent, always-on-top window you can drag anywhere. Hit the global hotkey and they are
 					there, over your browser, your code, or your game.
 				</p>
 			</div>
@@ -225,7 +225,6 @@
 	}
 
 	.dl-wrap {
-		--card-w: clamp(290px, min(29vw, calc((100svh - 250px) * 0.658)), 400px);
 		position: relative;
 		z-index: 3;
 		display: flex;
@@ -236,6 +235,27 @@
 		max-width: 1057px;
 		margin: auto 0;
 		color: #fff;
+	}
+
+	/* Sized by the hero's height so he stands the same way on any laptop. The
+	   frame is head to knees; the fade hides where it ends. */
+	.dl-figure {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		overflow: hidden;
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 98%);
+		mask-image: linear-gradient(to bottom, #000 78%, transparent 98%);
+	}
+
+	.dl-figure img {
+		position: absolute;
+		top: 13%;
+		left: 72%;
+		width: auto;
+		height: 100%;
+		translate: -50% 0;
 	}
 
 	.dl-copy {
@@ -497,6 +517,13 @@
 		line-height: 1.35;
 	}
 
+	/* Narrow laptops: step him right so the copy clears his arms */
+	@media (max-width: 1100px) {
+		.dl-figure img {
+			left: 77%;
+		}
+	}
+
 	/* Big monitors: scale the composition up instead of leaving a small island */
 	@media (min-width: 1800px) and (min-height: 1000px) {
 		.dl-wrap {
@@ -517,8 +544,24 @@
 		}
 
 		.dl-wrap {
-			--card-w: clamp(280px, 44vw, 380px);
 			flex-direction: column;
+		}
+
+		/* Stacked: he gets a band under the copy, full bleed */
+		.dl-figure {
+			position: relative;
+			inset: auto;
+			order: 2;
+			width: 100vw;
+			height: clamp(260px, 90vw, 600px);
+			margin-bottom: -60px;
+		}
+
+		/* Waist up, so he still reads at phone size */
+		.dl-figure img {
+			top: 3%;
+			left: 50%;
+			height: 165%;
 		}
 
 		.dl-copy {
@@ -559,6 +602,23 @@
 
 		.overlay-shot {
 			border-radius: 36px;
+		}
+	}
+
+	/* Landscape phones: small enough type that the download button fits */
+	@media (max-width: 956px) and (max-height: 520px) and (orientation: landscape) {
+		.dl-eyebrow {
+			margin-bottom: 8px;
+		}
+
+		.dl-title {
+			font-size: 40px;
+		}
+
+		.dl-lead {
+			margin: 14px 0 18px;
+			font-size: 15px;
+			line-height: 20px;
 		}
 	}
 
