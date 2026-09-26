@@ -41,6 +41,24 @@
     "width": 2388,
     "height": 1506
   },
+  "/blog/dev-log-2026-9-26-animations.png": {
+    "src": "/optimized/blog/dev-log-2026-9-26-animations-1920.webp",
+    "srcset": "/optimized/blog/dev-log-2026-9-26-animations-96.webp 96w, /optimized/blog/dev-log-2026-9-26-animations-479.webp 479w, /optimized/blog/dev-log-2026-9-26-animations-960.webp 960w, /optimized/blog/dev-log-2026-9-26-animations-1920.webp 1920w",
+    "width": 2632,
+    "height": 1472
+  },
+  "/blog/dev-log-2026-9-26-pair.png": {
+    "src": "/optimized/blog/dev-log-2026-9-26-pair-1800.webp",
+    "srcset": "/optimized/blog/dev-log-2026-9-26-pair-96.webp 96w, /optimized/blog/dev-log-2026-9-26-pair-480.webp 480w, /optimized/blog/dev-log-2026-9-26-pair-960.webp 960w, /optimized/blog/dev-log-2026-9-26-pair-1800.webp 1800w",
+    "width": 1800,
+    "height": 1125
+  },
+  "/blog/dev-log-2026-9-26.png": {
+    "src": "/optimized/blog/dev-log-2026-9-26-1920.webp",
+    "srcset": "/optimized/blog/dev-log-2026-9-26-96.webp 96w, /optimized/blog/dev-log-2026-9-26-480.webp 480w, /optimized/blog/dev-log-2026-9-26-959.webp 959w, /optimized/blog/dev-log-2026-9-26-1920.webp 1920w",
+    "width": 2388,
+    "height": 1506
+  },
   "/blog/gaming-gpu.jpg": {
     "src": "/optimized/blog/gaming-gpu-1200.webp",
     "srcset": "/optimized/blog/gaming-gpu-96.webp 96w, /optimized/blog/gaming-gpu-480.webp 480w, /optimized/blog/gaming-gpu-960.webp 960w, /optimized/blog/gaming-gpu-1200.webp 1200w",
