@@ -293,6 +293,38 @@
 		}
 	}
 
+	@media (max-width: 1060px) {
+		.hero-figure :global(.bust) {
+			left: 66%;
+		}
+	}
+
+	/* Landscape phones: side by side, with type small enough to fit the height */
+	@media (max-width: 956px) and (max-height: 520px) and (orientation: landscape) {
+		.hero {
+			gap: 16px;
+			padding-top: 20px;
+			padding-bottom: 20px;
+		}
+
+		.hero-title {
+			font-size: 44px;
+		}
+
+		.hero-lede {
+			max-width: 340px;
+			margin-top: 14px;
+			font-size: 15px;
+		}
+
+		/* A touch smaller and lower, so her bows stay under the nav */
+		.hero-figure :global(.bust) {
+			--h: 96%;
+			top: calc(46% - 0.4 * var(--h));
+			left: 68%;
+		}
+	}
+
 	@media (min-width: 1800px) and (min-height: 1000px) {
 		.hero-wrap {
 			--wrap: 1300px;
@@ -313,7 +345,9 @@
 		}
 	}
 
-	@media (max-width: 956px) {
+	/* Stack on portrait tablets and phones. Landscape phones keep the side
+	   by side layout: stacked, their whole first screen was headline. */
+	@media (max-width: 956px) and (orientation: portrait), (max-width: 600px) {
 		.hero {
 			min-height: auto;
 		}
@@ -329,18 +363,25 @@
 			align-items: center;
 		}
 
+		.hero-head {
+			align-items: center;
+		}
+
 		/* Stacked: the figure gets its own band under the copy, bleeding to
-		   the screen edges, with the same eye line inside it */
+		   the screen edges. A higher eye line than desktop, so her hair starts
+		   right under the copy instead of leaving a gap of empty wall. */
 		.hero-figure {
 			position: relative;
 			inset: auto;
 			width: 100vw;
-			height: min(100vw, 520px);
+			/* Grows on tablets, but never pushes the download button off a short screen */
+			height: clamp(min(100vw, 260px), 100svh - 440px, min(100vw, 640px));
 			margin-top: 12px;
 		}
 
 		.hero-figure :global(.bust) {
 			--h: 118%;
+			top: calc(32% - 0.4 * var(--h));
 			left: 50%;
 		}
 
