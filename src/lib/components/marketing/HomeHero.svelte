@@ -15,13 +15,12 @@
 		{ alt: m.hero_alt_avatar_c(), frames: turns('avatar-c') }
 	];
 
-	// One beat per phrase: the headline word, who is standing there, what they
-	// say, and a status line under the message that backs it up.
+	// One beat per headline word, alternating who is standing there
 	const beats = [
-		{ word: m.hero_word_body(), who: 0, bubble: m.hero_bubble_body(), meta: m.hero_meta_body() },
-		{ word: m.hero_word_voice(), who: 1, bubble: m.hero_bubble_voice(), meta: m.hero_meta_voice() },
-		{ word: m.hero_word_memory(), who: 0, bubble: m.hero_bubble_memory(), meta: m.hero_meta_memory() },
-		{ word: m.hero_word_home(), who: 1, bubble: m.hero_bubble_home(), meta: m.hero_meta_home() }
+		{ word: m.hero_word_body(), who: 0 },
+		{ word: m.hero_word_voice(), who: 1 },
+		{ word: m.hero_word_memory(), who: 0 },
+		{ word: m.hero_word_home(), who: 1 }
 	];
 
 	let active = $state(0);
@@ -83,7 +82,7 @@
 			</div>
 
 			<div class="hero-figure">
-				<HeroBust {characters} active={beats[active].who} bubble={beats[active].bubble} meta={beats[active].meta} />
+				<HeroBust {characters} active={beats[active].who} />
 			</div>
 
 			<a href="/download" class="btn btn-hero hero-cta-mobile">
@@ -122,7 +121,6 @@
 	   monitors so the figure beside it stays clear of the headline */
 	.hero-wrap {
 		--wrap: 1130px;
-		--figure-max: 1040px;
 		display: flex;
 		justify-content: space-between;
 		gap: clamp(32px, 4vw, 56px);
@@ -131,7 +129,7 @@
 		margin: auto 0;
 	}
 
-	/* The copy holds the left side, over the figure where they meet */
+	/* The copy holds the left side, in front of the figure */
 	.hero-copy {
 		position: relative;
 		z-index: 2;
@@ -146,13 +144,26 @@
 	/* Head and shoulders, standing in the room: anchored to the bottom of the
 	   hero and sized by its height, so the face lands at the same spot on any
 	   laptop screen. */
-	/* The 5vw floor leaves room for her speech bubble on narrow laptops */
+	/* Large and centered, cut by the fold. Everything is a percentage of the
+	   hero's height so her eyes sit 42% down on any screen (they are 40% down
+	   the frame). A little right of center keeps the headline off her face. */
 	.hero-figure {
+		--h: min(108%, 1600px);
 		position: absolute;
-		right: max(5vw, calc((100% - var(--wrap)) / 2 - 60px));
-		bottom: 0;
+		inset: 0;
 		z-index: 1;
-		height: min(calc(100% - 88px), var(--figure-max));
+		overflow: hidden;
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+	}
+
+	.hero-figure :global(.bust) {
+		position: absolute;
+		top: calc(42% - 0.4 * var(--h));
+		left: 57%;
+		height: var(--h);
+		translate: -50% 0;
 	}
 
 	/* Headline and the one plain sentence that says what Utsuwa is */
@@ -168,7 +179,7 @@
 		align-items: center;
 		margin: 0;
 		color: #fff;
-		font-size: clamp(64px, 8.2vw, 110px);
+		font-size: clamp(56px, 6.4vw, 96px);
 		font-weight: 700;
 		line-height: 0.86;
 		letter-spacing: -0.066em;
@@ -275,10 +286,16 @@
 	}
 
 	/* Big monitors: scale the composition up instead of leaving a small island */
+	/* Narrow desktops: step her further right so the headline clears her face */
+	@media (max-width: 1180px) {
+		.hero-figure :global(.bust) {
+			left: 62%;
+		}
+	}
+
 	@media (min-width: 1800px) and (min-height: 1000px) {
 		.hero-wrap {
 			--wrap: 1300px;
-			--figure-max: 1200px;
 		}
 
 		.hero-copy {
@@ -289,7 +306,6 @@
 	@media (min-width: 2200px) and (min-height: 1250px) {
 		.hero-wrap {
 			--wrap: 1582px;
-			--figure-max: 1460px;
 		}
 
 		.hero-copy {
@@ -313,12 +329,19 @@
 			align-items: center;
 		}
 
+		/* Stacked: the figure gets its own band under the copy, bleeding to
+		   the screen edges, with the same eye line inside it */
 		.hero-figure {
 			position: relative;
-			right: auto;
-			width: min(460px, 100%);
-			height: auto;
-			margin-top: 28px;
+			inset: auto;
+			width: 100vw;
+			height: min(100vw, 520px);
+			margin-top: 12px;
+		}
+
+		.hero-figure :global(.bust) {
+			--h: 118%;
+			left: 50%;
 		}
 
 		.hero-title {
