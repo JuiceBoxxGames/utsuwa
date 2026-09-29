@@ -22,5 +22,10 @@
 	],
 	"workers_dev": true,
 	"preview_urls": true,
+	// Per-IP cap on /api/* (cloudflare-worker.js). A long reply with Fish Audio is
+	// about 20 calls, so this only stops floods. Counts are per Cloudflare location.
+	"ratelimits": [
+		{ "name": "API_RATE_LIMIT", "namespace_id": "1001", "simple": { "limit": 240, "period": 60 } }
+	],
 	"observability": { "enabled": true }
 }
