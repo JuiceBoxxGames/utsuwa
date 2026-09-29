@@ -20,7 +20,8 @@
 		{ "pattern": "app.utsuwa.ai", "custom_domain": true },
 		{ "pattern": "docs.utsuwa.ai", "custom_domain": true }
 	],
-	"workers_dev": true,
+	// No public workers.dev copy of the site; version previews stay on.
+	"workers_dev": false,
 	"preview_urls": true,
 	"observability": { "enabled": true }
 }
