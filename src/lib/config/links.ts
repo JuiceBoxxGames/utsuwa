@@ -6,7 +6,7 @@ import { page } from '$app/state';
  * - On the real utsuwa.ai (apex or any subdomain): links resolve to the right
  *   subdomain via absolute URLs. Same-origin links stay client-side (SPA) nav,
  *   cross-subdomain links do a normal full navigation.
- * - In local dev (localhost) and on *.vercel.app preview deploys: everything
+ * - In local dev (localhost) and on preview deploys (*.workers.dev): everything
  *   stays path-based (/docs, /app), so there's nothing to set up to test.
  *
  * The reroute hook (src/hooks.ts) maps the clean subdomain paths back to the
@@ -21,7 +21,7 @@ function hostname(): string {
 }
 
 // Only the real production domain uses the subdomain split. localhost and
-// preview deploys (e.g. *.vercel.app) fall back to path-based routing. During
+// preview deploys (e.g. *.workers.dev) fall back to path-based routing. During
 // prerendering there is no real hostname, and that HTML is what production
 // serves until the page hydrates, so it must default to the production layout.
 function usesSubdomains(): boolean {

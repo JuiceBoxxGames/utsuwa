@@ -10,9 +10,17 @@
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare",
-		// Apex /docs pages are static files; run the worker first so it can
-		// redirect them to docs.utsuwa.ai.
-		"run_worker_first": ["/docs", "/docs/*"]
+		// "/" is prerendered, but docs. and app. each have their own root.
+		"run_worker_first": ["/"]
 	},
+	// Production domains. The apex isn't here: a Cloudflare redirect rule sends
+	// it to www. Forks deploying elsewhere: swap in your own or drop this block.
+	"routes": [
+		{ "pattern": "www.utsuwa.ai", "custom_domain": true },
+		{ "pattern": "app.utsuwa.ai", "custom_domain": true },
+		{ "pattern": "docs.utsuwa.ai", "custom_domain": true }
+	],
+	"workers_dev": true,
+	"preview_urls": true,
 	"observability": { "enabled": true }
 }
