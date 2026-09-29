@@ -118,7 +118,7 @@
 			own privacy policies.
 		</li>
 		<li>
-			<strong>Vercel</strong> hosts the website and web app. Like any host, it produces standard,
+			<strong>Cloudflare</strong> hosts the website and web app. Like any host, it produces standard,
 			short-lived infrastructure logs (such as IP addresses and request timestamps) as part of
 			serving pages. We don't use these to identify or profile anyone.
 		</li>

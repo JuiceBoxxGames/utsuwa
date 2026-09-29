@@ -35,7 +35,14 @@ test('docs subdomain leaves kit, API, and already-prefixed paths alone', () => {
 	assert.equal(route('https://docs.utsuwa.ai/docs/guides/voice'), undefined);
 });
 
-test('the app subdomain and preview hosts are untouched', () => {
-	assert.equal(route('https://app.utsuwa.ai/'), undefined);
+test('app subdomain paths are served from /app', () => {
+	assert.deepEqual(route('https://app.utsuwa.ai/'), { rewrite: 'https://app.utsuwa.ai/app' });
+	assert.deepEqual(route('https://app.utsuwa.ai/settings/llm'), { rewrite: 'https://app.utsuwa.ai/app/settings/llm' });
+	assert.equal(route('https://app.utsuwa.ai/api/chat'), undefined);
+	assert.equal(route('https://app.utsuwa.ai/_app/env.js'), undefined);
+});
+
+test('the apex root and preview hosts are untouched', () => {
+	assert.equal(route('https://utsuwa.ai/ja'), undefined);
 	assert.equal(route('https://utsuwa.someone.workers.dev/docs/guides'), undefined);
 });

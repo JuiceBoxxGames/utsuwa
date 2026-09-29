@@ -101,7 +101,7 @@ The web app runs at `app.utsuwa.ai`, and your browser connects directly to Ollam
 OLLAMA_ORIGINS=https://app.utsuwa.ai ollama serve
 ```
 
-Match whatever is in your browser's address bar. For local development use `http://localhost:5173`. For a Vercel preview, use the exact origin shown in the address bar (no trailing slash), such as `https://your-preview.vercel.app`. Comma-separate multiple origins, or use `OLLAMA_ORIGINS=*` to allow any origin on your machine.
+Match whatever is in your browser's address bar. For local development use `http://localhost:5173`. For a preview deploy, use the exact origin shown in the address bar (no trailing slash), such as `https://your-preview.workers.dev`. Comma-separate multiple origins, or use `OLLAMA_ORIGINS=*` to allow any origin on your machine.
 
 ## LM Studio
 
@@ -217,10 +217,10 @@ OLLAMA_ORIGINS=https://app.utsuwa.ai ollama serve
 
 Ollama documents this under [allowing additional web origins](https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama).
 
-For Vercel previews, replace the value with the exact preview origin from the browser address bar:
+For preview deploys, replace the value with the exact preview origin from the browser address bar:
 
 ```bash
-OLLAMA_ORIGINS=https://your-preview.vercel.app ollama serve
+OLLAMA_ORIGINS=https://your-preview.workers.dev ollama serve
 ```
 
 If you use multiple Utsuwa origins, comma-separate them. Use `OLLAMA_ORIGINS=http://localhost:5173` for local development, or `OLLAMA_ORIGINS=*` only if you intentionally want to allow any browser origin on your machine.
