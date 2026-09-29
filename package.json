@@ -20,7 +20,9 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"postbuild": "pagefind --site .vercel/output/static || pagefind --site build || echo 'Pagefind indexing skipped (no static HTML found)'",
+		"postbuild": "pagefind --site .vercel/output/static || pagefind --site .svelte-kit/cloudflare || pagefind --site build || echo 'Pagefind indexing skipped (no static HTML found)'",
+		"cf:deploy": "wrangler deploy cloudflare-worker.js",
+		"cf:preview": "wrangler versions upload cloudflare-worker.js",
 		"preview": "vite preview",
 		"prepare": "(paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide && svelte-kit sync) || echo ''",
 		"lint": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -33,6 +35,7 @@
 		"@inlang/paraglide-js": "2.25.4",
 		"@playwright/test": "1.62.1",
 		"@sveltejs/adapter-auto": "^7.0.0",
+		"@sveltejs/adapter-cloudflare": "^7.2.9",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.49.1",
 		"@sveltejs/vite-plugin-svelte": "^6.2.1",
@@ -50,7 +53,8 @@
 		"svelte-check": "^4.3.4",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3",
-		"vite": "^7.2.6"
+		"vite": "^7.2.6",
+		"wrangler": "^4.143.1"
 	},
 	"dependencies": {
 		"@fontsource-variable/inter": "^5.2.8",

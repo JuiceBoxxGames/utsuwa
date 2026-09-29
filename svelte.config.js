@@ -1,4 +1,5 @@
 import adapterAuto from '@sveltejs/adapter-auto';
+import adapterCloudflare from '@sveltejs/adapter-cloudflare';
 import adapterStatic from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { mdsvex } from 'mdsvex';
@@ -6,6 +7,8 @@ import rehypeSlug from 'rehype-slug';
 import { createHighlighter } from 'shiki/bundle/web';
 
 const isTauri = !!process.env.TAURI_ENV_PLATFORM;
+// Set by Cloudflare Workers Builds; set it yourself for a local Cloudflare build.
+const isCloudflare = !!process.env.WORKERS_CI;
 
 const highlighter = await createHighlighter({
 	themes: ['github-light', 'github-dark'],
@@ -36,7 +39,9 @@ const config = {
 	kit: {
 		adapter: isTauri
 			? adapterStatic({ fallback: 'index.html' })
-			: adapterAuto(),
+			: isCloudflare
+				? adapterCloudflare()
+				: adapterAuto(),
 		// Lock down the desktop webview: with fs and http capabilities, a script
 		// injection would be dangerous, so forbid inline/remote script execution.
 		// SvelteKit hashes its own inline scripts in 'hash' mode. Applied only to

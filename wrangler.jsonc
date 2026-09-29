@@ -1,0 +1,18 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "utsuwa",
+	// adapter-cloudflare writes SvelteKit's worker here. Deploys use
+	// cloudflare-worker.js instead (see the cf:deploy scripts), which does the
+	// host routing and then hands off to this one.
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2026-09-26",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare",
+		// Apex /docs pages are static files; run the worker first so it can
+		// redirect them to docs.utsuwa.ai.
+		"run_worker_first": ["/docs", "/docs/*"]
+	},
+	"observability": { "enabled": true }
+}
