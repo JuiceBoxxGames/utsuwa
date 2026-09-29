@@ -14,5 +14,12 @@
 		// are static files that must redirect to docs.utsuwa.ai.
 		"run_worker_first": ["/", "/docs", "/docs/*"]
 	},
+	// Production domains. Forks deploying elsewhere: swap in your own or drop
+	// this block and use the workers.dev URL.
+	"routes": [
+		{ "pattern": "utsuwa.ai", "custom_domain": true },
+		{ "pattern": "app.utsuwa.ai", "custom_domain": true },
+		{ "pattern": "docs.utsuwa.ai", "custom_domain": true }
+	],
 	"observability": { "enabled": true }
 }
