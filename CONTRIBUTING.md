@@ -56,7 +56,7 @@ pnpm test:browser  # Playwright browser tests (tests/browser)
 VISUAL_REVIEW=1 pnpm test:browser  # also save review screenshots to test-results/
 ```
 
-CI runs both plus a Rust `cargo check` on every PR. A red check means no review until it's green.
+CI runs both, the Playwright browser tests on desktop and mobile, and a Rust `cargo check` on every PR. A red check means no review until it's green. Branches in this repo also get a Cloudflare preview deploy; PRs from forks don't, so say how you tested in the description.
 
 **Bump Tauri JS and Rust together.** The `@tauri-apps/*` packages in `package.json` and the `tauri*` crates in `src-tauri/Cargo.toml` must stay on the same minor versions. Dependabot groups each side, so land the npm and cargo bumps together.
 
