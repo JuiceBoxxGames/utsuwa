@@ -90,6 +90,8 @@ test('chat setup enables only the configured service and preserves it through Ba
 	await dialog.getByRole('button', { name: 'Next', exact: true }).click();
 	await dialog.getByRole('button', { name: 'Set up later', exact: true }).click();
 	await dialog.getByRole('button', { name: 'Start chatting', exact: true }).click();
+	// The dialog closes once completion is saved; reloading sooner races that write
+	await expect(dialog).toHaveCount(0);
 	await page.reload();
 	await waitForHydration(page);
 	await expect(dialog).toHaveCount(0);
