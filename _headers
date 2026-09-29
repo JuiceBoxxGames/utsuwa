@@ -1,0 +1,22 @@
+# Cloudflare static asset headers (vercel.json's twin). Responses from the
+# worker get the same security headers from src/hooks.server.ts.
+/*
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: microphone=(self), camera=(), geolocation=(), xr-spatial-tracking=(self)
+
+/models/*
+  Cache-Control: public, max-age=2592000, immutable
+/animations/*
+  Cache-Control: public, max-age=2592000, immutable
+/poses/*
+  Cache-Control: public, max-age=2592000, immutable
+/blog/*
+  Cache-Control: public, max-age=2592000, immutable
+/landing-page/*
+  Cache-Control: public, max-age=2592000, immutable
+/brand-assets/*
+  Cache-Control: public, max-age=2592000, immutable
+/audio/*
+  Cache-Control: public, max-age=2592000, immutable

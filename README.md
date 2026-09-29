@@ -223,6 +223,17 @@ pnpm dev
 
 The app will be available at `http://localhost:5173`
 
+#### Deploying
+
+Any host SvelteKit's `adapter-auto` supports works out of the box. For Cloudflare Workers, which is how utsuwa.ai is hosted, the repo ships a `wrangler.jsonc`:
+
+```bash
+WORKERS_CI=1 pnpm build   # Cloudflare Workers Builds sets WORKERS_CI for you
+pnpm cf:deploy            # or pnpm cf:preview for a preview version
+```
+
+MCP stdio servers need a Node host; Workers can't spawn processes.
+
 #### Running the Desktop App (Beta)
 
 To run the desktop app from source, you'll need the [Rust toolchain](https://rustup.rs/) in addition to the web prerequisites:

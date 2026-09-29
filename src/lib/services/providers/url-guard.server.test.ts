@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { assertSafeProviderTarget, createGuardedFetch, type Resolver } from './url-guard.server.ts';
+import {
+	assertSafeProviderTarget,
+	createGuardedFetch,
+	lookupWithDnsFallback,
+	type Resolver
+} from './url-guard.server.ts';
 
 const resolvesTo =
 	(...addresses: string[]): Resolver =>
@@ -58,6 +63,41 @@ test('base URLs with a query, fragment, or credentials are rejected', async () =
 	for (const raw of ['http://api.example/?x', 'http://api.example/v1?x=1', 'http://api.example/#x', 'http://u:p@api.example/']) {
 		await assert.rejects(assertSafeProviderTarget(raw, false, ok), raw);
 	}
+});
+
+const notImplemented: Resolver = async () => {
+	throw new Error('Not implemented');
+};
+const records =
+	(...addresses: string[]) =>
+	async () =>
+		addresses;
+const noRecords = async (): Promise<string[]> => {
+	throw new Error('queryA ENODATA');
+};
+
+test('the system lookup wins when it works', async () => {
+	const resolve = lookupWithDnsFallback(resolvesTo('192.168.1.20'), records('8.8.8.8'), records());
+	assert.deepEqual(await resolve('nas.lan'), [{ address: '192.168.1.20' }]);
+});
+
+// Workers implement node:dns over DoH but throw on lookup.
+test('without lookup, A and AAAA answers are merged and a missing family is fine', async () => {
+	const both = lookupWithDnsFallback(notImplemented, records('8.8.8.8'), records('2606:4700::1'));
+	assert.deepEqual(await both('api.example'), [{ address: '8.8.8.8' }, { address: '2606:4700::1' }]);
+	const v4only = lookupWithDnsFallback(notImplemented, records('10.0.0.5'), noRecords);
+	await assert.rejects(assertSafeProviderTarget('http://evil.example', false, v4only), /not allowed/);
+});
+
+test('without lookup, a name with no records fails closed', async () => {
+	const none = lookupWithDnsFallback(notImplemented, noRecords, noRecords);
+	await assert.rejects(assertSafeProviderTarget('http://nope.invalid', false, none), /could not be resolved/);
+});
+
+test('without lookup, IP literals resolve to themselves', async () => {
+	const resolve = lookupWithDnsFallback(notImplemented, noRecords, noRecords);
+	assert.deepEqual(await resolve('203.0.113.7'), [{ address: '203.0.113.7' }]);
+	assert.deepEqual(await resolve('2606:4700::1'), [{ address: '2606:4700::1' }]);
 });
 
 function stubFetch(impl: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) {

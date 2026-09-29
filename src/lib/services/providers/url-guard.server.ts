@@ -3,12 +3,33 @@
 // metadata address, so resolve it and check every answer.
 // ponytail: resolve-then-fetch leaves a DNS rebinding window (fetch resolves
 // again). Closing it needs an undici dispatcher that pins the checked address.
-import { lookup } from 'node:dns/promises';
+import { lookup, resolve4, resolve6 } from 'node:dns/promises';
 import { assertSafeProviderUrl, isBlockedHost } from './url-guard.ts';
 
 export type Resolver = (host: string) => Promise<Array<{ address: string }>>;
+type RecordQuery = (host: string) => Promise<string[]>;
 
-const lookupAll: Resolver = (host) => lookup(host, { all: true });
+// Cloudflare Workers ship node:dns over DoH but throw on lookup, so fall back
+// to plain A/AAAA queries there. lookup stays first on Node because it also
+// honors /etc/hosts, which self-hosters lean on for local providers.
+export function lookupWithDnsFallback(
+	system: Resolver,
+	queryA: RecordQuery,
+	queryAAAA: RecordQuery
+): Resolver {
+	return async (host) => {
+		try {
+			return await system(host);
+		} catch {
+			// fall through to the record queries
+		}
+		if (/^[\d.]+$/.test(host) || host.includes(':')) return [{ address: host }];
+		const answers = await Promise.allSettled([queryA(host), queryAAAA(host)]);
+		return answers.flatMap((a) => (a.status === 'fulfilled' ? a.value.map((address) => ({ address })) : []));
+	};
+}
+
+const lookupAll = lookupWithDnsFallback((host) => lookup(host, { all: true }), resolve4, resolve6);
 
 async function assertResolvesSafe(url: URL, allowPrivate: boolean, resolve: Resolver): Promise<void> {
 	let addresses: Array<{ address: string }>;
