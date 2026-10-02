@@ -35,6 +35,19 @@ export const DEFAULT_MODELS_BASE_URLS: Record<string, string> = {
 	'openai-tts': 'https://api.openai.com/v1'
 };
 
+// Model-list filters that keep only chat models, shared by the client fetch
+// (desktop) and the server route (web). Google ids are matched after the
+// 'models/' prefix is stripped. Providers without an entry keep everything.
+export const CHAT_MODEL_FILTERS: Record<string, RegExp> = {
+	openai: /^(gpt-|o1-|o3-|chatgpt-4o-)/,
+	anthropic: /^claude-/,
+	// DeepSeek's list holds only chat models, and its ids change every
+	// generation (deepseek-chat became deepseek-flash), so keep them all.
+	deepseek: /^deepseek-/,
+	xai: /^grok-/,
+	google: /^gemini-/
+};
+
 // Fish Audio's TTS route serves no CORS preflight, so browsers can't call it
 // directly: web posts to our /api/tts/fish-audio proxy, desktop calls this URL
 // through the Tauri HTTP plugin.

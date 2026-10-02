@@ -39,7 +39,9 @@ const VISION_MODEL_HINTS = [
 	'llama-4',
 	'mistral-small-3',
 	'phi-3.5-vision',
-	'phi-4-multimodal'
+	'phi-4-multimodal',
+	// V4.1 Flash; deepseek-v4-pro stays text-only
+	'deepseek-flash'
 ];
 
 // Names that match a hint but are actually text-only (e.g. small Gemma 3 has

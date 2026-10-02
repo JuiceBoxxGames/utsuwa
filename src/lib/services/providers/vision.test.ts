@@ -18,6 +18,10 @@ test('model heuristic catches vision models and rejects text-only ones', () => {
 	assert.equal(modelSupportsVision('claude-3-5-haiku-latest'), true);
 	// Aggregators often prefix the vendor
 	assert.equal(modelSupportsVision('google/gemini-3.8-flash'), true);
+	// DeepSeek V4.1 Flash sees images; V4 Pro is text-only
+	assert.equal(modelSupportsVision('deepseek-flash'), true);
+	assert.equal(modelSupportsVision('deepseek-v4-pro'), false);
+	assert.equal(modelSupportsVision('deepseek-chat'), false);
 	assert.equal(modelSupportsVision('llama3.1:8b'), false);
 	assert.equal(modelSupportsVision('mistral'), false);
 	assert.equal(modelSupportsVision('gpt-3.5-turbo'), false);
@@ -36,6 +40,9 @@ test('canShowImages needs a vision-capable model on a vision/local provider', ()
 	assert.equal(canShowImages(false, true, 'llava:13b'), true);
 	// Local provider + text model -> prompt
 	assert.equal(canShowImages(false, true, 'gemma3:1b'), false);
-	// Non-vision, non-local provider (e.g. DeepSeek) -> never
+	// Non-vision, non-local provider -> never
 	assert.equal(canShowImages(false, false, 'gpt-4o'), false);
+	// DeepSeek: only the Flash model can see
+	assert.equal(canShowImages(true, false, 'deepseek-flash'), true);
+	assert.equal(canShowImages(true, false, 'deepseek-v4-pro'), false);
 });
