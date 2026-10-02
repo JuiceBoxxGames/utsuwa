@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-10-02
+
+### Added
+- **Your own system prompt.** Settings > Character has a new System prompt field that replaces the built-in framing and rules at the top of every prompt, in both modes. Empty keeps the default, which the field shows as a placeholder. **Start from default** copies it in to edit, and **Reset to default** clears your version after you confirm. Memory, mood, relationship state, and the reply format are still added after it, so a custom prompt can't break replies ([#253](https://github.com/JuiceBoxxGames/utsuwa/pull/253), closes [#245](https://github.com/JuiceBoxxGames/utsuwa/issues/245)).
+- `{{char}}` and `{{user}}` macros in Personality and the system prompt, so character cards from other frontends paste in cleanly. `{{char}}` becomes your companion's name and `{{user}}` becomes "the user" ([#253](https://github.com/JuiceBoxxGames/utsuwa/pull/253)).
+- **A separate model for photos.** Settings > LLM Model > Vision sends photos to a different model, which describes them, and your chat model replies from that description without receiving the image. Text-only chat models can react to photos, and image tokens can go to a cheaper or local model. If the vision model isn't set up or can't be reached, the photo goes back to the chat box with an error; it never falls back to the chat model. The privacy notice names the provider that actually receives the photo ([#254](https://github.com/JuiceBoxxGames/utsuwa/pull/254), closes [#244](https://github.com/JuiceBoxxGames/utsuwa/issues/244)).
+
+### Changed
+- The hosted web app allows up to 240 API requests a minute per IP address. Normal use stays far below it; self-hosted builds are unchanged ([#251](https://github.com/JuiceBoxxGames/utsuwa/pull/251)).
+- New landing page hero and download page, plus a dev log on the blog ([#243](https://github.com/JuiceBoxxGames/utsuwa/pull/243)).
+
+### Fixed
+- The DeepSeek model list was empty. DeepSeek renamed its models (`deepseek-chat` is now `deepseek-flash`, plus `deepseek-v4-pro`), and the list only kept the old names. `deepseek-flash` can now see photos; `deepseek-v4-pro` is text-only and says so ([#252](https://github.com/JuiceBoxxGames/utsuwa/pull/252), [#244](https://github.com/JuiceBoxxGames/utsuwa/issues/244)).
+- The DeepSeek provider icon was an alert symbol, so the provider looked broken. It now shows DeepSeek's whale ([#255](https://github.com/JuiceBoxxGames/utsuwa/pull/255)).
+- Character edits (name, personality, system prompt) save right away. Before, an edit made just before reloading or closing the window could be lost ([#253](https://github.com/JuiceBoxxGames/utsuwa/pull/253)).
+- When the very first message in a chat failed before she answered, a photo attached to it was lost instead of going back to the chat box ([#254](https://github.com/JuiceBoxxGames/utsuwa/pull/254)).
+
 ## [0.19.2] - 2026-09-26
 
 ### Changed
