@@ -170,16 +170,20 @@ function createCharacterStore() {
 	function updatePersona(updates: {
 		name?: string;
 		systemPrompt?: string;
+		customSystemPrompt?: string;
 		extensions?: PersonaExtensions;
 	}): void {
 		state = {
 			...state,
 			...(updates.name !== undefined && { name: updates.name }),
 			...(updates.systemPrompt !== undefined && { systemPrompt: updates.systemPrompt }),
+			...(updates.customSystemPrompt !== undefined && { customSystemPrompt: updates.customSystemPrompt }),
 			...(updates.extensions !== undefined && { extensions: updates.extensions }),
 			updatedAt: new Date()
 		};
-		save();
+		// Not debounced: persona edits are rare, and the unload flush can lose a
+		// write that was still waiting when the window closed or reloaded.
+		void save(true);
 	}
 
 	// Apply state updates. countInteraction is false for system events (e.g.

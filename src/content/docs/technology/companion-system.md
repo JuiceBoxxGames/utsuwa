@@ -372,7 +372,7 @@ A written scene is cached per event for the session, so a dismissed event that c
 
 `buildSystemPrompt()` in `src/lib/ai/prompt-builder.ts` joins these layers in Dating Sim Mode:
 
-1. **`<system>`**: rules, output format, current time, session length, and the next reminder
+1. **`<system>`**: framing and rules, then current time, session length, and the next reminder. The framing comes from `defaultSystemRules()` unless the user wrote a custom system prompt on the Character page, which replaces it in both modes
 2. **`<character>`**: name and the persona's personality prompt
 3. **`<current_state>`**: mood and its causes, energy, time since last talk, stage, stat descriptions, days known, streak
 4. **`<memory>`**: recent turns, relevant facts, triggered memories, last session summary
@@ -383,6 +383,8 @@ A written scene is cached per event for the session, so a dismissed event that c
 9. **`<instructions>`**: stage guidance, behavior parameters, the reminder tag, and the JSON format
 
 Companion Mode uses a shorter prompt: system, character, a `<state>` with mood and energy only, memory, the same optional layers, and simpler instructions.
+
+The custom system prompt only swaps the framing. Everything the engine needs (time, state, memory, the "write only your own reply" rule, and the JSON contract in `<instructions>`) stays app-owned, so a custom prompt can change tone and boundaries without breaking parsing. `applyPromptMacros()` fills `{{char}}` with the companion's name and `{{user}}` with "the user" in both the custom prompt and the personality.
 
 When MCP tools are active, an `<mcp_tool_security>` block is appended unless `PUBLIC_MCP_PROMPT_HARDENING=false` opts out. See [MCP Servers](/docs/guides/mcp#hardening).
 

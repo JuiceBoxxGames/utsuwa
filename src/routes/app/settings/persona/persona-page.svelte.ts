@@ -2,6 +2,7 @@ import { personaStore } from '$lib/stores/persona.svelte';
 import { characterStore } from '$lib/stores/character.svelte';
 import { vrmGalleryStore } from '$lib/stores/vrm-gallery.svelte';
 import { allEvents } from '$lib/data/events';
+import { defaultSystemRules } from '$lib/ai/prompt-builder';
 import type { CompletedEventRecord, EventType } from '$lib/types/events';
 
 // Achievement data with event definitions joined
@@ -55,6 +56,10 @@ export function createPersonaPageState() {
 	// Persona form state
 	let formName = $state('');
 	let formSystemPrompt = $state('');
+	let formCustomSystemPrompt = $state('');
+	let resetPromptOpen = $state(false);
+	// Shown as the placeholder and copied in by "Start from default"
+	const defaultRules = $derived(defaultSystemRules(appMode, '{{char}}'));
 	let uploadModalOpen = $state(false);
 	let modeConfirmOpen = $state(false);
 	let pendingMode = $state<'companion' | 'dating_sim' | null>(null);
@@ -65,6 +70,19 @@ export function createPersonaPageState() {
 
 	function saveSystemPrompt() {
 		personaStore.updateCard({ systemPrompt: formSystemPrompt });
+	}
+
+	// Saving the untouched default would pin this mode's framing even after a
+	// mode switch, so an unedited copy saves as empty (use the default).
+	function saveCustomSystemPrompt() {
+		const text = formCustomSystemPrompt.trim();
+		personaStore.updateCard({ customSystemPrompt: text === defaultRules ? '' : formCustomSystemPrompt });
+	}
+
+	function resetCustomSystemPrompt() {
+		formCustomSystemPrompt = '';
+		personaStore.updateCard({ customSystemPrompt: '' });
+		resetPromptOpen = false;
 	}
 
 	async function handleUpload(file: File) {
@@ -123,6 +141,21 @@ export function createPersonaPageState() {
 		set formSystemPrompt(value: string) {
 			formSystemPrompt = value;
 		},
+		get formCustomSystemPrompt() {
+			return formCustomSystemPrompt;
+		},
+		set formCustomSystemPrompt(value: string) {
+			formCustomSystemPrompt = value;
+		},
+		get defaultRules() {
+			return defaultRules;
+		},
+		get resetPromptOpen() {
+			return resetPromptOpen;
+		},
+		set resetPromptOpen(value: boolean) {
+			resetPromptOpen = value;
+		},
 		get uploadModalOpen() {
 			return uploadModalOpen;
 		},
@@ -140,6 +173,8 @@ export function createPersonaPageState() {
 		formatAchievementDate,
 		saveName,
 		saveSystemPrompt,
+		saveCustomSystemPrompt,
+		resetCustomSystemPrompt,
 		handleUpload,
 		requestModeChange,
 		confirmModeChange,

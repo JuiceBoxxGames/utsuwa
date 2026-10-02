@@ -10,6 +10,7 @@ import { completeJson } from '$lib/services/llm/transport';
 import { memoryApi } from '$lib/engine/memory';
 import { getRecentTurns } from '$lib/engine/memory-session';
 import { buildMomentPrompt, parseMoment, selectMomentMemories } from '$lib/engine/moments';
+import { applyPromptMacros } from '$lib/ai/prompt-builder';
 import type { EventDefinition, Scene } from '$lib/types/events';
 
 const MAX_TOKENS = 900;
@@ -44,7 +45,7 @@ export async function generateMoment(
 		const facts = await memoryApi.getFacts(40);
 		const { system, user } = buildMomentPrompt(template, {
 			companionName: personaStore.activeCard.name,
-			personality: personaStore.activeCard.systemPrompt,
+			personality: applyPromptMacros(personaStore.activeCard.systemPrompt, personaStore.activeCard.name),
 			mode: state.appMode,
 			stage: state.relationshipStage,
 			mood: state.mood,

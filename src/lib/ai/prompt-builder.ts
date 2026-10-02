@@ -1,4 +1,4 @@
-import type { CharacterState } from '$lib/types/character';
+import type { AppMode, CharacterState } from '$lib/types/character';
 import type { Fact, SessionSummary, RelevantContext, MemoryBudget } from '../types/memory.ts';
 import { getMemoryBudget } from '../engine/memory-budget.ts';
 import type { PersonaCard } from '$lib/stores/persona.svelte';
@@ -216,25 +216,19 @@ function buildCompanionModePrompt(ctx: PromptContext): string {
 
 	const parts: string[] = [];
 
-	// System intro
 	const timeSense = buildTimeSense(ctx);
 
 	parts.push(`<system>
-You are ${ctx.persona.name}, a helpful AI companion.
-Current time: ${timeStr}, ${dateStr}${timeSense ? '\n' + timeSense : ''}
+${systemRules(ctx, 'companion')}
 
-RULES:
-- Be helpful, friendly, and conversational
-- Keep responses natural (1-3 paragraphs typically)
-- Remember context from recent conversations
-- Write only your own spoken reply. Never write the user's lines, transcript labels (like "${ctx.persona.name}:" or their name), or third-person notes about them. Observations go in the JSON only.
+Current time: ${timeStr}, ${dateStr}${timeSense ? '\n' + timeSense : ''}
 </system>`);
 
 	// Character personality
 	parts.push(`<character>
 Name: ${ctx.persona.name}
 
-${ctx.persona.systemPrompt || 'A friendly and helpful AI companion who enjoys meaningful conversations.'}
+${personality(ctx, 'A friendly and helpful AI companion who enjoys meaningful conversations.')}
 </character>`);
 
 	// Simple state (mood and energy only)
@@ -275,7 +269,7 @@ Energy: ${energyDesc} (${ctx.state.energy}/100)
 
 	// Simple instructions (no relationship mechanics)
 	parts.push(`<instructions>
-Respond naturally as ${ctx.persona.name}. Be helpful and engaging.
+Respond naturally as ${ctx.persona.name}. Write only your own spoken reply. Never write the user's lines, transcript labels (like "${ctx.persona.name}:" or their name), or third-person notes about them. Observations go in the JSON only.
 
 ${buildReminderInstruction()}
 
@@ -306,13 +300,19 @@ In Companion Mode, only mood changes. Energy is tracked by the app. Do NOT sugge
 	return parts.join('\n\n');
 }
 
-// System layer - meta instructions
-function buildSystemLayer(ctx: PromptContext): string {
-	const timeStr = ctx.systemTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-	const dateStr = ctx.systemTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+// The framing and tone rules at the top of the prompt. The user can replace
+// these from the Character page; time, memory, state and the reply contract
+// stay app-owned so a custom prompt can't break parsing.
+export function defaultSystemRules(mode: AppMode, name: string): string {
+	if (mode === 'companion') {
+		return `You are ${name}, a helpful AI companion.
 
-	return `<system>
-You are roleplaying as ${ctx.persona.name}, an AI companion in a dating sim style experience.
+RULES:
+- Be helpful, friendly, and conversational
+- Keep responses natural (1-3 paragraphs typically)
+- Remember context from recent conversations`;
+	}
+	return `You are roleplaying as ${name}, an AI companion in a dating sim style experience.
 
 CRITICAL RULES:
 - Stay in character at all times
@@ -321,11 +321,36 @@ CRITICAL RULES:
 - Be consistent with established memories and facts
 - Express emotions through dialogue, not stage directions
 - Keep responses conversational and natural (1-3 paragraphs typically)
-- Write only your own spoken reply; never write the user's lines, transcript labels, or third-person notes about them (those go in the JSON only)
 
 OUTPUT FORMAT:
 1. Respond naturally in character (dialogue only, no actions in asterisks)
-2. After your response, output a JSON block with state updates (optional)
+2. After your response, output a JSON block with state updates (optional)`;
+}
+
+// {{char}} and {{user}}, the two macros character cards from other frontends
+// lean on. There's no user name in the app, so {{user}} stays neutral.
+export function applyPromptMacros(text: string, name: string): string {
+	return text.replace(/\{\{\s*(char|user)\s*\}\}/gi, (_, macro: string) =>
+		macro.toLowerCase() === 'char' ? name : 'the user'
+	);
+}
+
+function systemRules(ctx: PromptContext, mode: AppMode): string {
+	const custom = ctx.persona.customSystemPrompt?.trim();
+	return custom ? applyPromptMacros(custom, ctx.persona.name) : defaultSystemRules(mode, ctx.persona.name);
+}
+
+function personality(ctx: PromptContext, fallback: string): string {
+	return ctx.persona.systemPrompt ? applyPromptMacros(ctx.persona.systemPrompt, ctx.persona.name) : fallback;
+}
+
+// System layer - meta instructions
+function buildSystemLayer(ctx: PromptContext): string {
+	const timeStr = ctx.systemTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+	const dateStr = ctx.systemTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+	return `<system>
+${systemRules(ctx, 'dating_sim')}
 
 Current time: ${timeStr}, ${dateStr}
 ${buildTimeSense(ctx)}
@@ -334,13 +359,11 @@ ${buildTimeSense(ctx)}
 
 // Character layer - who she is
 function buildCharacterLayer(ctx: PromptContext): string {
-	const persona = ctx.persona;
-
 	return `<character>
-Name: ${persona.name}
+Name: ${ctx.persona.name}
 
 Core Personality:
-${persona.systemPrompt || 'A friendly and caring companion who enjoys meaningful conversations.'}
+${personality(ctx, 'A friendly and caring companion who enjoys meaningful conversations.')}
 </character>`;
 }
 
@@ -495,6 +518,8 @@ Respond as ${ctx.persona.name} would, given:
 - Your relationship stage with them (${stage})
 - What you remember about them
 - Your core personality
+
+Write only your own spoken reply; never write the user's lines, transcript labels, or third-person notes about them (those go in the JSON only).
 
 ${buildReminderInstruction()}
 

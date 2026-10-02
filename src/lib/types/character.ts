@@ -72,6 +72,8 @@ export interface CharacterState {
 	// Persona fields (unified - no more separate persona storage)
 	name: string;
 	systemPrompt: string;
+	// Replaces the built-in <system> framing; empty or missing uses the default
+	customSystemPrompt?: string;
 	extensions: PersonaExtensions;
 
 	// Mood
