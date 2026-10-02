@@ -30,9 +30,12 @@ function applyApiKey(providerId: string, apiKey: string) {
  * Shared reactive state for the LLM settings page.
  * Extracted from the persona page so the same UI can live in the settings sidebar.
  */
-export function createLlmSettingsState() {
+export function createLlmSettingsState(moduleId: 'consciousness' | 'vision' = 'consciousness') {
+	// Advanced params and context size always belong to the chat model; the
+	// provider/model pair comes from whichever module this instance edits.
 	const consciousnessSettings = $derived(modulesStore.getModuleSettings('consciousness'));
-	const isLLMEnabled = $derived.by(() => modulesStore.isModuleEnabled('consciousness'));
+	const modelSettings = $derived(modulesStore.getModuleSettings(moduleId));
+	const isLLMEnabled = $derived.by(() => modulesStore.isModuleEnabled(moduleId));
 
 	let llmIsLoading = $state(false);
 	let llmFetchError = $state<string | null>(null);
@@ -40,7 +43,7 @@ export function createLlmSettingsState() {
 	let lastLocalLLMFetchKey = $state('');
 
 	const staticLLMModels = $derived.by(() => {
-		const providerId = consciousnessSettings.activeProvider;
+		const providerId = modelSettings.activeProvider;
 		if (!providerId) return [];
 		const provider = getLLMProvider(providerId);
 		return provider?.models ?? [];
@@ -49,7 +52,7 @@ export function createLlmSettingsState() {
 	const llmModels = $derived(llmDynamicModels ?? staticLLMModels);
 
 	const llmHasApiKey = $derived.by(() => {
-		const providerId = consciousnessSettings.activeProvider;
+		const providerId = modelSettings.activeProvider;
 		if (!providerId) return false;
 		const provider = getLLMProvider(providerId);
 		if (!provider) return false;
@@ -57,17 +60,17 @@ export function createLlmSettingsState() {
 	});
 
 	const isLLMConfigured = $derived.by(() => {
-		const providerId = consciousnessSettings.activeProvider;
+		const providerId = modelSettings.activeProvider;
 		return isLlmConfigured(
 			getLLMProvider(providerId),
 			settingsStore.getProviderConfig(providerId),
-			consciousnessSettings.activeModel,
+			modelSettings.activeModel,
 			llmModels
 		);
 	});
 
 	function activeLLMProviderForFetch() {
-		const providerId = consciousnessSettings.activeProvider;
+		const providerId = modelSettings.activeProvider;
 		if (!providerId) return null;
 		const provider = getLLMProvider(providerId);
 		if (!provider) return null;
@@ -110,7 +113,7 @@ export function createLlmSettingsState() {
 			apiKey: config.apiKey ?? '',
 			baseUrl: config.baseUrl,
 			isLocal: provider.isLocal,
-			getCurrentProviderId: () => modulesStore.getModuleSettings('consciousness').activeProvider,
+			getCurrentProviderId: () => modulesStore.getModuleSettings(moduleId).activeProvider,
 			onStart: () => {
 				llmIsLoading = true;
 				llmFetchError = null;
@@ -118,10 +121,10 @@ export function createLlmSettingsState() {
 			onSuccess: (models) => {
 				llmIsLoading = false;
 				llmDynamicModels = models;
-				const currentModel = consciousnessSettings.activeModel;
+				const currentModel = modelSettings.activeModel;
 				const nextModel = selectDefaultModel(models, currentModel);
 				if (nextModel !== currentModel) {
-					modulesStore.setModuleSetting('consciousness', 'activeModel', nextModel);
+					modulesStore.setModuleSetting(moduleId, 'activeModel', nextModel);
 				}
 			},
 			onError: (error) => {
@@ -145,7 +148,7 @@ export function createLlmSettingsState() {
 	const debouncedFetchLLMModels = debounce(fetchLLMModels, 300);
 
 	function handleLLMProviderChange(providerId: string) {
-		modulesStore.setModuleSetting('consciousness', 'activeProvider', providerId);
+		modulesStore.setModuleSetting(moduleId, 'activeProvider', providerId);
 		const provider = getLLMProvider(providerId);
 
 		llmDynamicModels = null;
@@ -158,11 +161,11 @@ export function createLlmSettingsState() {
 		}
 
 		if (provider && !provider.isLocal && provider.models?.length) {
-			modulesStore.setModuleSetting('consciousness', 'activeModel', provider.models[0].id);
+			modulesStore.setModuleSetting(moduleId, 'activeModel', provider.models[0].id);
 		}
 
 		if (provider?.custom) {
-			modulesStore.setModuleSetting('consciousness', 'activeModel', '');
+			modulesStore.setModuleSetting(moduleId, 'activeModel', '');
 		}
 
 		if (provider?.isLocal || !provider?.requiresApiKey) {
@@ -178,7 +181,7 @@ export function createLlmSettingsState() {
 	}
 
 	function handleLLMModelChange(modelId: string) {
-		modulesStore.setModuleSetting('consciousness', 'activeModel', modelId);
+		modulesStore.setModuleSetting(moduleId, 'activeModel', modelId);
 	}
 
 	function handleLLMBaseUrlChange(providerId: string, baseUrl: string) {
@@ -192,7 +195,7 @@ export function createLlmSettingsState() {
 	}
 
 	function handleLLMApiKeyBlur() {
-		const providerId = consciousnessSettings.activeProvider;
+		const providerId = modelSettings.activeProvider;
 		if (!providerId) return;
 		const provider = getLLMProvider(providerId);
 		const config = settingsStore.getProviderConfig(providerId);
@@ -202,12 +205,19 @@ export function createLlmSettingsState() {
 	}
 
 	function toggleLLM() {
-		modulesStore.setModuleEnabled('consciousness', !isLLMEnabled);
+		modulesStore.setModuleEnabled(moduleId, !isLLMEnabled);
 	}
 
 	return {
+		moduleId,
 		get consciousnessSettings() {
 			return consciousnessSettings;
+		},
+		get activeProvider() {
+			return modelSettings.activeProvider;
+		},
+		get activeModel() {
+			return modelSettings.activeModel;
 		},
 		get isLLMEnabled() {
 			return isLLMEnabled;

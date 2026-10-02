@@ -22,6 +22,8 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	let latest = '';
 	const thinking: boolean[] = [];
 	let speechEnabled = true;
+	let visionEnabled = false;
+	const visionSettings: { activeProvider: string; activeModel?: string } = { activeProvider: 'openai-compatible', activeModel: 'vision-model' };
 	let speechStarted = false;
 	const hints: string[] = [];
 	const said: string[] = [];
@@ -48,9 +50,10 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		personaStore: { activeCard: { id: 'test', name: 'Utsuwa', systemPrompt: 'Friendly', extensions: {} } },
 		settingsStore: { getProviderConfig: () => ({ apiKey: 'test-key', baseUrl: 'https://provider.invalid/v1/' }) },
 		modulesStore: {
-			isModuleEnabled: () => true,
+			isModuleEnabled: (id: string) => id !== 'vision' || visionEnabled,
 			getModuleState: () => ({ enabled: speechEnabled }),
-			getModuleSettings: (id: string) => id === 'speech' ? speech : { activeProvider: llmProvider, activeModel: 'test-model', contextSize }
+			getModuleSettings: (id: string) =>
+				id === 'speech' ? speech : id === 'vision' ? visionSettings : { activeProvider: llmProvider, activeModel: 'test-model', contextSize }
 		},
 		vrmStore: { startTalking: () => {}, setThinking: (value: boolean) => { thinking.push(value); } },
 		animationLibraryStore: { enabledForLlm: [] },
@@ -955,6 +958,98 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				assert.equal(fixtures.chatDraftStore.pending.length, 1);
 			});
 		}
+		for (const transport of ['direct', 'hosted']) {
+			const image = { id: 'img-v', mimeType: 'image/png', base64: 'eA==', blob: new Blob(['x'], { type: 'image/png' }) };
+			// Every upstream body, in order, whichever transport carried it
+			const upstreamBodies = (t: { mock: { method: (o: object, m: string, f: (...args: never[]) => unknown) => unknown } }, reply: (body: { model: string; messages: { role: string; content: unknown }[] }) => Response) => {
+				const bodies: { model: string; messages: { role: string; content: unknown }[] }[] = [];
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					const body = JSON.parse(String(init.body));
+					bodies.push(body);
+					return reply(body);
+				});
+				return bodies;
+			};
+			await t.test(`${transport}: a separate vision model describes the photo and the chat model gets text`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+				visionEnabled = true;
+				let kept = 0;
+				fixtures.keepImage = async () => { kept++; };
+				const bodies = upstreamBodies(t, (body) => new Response(
+					sse(body.model === 'vision-model' ? 'A grey cat on a windowsill.' : 'What a sweet cat!') + 'data: [DONE]\n\n',
+					{ headers: { 'Content-Type': 'text/event-stream' } }
+				));
+				try {
+					await sendCompanionMessage('Meet Miso', [image], hooks);
+				} finally {
+					visionEnabled = false;
+					fixtures.keepImage = async () => {};
+				}
+				assert.equal(chatStore.error, null);
+				assert.deepEqual(bodies.map((b) => b.model), ['vision-model', 'test-model']);
+				const visionTurn = JSON.stringify(bodies[0].messages.at(-1));
+				assert.match(visionTurn, /data:image\/png;base64,eA==/);
+				assert.match(visionTurn, /Meet Miso/);
+				const chatTurn = bodies[1].messages.at(-1);
+				assert.equal(chatTurn?.content, 'Meet Miso\n\n[They showed you an image. What it shows: A grey cat on a windowsill.]');
+				assert.doesNotMatch(JSON.stringify(bodies[1]), /base64/);
+				assert.match(String(bodies[1].messages[0].content), /<being_shown>/);
+				assert.equal(latest, 'What a sweet cat!');
+				assert.equal(messages.at(-1)?.content, 'What a sweet cat!');
+				assert.equal(kept, 1, 'the photo is still kept on the board');
+			});
+			await t.test(`${transport}: a failing vision model stops the turn and returns the photo`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+				visionEnabled = true;
+				const bodies = upstreamBodies(t, () => new Response(JSON.stringify({ error: { message: 'Invalid API key' } }), {
+					status: 401, headers: { 'Content-Type': 'application/json' }
+				}));
+				try {
+					await sendCompanionMessage('Meet Miso', [image], hooks);
+				} finally {
+					visionEnabled = false;
+				}
+				assert.deepEqual(bodies.map((b) => b.model), ['vision-model'], 'the chat model is never asked');
+				assert.equal(chatStore.error, 'Vision model: Invalid API key');
+				assert.equal(messages.length, 0);
+				assert.equal(fixtures.chatDraftStore.draft, 'Meet Miso');
+				assert.equal(fixtures.chatDraftStore.pending.length, 1);
+			});
+		}
+		await t.test('a vision model with nothing picked never falls back to the chat model', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			visionEnabled = true;
+			const model = visionSettings.activeModel;
+			visionSettings.activeModel = '';
+			let calls = 0;
+			t.mock.method(globalThis, 'fetch', async () => { calls++; return new Response(''); });
+			const image = { id: 'img-v', mimeType: 'image/png', base64: 'eA==', blob: new Blob(['x'], { type: 'image/png' }) };
+			try {
+				await sendCompanionMessage('Look', [image], hooks);
+			} finally {
+				visionEnabled = false;
+				visionSettings.activeModel = model;
+			}
+			assert.equal(calls, 0);
+			assert.match(chatStore.error ?? '', /Pick a vision model/);
+			assert.equal(fixtures.chatDraftStore.pending.length, 1);
+		});
+		await t.test('text-only turns skip the vision model', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			visionEnabled = true;
+			const models: string[] = [];
+			t.mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
+				models.push(JSON.parse(String(init.body)).model);
+				return new Response(sse('Hi!') + 'data: [DONE]\n\n');
+			});
+			try {
+				await sendCompanionMessage('Hello', [], hooks);
+			} finally {
+				visionEnabled = false;
+			}
+			assert.deepEqual(models, ['test-model']);
+		});
 		await t.test('route errors without a transient flag are not retried; bare gateway errors are', { timeout: 5000 }, async (t) => {
 			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
 			let calls = 0;

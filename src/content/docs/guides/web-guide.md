@@ -117,6 +117,8 @@ With a vision-capable model, she can see images you show her.
 
 Photos need a vision model, such as GPT-4o, Claude, Gemini, DeepSeek Flash, or LLaVA on Ollama or LM Studio. Utsuwa decides from the model name, which also covers vision models behind the OpenAI-Compatible provider. With a text-only model, the paperclip shows a hint instead.
 
+If your chat model can't see images, or image tokens cost too much there, turn on **Vision** in Settings > LLM Model and pick a separate model for photos. It describes each photo, and your chat model replies from the description. The privacy notice then names the vision model's provider, since that's where the photo goes.
+
 ## Photo mode
 
 Click the camera button (top left). The chat hides and a **Photo Mode** panel opens with Camera, Pose, Face, Scene, and Sticker tabs. Pose her, set her expression, pick a background, filter, and frame, add stickers, then click **Snap** or **Capture**. Photos download as PNG files. Press `Esc` to leave.

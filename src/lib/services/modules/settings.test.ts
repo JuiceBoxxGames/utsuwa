@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
 	DEFAULT_CONSCIOUSNESS_SETTINGS,
 	DEFAULT_SPEECH_SETTINGS,
+	DEFAULT_VISION_SETTINGS,
 	withModuleDefaults
 } from './settings.ts';
 
@@ -66,4 +67,9 @@ test('nothing saved gives a copy of the defaults', () => {
 test('modules without typed defaults pass through untouched', () => {
 	assert.deepEqual(withModuleDefaults('something-else', { a: 1 }), { a: 1 });
 	assert.deepEqual(withModuleDefaults('something-else', undefined), {});
+});
+
+test('the vision model starts unset, so photos go to the chat model', () => {
+	assert.deepEqual(DEFAULT_VISION_SETTINGS, { activeProvider: '' });
+	assert.deepEqual(withModuleDefaults('vision', { activeModel: 'llava' }), { activeProvider: '', activeModel: 'llava' });
 });

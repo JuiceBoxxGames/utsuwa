@@ -16,10 +16,10 @@ import { vrmStore } from '$lib/stores/vrm.svelte';
 import { animationLibraryStore } from '$lib/stores/animation-library.svelte';
 import { getTTSProvider } from '$lib/services/providers/registry';
 import { buildTTSOptions } from '$lib/services/tts/tts-options';
-import { cleanSpeechMarkers } from '$lib/services/tts/chat-text';
+import { cleanSpeechMarkers, stripThinkingBlocks } from '$lib/services/tts/chat-text';
 import { streamChat } from '$lib/services/llm/transport';
 import { RETRY_DELAYS_MS } from '$lib/services/llm/retry';
-import { missingLLMMessage, resolveActiveLLM } from '$lib/services/llm/active-llm';
+import { missingLLMMessage, resolveActiveLLM, resolveVisionLLM, visionModelEnabled } from '$lib/services/llm/active-llm';
 
 import { processCompanionTurn } from '$lib/services/chat/companion-turn';
 import { retrieveRelevantContext } from '$lib/engine/memory';
@@ -28,7 +28,7 @@ import { keepImage, type PreparedImage } from '$lib/services/storage/keepsakes';
 import { extractReminderTags, tryExtractReminderFromUserMessage } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { getWorkingMemory, ensureSession } from '$lib/engine/memory-session';
-import { buildAdvancedParams, buildMessages, type ChatLoopMessage } from '$lib/services/chat/turn-context';
+import { buildAdvancedParams, buildMessages, describeImagesRequest, type ChatLoopMessage } from '$lib/services/chat/turn-context';
 import { TurnStream } from '$lib/services/chat/turn-stream';
 import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { buildSpeechTools, shouldUseSpeechTools } from '$lib/services/tts/tool-definitions';
@@ -202,8 +202,40 @@ export async function sendCompanionMessage(
 		// Prompt building (memory retrieval) is done; the model call starts now
 		hooks.setPhase?.(images.length > 0 ? 'seeing' : 'thinking');
 
+		// A separate vision model looks first, and the chat model gets its
+		// description instead of the image bytes.
+		let imageDescription: string | undefined;
+		if (images.length > 0 && visionModelEnabled()) {
+			const vision = resolveVisionLLM();
+			if (!vision) {
+				throw new Error('Pick a vision model in Settings > LLM Model, or turn off the separate vision model.');
+			}
+			const request = describeImagesRequest(content, images);
+			bumpStall();
+			try {
+				imageDescription = await untilAborted(streamChat(
+					{
+						...vision,
+						messages: [{ role: 'user', content: request.content }],
+						systemPrompt: request.system,
+						// Small local vision models (moondream, llava) drift into gibberish
+						// at their default temperature. Cloud reasoning models reject
+						// anything but the default, so only local ones get pinned.
+						...(vision.isLocal && { temperature: 0 }),
+						signal
+					},
+					() => bumpStall()
+				));
+			} catch (err) {
+				if (signal.aborted) throw err;
+				throw new Error(`Vision model: ${err instanceof Error ? err.message : 'request failed'}`);
+			}
+			guard.pauseStall();
+			if (!stripThinkingBlocks(imageDescription).trim()) throw new Error('Vision model: the reply was empty');
+		}
+
 		chatStore.addMessage('assistant', '');
-		let messages: ChatLoopMessage[] = buildMessages(chatStore.messages.slice(0, -1), images);
+		let messages: ChatLoopMessage[] = buildMessages(chatStore.messages.slice(0, -1), images, imageDescription);
 		const currentQuestion = [...messages].reverse().find((message) => message.role === 'user');
 
 		// Snapshot speech settings at turn start so mid-stream changes cannot
@@ -540,9 +572,12 @@ async function scheduleReminderFallback(
 // A turn that failed before she said anything goes back into the composer, so
 // the user can just resend and the history doesn't end up with the question twice.
 function bounceBack(sent: Message, images: PreparedImage[]) {
-	const [before, last] = chatStore.messages.slice(-2);
+	// at() rather than slice(-2) destructuring: with one message, the pair
+	// shifts and the sent message lands in `before`.
+	const last = chatStore.messages.at(-1);
+	const before = chatStore.messages.at(-2);
 	const unanswered =
-		last?.id === sent.id || (before?.id === sent.id && last.role === 'assistant' && !last.content);
+		last?.id === sent.id || (before?.id === sent.id && last?.role === 'assistant' && !last.content);
 	if (!unanswered || chatDraftStore.draft.trim() || chatDraftStore.pending.length) return;
 	chatStore.removeMessage(sent.id);
 	chatDraftStore.draft = sent.content;

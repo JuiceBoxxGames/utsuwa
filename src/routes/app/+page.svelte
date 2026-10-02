@@ -114,8 +114,14 @@
 	// Images she's currently being shown, floated above her head while she thinks
 	let thinkingImages = $state<{ id: string; url: string }[]>([]);
 
-	// Can the active LLM actually see images? Gates the "show" affordance.
+	// Photos go to the separate vision model when it's on, else the chat model
+	const imageModule = $derived(modulesStore.isModuleEnabled('vision') ? 'vision' : 'consciousness');
+
+	// Can the model that gets photos see them? Gates the "show" affordance. A
+	// separate vision model is the user saying it can; a misconfigured one
+	// fails the send with a pointer to settings instead of silently hiding.
 	const visionCapable = $derived.by(() => {
+		if (imageModule === 'vision') return true;
 		const cs = modulesStore.getModuleSettings('consciousness');
 		const provider = cs.activeProvider;
 		const model = cs.activeModel;
@@ -125,7 +131,7 @@
 
 	// Provider info for the one-time "where do photos go" disclosure.
 	const imageProvider = $derived.by(() => {
-		const provider = modulesStore.getModuleSettings('consciousness').activeProvider;
+		const provider = modulesStore.getModuleSettings(imageModule).activeProvider;
 		return {
 			label: getLLMProvider(provider)?.name ?? 'your AI provider',
 			isLocal: provider ? isLocalLLMProvider(provider) : false

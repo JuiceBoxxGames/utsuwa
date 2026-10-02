@@ -237,10 +237,11 @@ Users show the companion an image with the paperclip button in the chat bar or b
 - **Format handling.** Images are downscaled so the longest edge is at most 1568 px. Formats the browser can decode but the APIs reject (such as HEIC on Safari) are converted to JPEG. Formats the browser cannot decode are rejected with a message. The wire formats are JPEG, PNG, GIF, and WebP.
 - **Wire formats.** `toOpenAIContent` and `toAnthropicContent` in `src/lib/services/chat/content.ts` serialize the same image as `image_url` data URLs or Anthropic base64 `source` blocks.
 - **Keepsakes.** A shown image is kept locally with a thumbnail and her memory note, and appears on the photoboard.
+- **Separate vision model.** The optional `vision` module (Settings > LLM Model > Vision) gives photos their own provider and model. `sendCompanionMessage()` sends the images to it first with `describeImagesRequest()` from `turn-context.ts`, then `buildMessages()` replaces the image parts in the current turn with a `[They showed you an image. What it shows: ...]` note, so the chat model gets text only. The `<being_shown>` layer, keepsakes, and memory work the same. Local vision models are pinned to temperature 0, because small ones like moondream drift into gibberish at their default. When the module is on but unusable, the turn fails with a `Vision model:` error instead of falling back to the chat model, and the paperclip stays enabled so that error can point to settings.
 
 ### Privacy
 
-Images stay on the device except for the one request where they are shown, and only vision-capable models receive them. The first time a cloud provider is used, a notice says the photo goes to that provider. With a local provider it says the photo never leaves the machine. Kept photos can be deleted from the board.
+Images stay on the device except for the one request where they are shown, and only vision-capable models receive them. With a separate vision model on, only that model receives them. The first time a cloud provider is used, a notice says the photo goes to that provider (the vision model's provider when one is on). With a local provider it says the photo never leaves the machine. Kept photos can be deleted from the board.
 
 ## Time-Based Recovery and Decay
 

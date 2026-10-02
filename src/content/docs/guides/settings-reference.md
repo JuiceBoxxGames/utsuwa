@@ -143,6 +143,17 @@ For **OpenAI-Compatible** the Model field is a text box, with a **Pick a fetched
 | Presence Penalty | Reduces repetition of tokens already used, from -2 to 2. | 0.0 |
 | Frequency Penalty | Stronger penalty for frequently repeated tokens, from -2 to 2. | 0.0 |
 
+**Vision**
+
+An optional second model that looks at photos for the chat model. When it's on, a photo you show her goes to this model, which describes it, and the chat model replies from that description without ever receiving the image. Use it when your chat model can't see images, or when you'd rather send photos to a cheaper or local model (for example DeepSeek V4 Pro for chat and LLaVA on Ollama for photos).
+
+| Control | What it does | Default |
+|---|---|---|
+| Separate vision model | Routes photos through the vision model. Off sends them to the chat model as before. | Off |
+| Provider, API key, Base URL, Model | The same fields as the chat model. Keys and base URLs are shared per provider, so using one provider for both needs one key. A note appears when the picked model's name doesn't look like a vision model. | None |
+
+If the vision model is on but not set up, or can't be reached, sending a photo shows an error that starts with **Vision model:** and puts the message and photo back in the composer. Photos never fall back to the chat model while this is on.
+
 See [Local LLM Setup](/docs/guides/local-llm-setup) for Ollama and LM Studio.
 
 ## TTS
