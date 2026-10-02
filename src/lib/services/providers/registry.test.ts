@@ -43,7 +43,7 @@ test('vision-capable cloud providers are flagged; text-only and local are not', 
 	assert.equal(providerSupportsVision('anthropic'), true);
 	assert.equal(providerSupportsVision('google'), true);
 	assert.equal(providerSupportsVision('xai'), true);
-	assert.equal(providerSupportsVision('deepseek'), false);
+	assert.equal(providerSupportsVision('deepseek'), true);
 	assert.equal(providerSupportsVision('ollama'), false);
 	assert.equal(providerSupportsVision('lmstudio'), false);
 });

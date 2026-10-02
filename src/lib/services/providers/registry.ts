@@ -67,6 +67,7 @@ export const LLM_PROVIDERS: ProviderMetadata[] = [
 		category: 'llm',
 		icon: '🔍',
 		requiresApiKey: true,
+		supportsVision: true,
 		defaultBaseUrl: DEFAULT_CHAT_BASE_URLS.deepseek,
 	},
 	{

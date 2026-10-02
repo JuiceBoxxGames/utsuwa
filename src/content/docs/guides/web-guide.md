@@ -115,7 +115,7 @@ With a vision-capable model, she can see images you show her.
 - The first time, a notice tells you where photos go. With a cloud provider, the photo is sent to that provider. With Ollama or LM Studio, it stays on your machine.
 - After she replies, the photo is kept on your device on the photoboard, with her impression as a note.
 
-Photos need a vision model on OpenAI, Anthropic, Google Gemini, xAI, Ollama, or LM Studio, such as GPT-4o, Claude, Gemini, or LLaVA. Utsuwa decides from the model name. With a text-only model, DeepSeek, or the OpenAI-Compatible provider, the paperclip shows a hint instead.
+Photos need a vision model, such as GPT-4o, Claude, Gemini, DeepSeek Flash, or LLaVA on Ollama or LM Studio. Utsuwa decides from the model name, which also covers vision models behind the OpenAI-Compatible provider. With a text-only model, the paperclip shows a hint instead.
 
 ## Photo mode
 

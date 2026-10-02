@@ -9,7 +9,7 @@ import {
 } from '$lib/services/providers/local-endpoints';
 import { assertSafeProviderTarget, createGuardedFetch } from '$lib/services/providers/url-guard.server';
 import { sanitizeProviderError } from '$lib/services/providers/provider-errors';
-import { DEFAULT_MODELS_BASE_URLS } from '$lib/services/providers/provider-defaults';
+import { CHAT_MODEL_FILTERS, DEFAULT_MODELS_BASE_URLS } from '$lib/services/providers/provider-defaults';
 
 interface ModelInfo {
 	id: string;
@@ -65,18 +65,9 @@ async function readCapped(response: Response, max: number): Promise<string> {
 }
 
 
-// Model filter patterns - only keep chat-compatible models
-// Note: Google IDs have 'models/' prefix stripped before filtering
-const MODEL_FILTERS: Record<string, RegExp> = {
-	openai: /^(gpt-|o1-|o3-|chatgpt-4o-)/,
-	anthropic: /^claude-/,
-	deepseek: /^deepseek-(chat|reasoner)/,
-	xai: /^grok-/,
-	google: /^gemini-/
-};
 
 function filterModels(providerId: string, models: ModelInfo[]): ModelInfo[] {
-	const filter = MODEL_FILTERS[providerId];
+	const filter = CHAT_MODEL_FILTERS[providerId];
 	if (!filter) return models; // No filter = keep all (Ollama, LM Studio, openai-compatible)
 	return models.filter((m) => filter.test(m.id));
 }

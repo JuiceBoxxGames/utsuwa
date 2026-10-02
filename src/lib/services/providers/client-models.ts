@@ -6,20 +6,12 @@ import {
 	isLocalLLMProvider,
 	looksLikeOllama
 } from './local-endpoints';
-import { DEFAULT_MODELS_BASE_URLS } from './provider-defaults.ts';
+import { CHAT_MODEL_FILTERS, DEFAULT_MODELS_BASE_URLS } from './provider-defaults.ts';
 
 interface ModelInfo {
 	id: string;
 	name: string;
 }
-
-const MODEL_FILTERS: Record<string, RegExp> = {
-	openai: /^(gpt-|o1-|o3-|chatgpt-4o-)/,
-	anthropic: /^claude-/,
-	deepseek: /^deepseek-(chat|reasoner)/,
-	xai: /^grok-/,
-	google: /^gemini-/
-};
 
 function getCurrentSiteOrigin(): string | undefined {
 	return typeof window !== 'undefined' ? window.location.origin : undefined;
@@ -183,7 +175,7 @@ export async function fetchModelsDirect(
 				return { models: [], error: `Unknown provider: ${providerId}` };
 		}
 
-		const filter = MODEL_FILTERS[providerId];
+		const filter = CHAT_MODEL_FILTERS[providerId];
 		const filtered = filter ? models.filter((m) => filter.test(m.id)) : models;
 		return { models: filtered };
 	} catch (error) {
