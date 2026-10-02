@@ -11,7 +11,7 @@
 	let query = $state('');
 	let searchInput: HTMLInputElement;
 	const navItems = $derived([
-		{ href: localPath('app', '/settings/persona'), label: 'Character', icon: 'persona', keywords: 'avatar personality name companion mode' },
+		{ href: localPath('app', '/settings/persona'), label: 'Character', icon: 'persona', keywords: 'avatar personality name companion mode system prompt instructions' },
 		{ href: localPath('app', '/settings/display'), label: 'Display', icon: 'monitor', keywords: 'appearance theme light dark chat typing screen awake layout' },
 		{ href: localPath('app', '/settings/animations'), label: 'Animations', icon: 'play', keywords: 'vrma emote gesture upload motion library idle thinking' },
 		{ href: localPath('app', '/settings/llm'), label: 'LLM Model', icon: 'brain', keywords: 'ai provider api model language context' },

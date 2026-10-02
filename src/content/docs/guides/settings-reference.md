@@ -38,6 +38,12 @@ The gallery has no delete button. To remove uploaded models, use **Clear VRM Sto
 
 A free-text field for how your companion speaks, behaves, and sees the world. It becomes part of her system prompt. Changes save when you leave the field.
 
+**System prompt**
+
+Replaces the built-in framing and rules at the top of every prompt (the "You are roleplaying as..." block), in both modes. Leave it empty to use the default, which the empty field shows as a placeholder. **Start from default** copies the default in so you can edit it, and **Reset to default** clears your version after you confirm. Memory, mood, relationship state, and the reply format are still added after it, so a custom prompt can't break replies. Changes save when you leave the field.
+
+Both fields understand two macros from character cards made for other frontends: `{{char}}` becomes your companion's name and `{{user}}` becomes "the user".
+
 **Experience**
 
 | Control | What it does | Default |

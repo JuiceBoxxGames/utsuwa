@@ -17,6 +17,8 @@ export interface PersonaCard {
 	id: string;
 	name: string;
 	systemPrompt: string;
+	/** Replaces the built-in framing at the top of the prompt. Empty uses the default. */
+	customSystemPrompt?: string;
 	extensions: PersonaExtensions;
 }
 
@@ -26,6 +28,7 @@ function createPersonaStore() {
 		id: 'default',
 		name: characterStore.name,
 		systemPrompt: characterStore.systemPrompt,
+		customSystemPrompt: characterStore.state.customSystemPrompt,
 		extensions: characterStore.extensions
 	}));
 
@@ -49,6 +52,7 @@ function createPersonaStore() {
 		characterStore.updatePersona({
 			name: updates.name,
 			systemPrompt: updates.systemPrompt,
+			customSystemPrompt: updates.customSystemPrompt,
 			extensions: updates.extensions
 		});
 	}

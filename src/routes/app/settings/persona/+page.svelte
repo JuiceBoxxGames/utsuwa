@@ -8,6 +8,7 @@
 	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { createPersonaPageState } from './persona-page.svelte';
 	import AvatarGallery from './AvatarGallery.svelte';
 	import StatsPanel from './StatsPanel.svelte';
@@ -23,8 +24,13 @@
 		if (page.isDatingSimMode) getCompletedEvents().then(records => { page.completedEventRecords = records; });
 	});
 	$effect(() => {
-		if (characterStore.isReady) { page.formName = personaStore.name; page.formSystemPrompt = personaStore.systemPrompt; }
+		if (characterStore.isReady) { page.formName = personaStore.name; page.formSystemPrompt = personaStore.systemPrompt; page.formCustomSystemPrompt = personaStore.activeCard.customSystemPrompt ?? ''; }
 	});
+	let customPromptField = $state<HTMLTextAreaElement>();
+	function startFromDefault() {
+		page.formCustomSystemPrompt = page.defaultRules;
+		customPromptField?.focus();
+	}
 </script>
 
 <div class="page character-screen">
@@ -42,6 +48,17 @@
 					<SettingsSection title="Personality" description="How your companion speaks, behaves, and sees the world. Changes save when you leave the field.">
 						<label class="sr-only" for="character-personality">Core personality</label>
 						<textarea id="character-personality" class="settings-field" bind:value={page.formSystemPrompt} rows="6" onblur={page.saveSystemPrompt} placeholder="Personality, speaking style, and background..."></textarea>
+					</SettingsSection>
+					<SettingsSection title="System prompt" description="Replaces the built-in framing and rules at the top of every prompt, in both modes. Leave it empty to use the default.">
+						{#snippet actions()}
+							{#if page.formCustomSystemPrompt.trim()}<Button variant="ghost" size="sm" onclick={() => (page.resetPromptOpen = true)}>Reset to default</Button>
+							{:else}<Button variant="ghost" size="sm" onclick={startFromDefault}>Start from default</Button>{/if}
+						{/snippet}
+						<div class="ai-fields">
+							<label class="sr-only" for="character-system-prompt">System prompt</label>
+							<textarea id="character-system-prompt" class="settings-field" bind:this={customPromptField} bind:value={page.formCustomSystemPrompt} rows="8" onblur={page.saveCustomSystemPrompt} placeholder={page.defaultRules} aria-describedby="character-system-prompt-hint"></textarea>
+							<p class="hint" id="character-system-prompt-hint">{'{{char}}'} becomes your companion's name and {'{{user}}'} becomes "the user", here and in Personality. Memory, mood, and the reply format are still added after this.</p>
+						</div>
 					</SettingsSection>
 					<SettingsSection title="Experience">
 						<div class="setting-row"><div class="setting-info"><span class="setting-label">Companion mode</span><span class="setting-desc">Dating sim includes relationship progression and events. Companion focuses on everyday conversation.</span></div>
@@ -61,6 +78,17 @@
 			<Dialog.Title class="confirm-title">Change companion mode?</Dialog.Title>
 			<Dialog.Description class="confirm-message">This changes whether relationship progression and events are active. Your companion's name and personality stay the same.</Dialog.Description>
 			<div class="confirm-actions"><Dialog.Close class="btn btn-secondary">Cancel</Dialog.Close><button class="btn btn-primary" onclick={page.confirmModeChange}>Change mode</button></div>
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
+
+<Dialog.Root open={page.resetPromptOpen} onOpenChange={(open) => (page.resetPromptOpen = open)}>
+	<Dialog.Portal>
+		<Dialog.Overlay class="confirm-modal" />
+		<Dialog.Content class="confirm-content">
+			<Dialog.Title class="confirm-title">Reset system prompt?</Dialog.Title>
+			<Dialog.Description class="confirm-message">Your custom system prompt will be cleared and the built-in one used again. Personality is not affected.</Dialog.Description>
+			<div class="confirm-actions"><Dialog.Close class="btn btn-secondary">Cancel</Dialog.Close><button class="btn btn-danger" onclick={page.resetCustomSystemPrompt}>Reset</button></div>
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>

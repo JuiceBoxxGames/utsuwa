@@ -82,7 +82,7 @@ Utsuwa uses [Paraglide JS](https://paraglidejs.com) for translations. Only the l
 
 Some changes are product decisions, not code decisions: anything that changes what Utsuwa ships in its prompts, how the project positions itself, or what the hosted deployment transmits. Open an issue to discuss before writing code, it saves everyone time.
 
-One standing decision, so nobody has to rediscover it: **Utsuwa core does not ship content preambles or filter-override text.** The persona system prompt is fully user-editable, on the user's machine, in the user's words, and that is where tone and content boundaries belong. PRs that bundle preamble text into the app will be asked to convert to documentation instead.
+One standing decision, so nobody has to rediscover it: **Utsuwa core does not ship content preambles or filter-override text.** The persona and the system prompt framing (Settings > Character) are fully user-editable, on the user's machine, in the user's words, and that is where tone and content boundaries belong. PRs that bundle preamble text into the app will be asked to convert to documentation instead.
 
 ## Review Expectations
 
