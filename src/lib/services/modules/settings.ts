@@ -14,6 +14,13 @@ export interface ConsciousnessSettings {
 	frequencyPenalty: number;
 }
 
+// A separate model that looks at photos so the chat model doesn't have to.
+// Only used while the vision module is switched on.
+export interface VisionSettings {
+	activeProvider: string;
+	activeModel?: string;
+}
+
 export interface SpeechSettings {
 	activeProvider: string;
 	activeModel?: string;
@@ -43,6 +50,10 @@ export const DEFAULT_CONSCIOUSNESS_SETTINGS: Readonly<ConsciousnessSettings> = {
 	frequencyPenalty: 0
 };
 
+export const DEFAULT_VISION_SETTINGS: Readonly<VisionSettings> = {
+	activeProvider: ''
+};
+
 export const DEFAULT_SPEECH_SETTINGS: Readonly<SpeechSettings> = {
 	activeProvider: '',
 	activeLanguage: 'en',
@@ -64,6 +75,7 @@ export const DEFAULT_SPEECH_SETTINGS: Readonly<SpeechSettings> = {
 export interface TypedModuleSettings {
 	consciousness: ConsciousnessSettings;
 	speech: SpeechSettings;
+	vision: VisionSettings;
 }
 
 export type ModuleSettings<Id extends string> = Id extends keyof TypedModuleSettings
@@ -72,7 +84,8 @@ export type ModuleSettings<Id extends string> = Id extends keyof TypedModuleSett
 
 const MODULE_DEFAULTS: Record<string, object> = {
 	consciousness: DEFAULT_CONSCIOUSNESS_SETTINGS,
-	speech: DEFAULT_SPEECH_SETTINGS
+	speech: DEFAULT_SPEECH_SETTINGS,
+	vision: DEFAULT_VISION_SETTINGS
 };
 
 /** Saved keys win (including 0, false, ''); missing ones come from the defaults. */

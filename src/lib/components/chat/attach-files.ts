@@ -19,7 +19,7 @@ export function imageMimeFromPath(path: string): string | null {
 
 export function showVisionHint() {
 	chatHintStore.showHint(
-		"This model can't see images. Pick a vision model (GPT-4o, Claude, Gemini, or a local one like llava) in Settings."
+		"This model can't see images. Pick a vision model (GPT-4o, Claude, Gemini, DeepSeek Flash, or a local one like llava), or turn on a separate vision model in Settings > LLM Model."
 	);
 }
 

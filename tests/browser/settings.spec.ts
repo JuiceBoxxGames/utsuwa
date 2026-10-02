@@ -192,6 +192,37 @@ test('shared LLM and display controls keep their existing values and callbacks',
 	).toHaveValue('0.0');
 });
 
+test('the separate vision model keeps its own provider and model next to chat', async ({ page }) => {
+	await openApp(page);
+	await page.goto('/app/settings/llm');
+	await waitForHydration(page);
+	const chat = page.getByRole('switch', { name: 'Chat (LLM)', exact: true });
+	await chat.click();
+	await page.getByText('Select LLM provider...').click();
+	await page.getByRole('menuitem', { name: /OpenAI$/ }).click();
+	const vision = page.getByRole('switch', { name: 'Separate vision model', exact: true });
+	await expect(vision).not.toBeChecked();
+	await expect(page.getByText(/^Off\. Photos go to your chat model/)).toBeVisible();
+	await vision.click();
+	await page.getByText('Select vision provider...').click();
+	await page.getByRole('menuitem', { name: 'OpenAI-Compatible' }).click();
+	await page.locator('#vision-base-url').fill('http://localhost:9/v1');
+	await page.locator('#vision-custom-model').fill('some-text-model');
+	await expect(page.getByText('This model might not accept images')).toBeVisible();
+	await page.locator('#vision-custom-model').fill('llava:13b');
+	await expect(page.getByText('This model might not accept images')).toHaveCount(0);
+	await expect(page.locator('details.llm-advanced-params')).toHaveCount(0);
+	await page.reload();
+	await waitForHydration(page);
+	await expect(vision).toBeChecked();
+	await expect(page.locator('#vision-custom-model')).toHaveValue('llava:13b');
+	const saved = await page.evaluate(() => ({
+		chat: JSON.parse(localStorage.getItem('utsuwa-module-consciousness') ?? '{}').settings?.activeProvider,
+		vision: JSON.parse(localStorage.getItem('utsuwa-module-vision') ?? '{}').settings
+	}));
+	expect(saved).toEqual({ chat: 'openai', vision: { activeProvider: 'openai-compatible', activeModel: 'llava:13b' } });
+});
+
 test('settings search finds categories and Escape clears it without leaving settings', async ({ page }) => {
 	await page.goto('/app/settings/display');
 	await waitForHydration(page);

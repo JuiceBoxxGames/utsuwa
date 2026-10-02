@@ -16,8 +16,23 @@ export interface ActiveLLM extends LLMTarget {
 
 /** Null when chat is off, no provider is picked, or its required key is missing. */
 export function resolveActiveLLM(): ActiveLLM | null {
-	if (!modulesStore.isModuleEnabled('consciousness')) return null;
-	const settings = modulesStore.getModuleSettings('consciousness');
+	return resolveModuleLLM('consciousness');
+}
+
+/** True when photos should go to the separate vision model instead of the chat model. */
+export function visionModelEnabled(): boolean {
+	return modulesStore.isModuleEnabled('vision');
+}
+
+/** The separate vision model, or null when it's off or not fully set up. */
+export function resolveVisionLLM(): ActiveLLM | null {
+	const llm = resolveModuleLLM('vision');
+	return llm?.model ? llm : null;
+}
+
+function resolveModuleLLM(moduleId: 'consciousness' | 'vision'): ActiveLLM | null {
+	if (!modulesStore.isModuleEnabled(moduleId)) return null;
+	const settings = modulesStore.getModuleSettings(moduleId);
 	const provider = settings.activeProvider;
 	if (!provider) return null;
 	const meta = getLLMProvider(provider);

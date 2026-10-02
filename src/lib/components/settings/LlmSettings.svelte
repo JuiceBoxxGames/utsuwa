@@ -2,7 +2,8 @@
 	import { rangeProgress } from '$lib/utils/range-progress';
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
-	import { getLLMProvider } from '$lib/services/providers/registry';
+	import { getLLMProvider, providerSupportsVision, visionDependsOnModel } from '$lib/services/providers/registry';
+	import { canShowImages } from '$lib/services/providers/vision';
 	import { Icon, ProviderDropdown, ModelDropdown, ContextSizeSlider } from '$lib/components/ui';
 	import { DOCS_URL } from '$lib/config/site';
 	import { isTauri } from '$lib/services/platform';
@@ -10,6 +11,12 @@
 	import SettingsSection from './SettingsSection.svelte';
 
 	let { state }: { state: LlmSettingsState } = $props();
+
+	// The same fields serve the chat model and the separate vision model
+	const vision = $derived(state.moduleId === 'vision');
+	const idp = $derived(vision ? 'vision' : 'llm');
+	const title = $derived(vision ? 'Vision' : 'Chat (LLM)');
+	const switchLabel = $derived(vision ? 'Separate vision model' : 'Chat (LLM)');
 
 	const LOCAL_LLM_DOCS_URL = `${DOCS_URL}/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama`;
 
@@ -36,28 +43,31 @@
 	</p>
 {/snippet}
 
-<SettingsSection title="Chat (LLM)">
-	{#snippet actions()}<Switch checked={state.isLLMEnabled} onchange={state.toggleLLM} label="Chat (LLM)" />{/snippet}
+<SettingsSection
+	{title}
+	description={vision ? 'Let a different model look at photos for your chat model.' : undefined}
+>
+	{#snippet actions()}<Switch checked={state.isLLMEnabled} onchange={state.toggleLLM} label={switchLabel} />{/snippet}
 	<div class="ai-fields">
 		{#if state.isLLMEnabled}
 			<div class="ai-field">
 				<span class="settings-label">Provider</span>
 				<ProviderDropdown
 					type="llm"
-					value={state.consciousnessSettings.activeProvider}
+					value={state.activeProvider}
 					onSelect={state.handleLLMProviderChange}
-					placeholder="Select LLM provider..."
+					placeholder={vision ? 'Select vision provider...' : 'Select LLM provider...'}
 				/>
 			</div>
 
-			{#if state.consciousnessSettings.activeProvider}
-				{@const provider = getLLMProvider(state.consciousnessSettings.activeProvider)}
+			{#if state.activeProvider}
+				{@const provider = getLLMProvider(state.activeProvider)}
 
 				{#if provider?.requiresApiKey || provider?.custom}
 					<div class="ai-field">
-						<label class="settings-label" for="llm-api-key">{provider?.custom ? 'API key (optional)' : 'API key'}</label>
+						<label class="settings-label" for="{idp}-api-key">{provider?.custom ? 'API key (optional)' : 'API key'}</label>
 						<input
-							id="llm-api-key"
+							id="{idp}-api-key"
 							type="password"
 							class="settings-field"
 							class:error={state.llmFetchError}
@@ -71,9 +81,9 @@
 
 				{#if provider?.isLocal || provider?.custom}
 					<div class="ai-field">
-						<label class="settings-label" for="llm-base-url">Base URL</label>
+						<label class="settings-label" for="{idp}-base-url">Base URL</label>
 						<input
-							id="llm-base-url"
+							id="{idp}-base-url"
 							type="text"
 							class="settings-field"
 							placeholder={provider.custom
@@ -99,19 +109,19 @@
 				{#if provider?.custom}
 					{@const customConfig = settingsStore.getProviderConfig(provider.id)}
 					<div class="ai-field">
-						<label class="settings-label" for="llm-custom-model">Model</label>
+						<label class="settings-label" for="{idp}-custom-model">Model</label>
 						<input
-							id="llm-custom-model"
+							id="{idp}-custom-model"
 							type="text"
 							class="settings-field"
 							placeholder="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)" aria-label="Model (e.g. gpt-4o-mini, meta-llama/llama-3-70b)"
-							value={state.consciousnessSettings.activeModel ?? ''}
+							value={state.activeModel ?? ''}
 							oninput={(e) => state.handleLLMModelChange(e.currentTarget.value.trim())}
 						/>
 						{#if customConfig.baseUrl}
 							<ModelDropdown
 								models={state.llmModels}
-								value={state.consciousnessSettings.activeModel}
+								value={state.activeModel}
 								onSelect={state.handleLLMModelChange}
 								placeholder="Pick a fetched model..."
 								isLoading={state.llmIsLoading}
@@ -123,6 +133,7 @@
 						{/if}
 					</div>
 
+					{#if !vision}
 					<details class="llm-advanced-params">
 						<summary>Advanced Parameters</summary>
 						<div class="llm-param-grid">
@@ -220,12 +231,13 @@
 							</div>
 						</div>
 					</details>
+					{/if}
 				{:else}
 					<div class="ai-field">
 						<span class="settings-label">Model</span>
 						<ModelDropdown
 							models={state.llmModels}
-							value={state.consciousnessSettings.activeModel}
+							value={state.activeModel}
 							onSelect={state.handleLLMModelChange}
 							placeholder="Select model..."
 							isLoading={state.llmIsLoading}
@@ -236,27 +248,44 @@
 					</div>
 				{/if}
 
-				<ContextSizeSlider
-					contextSize={state.consciousnessSettings.contextSize}
-					onChange={handleContextSizeChange}
-					id="llm-context-size-toggle"
-				/>
+				{#if vision}
+					{#if state.activeModel && !canShowImages(providerSupportsVision(state.activeProvider), visionDependsOnModel(state.activeProvider), state.activeModel)}
+						<p class="hint warn">
+							<Icon name="alert-circle" size={14} />
+							This model might not accept images. Pick a vision model (GPT-4o, Claude, Gemini, DeepSeek Flash, or a local one like llava).
+						</p>
+					{/if}
+				{:else}
+					<ContextSizeSlider
+						contextSize={state.consciousnessSettings.contextSize}
+						onChange={handleContextSizeChange}
+						id="llm-context-size-toggle"
+					/>
+				{/if}
 			{/if}
 		{:else}
-			<p class="hint">Turn on chat to pick a provider and model.</p>
+			<p class="hint">
+				{vision
+					? "Off. Photos go to your chat model. Turn this on to have another model describe them instead, and your chat model replies from that description. Useful when the chat model can't see images, or its image tokens cost more."
+					: 'Turn on chat to pick a provider and model.'}
+			</p>
 		{/if}
 	</div>
 </SettingsSection>
 
 <style>
-	.hint.error {
+	.hint.error,
+	.hint.warn {
 		display: flex;
 		align-items: flex-start;
 		gap: 6px;
+	}
+
+	.hint.error {
 		color: var(--color-error);
 	}
 
-	.hint.error :global(svg) {
+	.hint :global(svg) {
 		flex-shrink: 0;
 		margin-top: 2px;
 	}
