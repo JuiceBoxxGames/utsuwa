@@ -1,6 +1,8 @@
-/* T3 settings pages use one readable column, grouped rows, and restrained headings. */
+/* T3 settings pages use one readable column, grouped rows, and restrained headings.
+   position: relative keeps sr-only labels inside the scroller; without it they
+   anchor to the viewport and the whole window scrolls behind the page. */
 .settings-layout .settings-content > :is(.page, .display-page, .character-screen, .dev-layout) {
-	width: 100%; max-width: 960px; margin: 0 auto; min-height: 0; height: 100%; overflow-y: auto;
+	position: relative; width: 100%; max-width: 960px; margin: 0 auto; min-height: 0; height: 100%; overflow-y: auto;
 }
 .settings-layout :is(.page, .display-page) { display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
 .settings-layout .page-header { flex-shrink: 0; margin-bottom: 0; padding: 0 16px; }

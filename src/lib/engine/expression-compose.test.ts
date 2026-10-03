@@ -4,6 +4,7 @@ import {
 	composeExpressionWeights,
 	createFaceState,
 	findHappyExpression,
+	quickTestFace,
 	type ComposeInput,
 	type FaceState
 } from './expression-compose.ts';
@@ -23,6 +24,7 @@ function input(state: FaceState, overrides: Partial<ComposeInput> = {}): Compose
 		speaking: false,
 		visemes: SILENT,
 		random: () => 0.5,
+		manual: new Map(),
 		...overrides
 	};
 }
@@ -177,4 +179,36 @@ test('emote face picks the first happy-like expression by keyword priority', () 
 	assert.equal(findHappyExpression(['Fun', 'Joy', 'aa']), 'Joy');
 	assert.equal(findHappyExpression(['smile_wide', 'relaxed']), 'smile_wide');
 	assert.equal(findHappyExpression(['sad', 'angry']), null);
+});
+
+test('manual weights beat the mood, blink, and mouth layers', () => {
+	const blinking: FaceState = { ...quiet(), blink: { timer: 0, next: 0, active: true, progress: 0 } };
+	const out = composeExpressionWeights(
+		input(blinking, {
+			moodTarget: { name: 'happy', weight: 0.6 },
+			visemes: { ...SILENT, aa: 0.5 },
+			manual: new Map([['happy', 0.9], ['blink', 0], ['aa', 0.7]]),
+			delta: 0.1
+		})
+	);
+	assert.equal(out.face.get('happy'), 0.9);
+	assert.equal(out.face.get('blink'), 0);
+	assert.equal(out.face.get('aa'), 0.7);
+	assert.equal(out.mouth.has('aa'), false);
+	// Layers it doesn't name carry on as usual
+	assert.equal(out.mouth.get('oh'), 0);
+	assert.ok((out.face.get('eyeBlinkLeft') ?? 0) > 0);
+});
+
+test('quick tests use ARKit shapes on perfect-sync models and VRM presets otherwise', () => {
+	const presets = ['happy', 'sad', 'surprised', 'blink', 'aa'];
+	assert.deepEqual(quickTestFace('blink', presets), { blink: 1 });
+	assert.deepEqual(quickTestFace('smile', presets), { happy: 0.8 });
+	assert.deepEqual(quickTestFace('mouthOpen', presets), { aa: 0.7 });
+	const arkit = ['eyeBlinkLeft', 'eyeBlinkRight', 'blink', 'jawOpen'];
+	assert.deepEqual(quickTestFace('blink', arkit), { eyeBlinkLeft: 1, eyeBlinkRight: 1 });
+	assert.deepEqual(quickTestFace('mouthOpen', arkit), { jawOpen: 0.7 });
+	assert.deepEqual(quickTestFace('sad', ['neutral']), {});
+	// VRM 0.x customs keep their casing, same as the mood face's lookup
+	assert.deepEqual(quickTestFace('surprised', ['neutral', 'Surprised']), { Surprised: 0.8 });
 });

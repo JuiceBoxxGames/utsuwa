@@ -48,6 +48,8 @@ export interface ComposeInput {
 	speaking: boolean;
 	visemes: Visemes;
 	random: () => number;
+	// Weights set by hand on the Developer page; they beat every layer above
+	manual: ReadonlyMap<string, number>;
 }
 
 export interface ComposeOutput {
@@ -162,6 +164,11 @@ export function composeExpressionWeights(input: ComposeInput): ComposeOutput {
 		['jawOpen', v.aa * 0.7]
 	]);
 
+	for (const [name, weight] of input.manual) {
+		face.set(name, weight);
+		mouth.delete(name);
+	}
+
 	return { state: { mood, flash, blink }, face, mouth };
 }
 
@@ -172,4 +179,28 @@ export function findHappyExpression(names: readonly string[]): string | null {
 		if (match) return match;
 	}
 	return null;
+}
+
+export type QuickTest = 'blink' | 'smile' | 'surprised' | 'sad' | 'mouthOpen';
+
+// Developer quick tests: ARKit shapes on perfect-sync models, VRM presets otherwise
+const QUICK_TESTS: Record<QuickTest, Record<string, number>[]> = {
+	blink: [{ eyeBlinkLeft: 1, eyeBlinkRight: 1 }, { blink: 1 }],
+	smile: [{ mouthSmileLeft: 0.8, mouthSmileRight: 0.8, cheekSquintLeft: 0.3, cheekSquintRight: 0.3 }, { happy: 0.8 }],
+	surprised: [
+		{ eyeWideLeft: 0.8, eyeWideRight: 0.8, browInnerUp: 0.7, browOuterUpLeft: 0.5, browOuterUpRight: 0.5, jawOpen: 0.4 },
+		{ surprised: 0.8 }
+	],
+	sad: [{ browInnerUp: 0.6, browDownLeft: 0.3, browDownRight: 0.3, mouthFrownLeft: 0.5, mouthFrownRight: 0.5 }, { sad: 0.8 }],
+	mouthOpen: [{ jawOpen: 0.7 }, { aa: 0.7 }]
+};
+
+export function quickTestFace(test: QuickTest, available: readonly string[]): Record<string, number> {
+	for (const set of QUICK_TESTS[test]) {
+		const face = Object.entries(set).map(
+			([want, weight]) => [available.find((n) => n.toLowerCase() === want.toLowerCase()), weight] as const
+		);
+		if (face.every(([name]) => name)) return Object.fromEntries(face);
+	}
+	return {};
 }

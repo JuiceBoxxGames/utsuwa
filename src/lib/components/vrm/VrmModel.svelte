@@ -501,7 +501,8 @@
 			photoActive: photomodeStore.active,
 			speaking: ttsStore.isSpeaking,
 			visemes: lipSyncAnalyzer.update(delta),
-			random: Math.random
+			random: Math.random,
+			manual: vrmStore.manualExpressions
 		});
 		face = composed.state;
 		for (const [name, value] of composed.face) setExpression(name, value);
