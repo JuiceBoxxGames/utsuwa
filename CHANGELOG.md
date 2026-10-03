@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1] - 2026-10-02
+
+### Fixed
+- On the desktop app the Character settings page scrolled the whole window, so it had a scrollbar inside a scrollbar and could scroll sideways too. Two hidden field labels were sitting outside the page's own scroll area. Now only the page scrolls ([#258](https://github.com/JuiceBoxxGames/utsuwa/pull/258)).
+- The Quick Tests in Settings > Developer (Test Blink, Smile, Surprised, Sad, and Mouth Open) did nothing. They used face shapes most VRM models don't have, and the automatic mood, blink, and lip-sync faces overwrote them on the next frame anyway. Each test now uses the model's own expression when the detailed shapes aren't there. The tests and the expression sliders hold over the automatic faces until you reset them or leave the page ([#258](https://github.com/JuiceBoxxGames/utsuwa/pull/258)).
+
 ## [0.20.0] - 2026-10-02
 
 ### Added
