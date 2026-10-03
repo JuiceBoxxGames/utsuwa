@@ -71,10 +71,11 @@ On WebXR devices that support `immersive-ar` (Android Chrome, headset browsers),
 
 The face combines several layers. Higher layers win over lower ones:
 
-1. Photo mode expression, emotes, and tap reactions
-2. The flash layer: a short reaction the model asks for with the `expression` field
-3. The resting mood face, driven by the tracked mood
-4. Lip sync, which drives only the mouth visemes
+1. Weights set by hand on Settings > Developer (sliders and quick tests). They exist only while that page is open
+2. Photo mode expression, emotes, and tap reactions
+3. The flash layer: a short reaction the model asks for with the `expression` field
+4. The resting mood face, driven by the tracked mood
+5. Lip sync, which drives only the mouth visemes
 
 `src/lib/engine/mood-expression.ts` maps each emotion to a VRM expression. `moodExpressionTarget()` scales the resting face by mood intensity. `flashExpressionTarget()` returns a stronger weight, capped at 0.9. A flash holds 2.5 seconds, or up to 8 seconds while she is speaking, then fades. Both layers switch off with Settings > Display > Mood expressions. See [Companion System](/docs/technology/companion-system#mood-state) for the mapping.
 

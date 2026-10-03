@@ -12,6 +12,7 @@
 	import { debugEventsStore, testEvents } from '$lib/stores/debug-events.svelte';
 	import { goto } from '$app/navigation';
 	import { localPath } from '$lib/config/links';
+	import { quickTestFace, type QuickTest } from '$lib/engine/expression-compose';
 
 	// Material debug modes from @pixiv/three-vrm-materials-mtoon
 	const materialDebugModes = [
@@ -124,97 +125,36 @@
 		return category.filter((name) => availableExpressions.includes(name));
 	}
 
-	// Set expression value
+	// Held through the manual layer so the mood, blink, and lip-sync layers
+	// don't overwrite it on the next frame. Zero hands it back to them.
 	function setExpression(name: string, value: number) {
 		expressionValues[name] = value;
-		const vrm = vrmStore.vrm;
-		if (vrm?.expressionManager) {
-			try {
-				vrm.expressionManager.setValue(name, value);
-				vrm.expressionManager.update();
-			} catch {
-				// Expression doesn't exist
-			}
-		}
+		if (value > 0) vrmStore.manualExpressions.set(name, value);
+		else vrmStore.manualExpressions.delete(name);
+		vrmStore.vrm?.expressionManager?.setValue(name, value);
 	}
 
-	// Reset all expressions
 	function resetAll() {
-		const vrm = vrmStore.vrm;
-		if (vrm?.expressionManager) {
-			for (const name of availableExpressions) {
-				vrm.expressionManager.setValue(name, 0);
-				expressionValues[name] = 0;
-			}
-			vrm.expressionManager.update();
-		}
+		for (const name of availableExpressions) setExpression(name, 0);
+		// A restored temp model can leave names the current one doesn't have
+		vrmStore.manualExpressions.clear();
 	}
 
-	// Test blink
-	function testBlink() {
-		setExpression('eyeBlinkLeft', 1);
-		setExpression('eyeBlinkRight', 1);
+	function runQuickTest(test: QuickTest, ms: number) {
+		const face = quickTestFace(test, availableExpressions);
+		for (const [name, value] of Object.entries(face)) setExpression(name, value);
 		setTimeout(() => {
-			setExpression('eyeBlinkLeft', 0);
-			setExpression('eyeBlinkRight', 0);
-		}, 150);
+			for (const name of Object.keys(face)) setExpression(name, 0);
+		}, ms);
 	}
 
-	// Test smile
-	function testSmile() {
-		setExpression('mouthSmileLeft', 0.8);
-		setExpression('mouthSmileRight', 0.8);
-		setExpression('cheekSquintLeft', 0.3);
-		setExpression('cheekSquintRight', 0.3);
-		setTimeout(() => {
-			setExpression('mouthSmileLeft', 0);
-			setExpression('mouthSmileRight', 0);
-			setExpression('cheekSquintLeft', 0);
-			setExpression('cheekSquintRight', 0);
-		}, 1000);
-	}
-
-	// Test surprised
-	function testSurprised() {
-		setExpression('eyeWideLeft', 0.8);
-		setExpression('eyeWideRight', 0.8);
-		setExpression('browInnerUp', 0.7);
-		setExpression('browOuterUpLeft', 0.5);
-		setExpression('browOuterUpRight', 0.5);
-		setExpression('jawOpen', 0.4);
-		setTimeout(() => {
-			setExpression('eyeWideLeft', 0);
-			setExpression('eyeWideRight', 0);
-			setExpression('browInnerUp', 0);
-			setExpression('browOuterUpLeft', 0);
-			setExpression('browOuterUpRight', 0);
-			setExpression('jawOpen', 0);
-		}, 1000);
-	}
-
-	// Test sad
-	function testSad() {
-		setExpression('browInnerUp', 0.6);
-		setExpression('browDownLeft', 0.3);
-		setExpression('browDownRight', 0.3);
-		setExpression('mouthFrownLeft', 0.5);
-		setExpression('mouthFrownRight', 0.5);
-		setTimeout(() => {
-			setExpression('browInnerUp', 0);
-			setExpression('browDownLeft', 0);
-			setExpression('browDownRight', 0);
-			setExpression('mouthFrownLeft', 0);
-			setExpression('mouthFrownRight', 0);
-		}, 1000);
-	}
-
-	// Open mouth for testing
-	function testMouthOpen() {
-		setExpression('jawOpen', 0.7);
-		setTimeout(() => {
-			setExpression('jawOpen', 0);
-		}, 500);
-	}
+	const quickTests: { test: QuickTest; label: string; ms: number }[] = [
+		{ test: 'blink', label: 'Test Blink', ms: 150 },
+		{ test: 'smile', label: 'Test Smile', ms: 1000 },
+		{ test: 'surprised', label: 'Test Surprised', ms: 1000 },
+		{ test: 'sad', label: 'Test Sad', ms: 1000 },
+		{ test: 'mouthOpen', label: 'Test Mouth Open', ms: 500 }
+	];
 
 	// ── Temporary VRM Upload ──
 	let tempModelName = $state('');
@@ -250,6 +190,7 @@
 
 	// Restore original avatar when leaving the developer page
 	onDestroy(() => {
+		resetAll();
 		vrmStore.restoreOriginalModel();
 	});
 
@@ -367,11 +308,10 @@
 		<section class="section">
 			<h3>Quick Tests</h3>
 			<div class="quick-actions">
-				<button class="btn btn-sm btn-secondary" onclick={testBlink}>Test Blink</button>
-				<button class="btn btn-sm btn-secondary" onclick={testSmile}>Test Smile</button>
-				<button class="btn btn-sm btn-secondary" onclick={testSurprised}>Test Surprised</button>
-				<button class="btn btn-sm btn-secondary" onclick={testSad}>Test Sad</button>
-				<button class="btn btn-sm btn-secondary" onclick={testMouthOpen}>Test Mouth Open</button>
+				{#each quickTests as { test, label, ms }}
+					<button class="btn btn-sm btn-secondary" onclick={() => runQuickTest(test, ms)}
+						disabled={!Object.keys(quickTestFace(test, availableExpressions)).length}>{label}</button>
+				{/each}
 				<button class="btn btn-sm btn-danger" onclick={resetAll}>Reset All</button>
 			</div>
 		</section>

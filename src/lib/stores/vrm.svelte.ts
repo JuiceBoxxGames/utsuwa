@@ -42,6 +42,9 @@ function createVrmStore() {
 		flashRequest = { emotion, seq: ++flashSeq };
 	}
 
+	// Developer page weights, read every frame by the model; plain Map on purpose
+	const manualExpressions = new Map<string, number>();
+
 	// Head position for 3D speech bubble positioning
 	let headPosition = $state<[number, number, number]>([0, 1.6, 0]);
 	// Screen-space position (x, y as percentages 0-100)
@@ -171,6 +174,7 @@ function createVrmStore() {
 		get availableExpressions() {
 			return availableExpressions;
 		},
+		manualExpressions,
 		get currentAnimation() {
 			return currentAnimation;
 		},
