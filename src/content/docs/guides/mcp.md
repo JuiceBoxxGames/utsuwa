@@ -118,7 +118,7 @@ stdio servers are spawned per request with a 15-second timeout and run with a mi
 
 The desktop app is the MCP host itself: there is no backend to gate, so no `MCP_ENABLED` variable exists there. **HTTP** servers connect directly through the Tauri HTTP plugin (CORS-free) and work exactly as on web; **stdio** servers are not available (the app cannot spawn local MCP processes yet, so stdio entries show a per-server error in the tool list). The MCP page says so in a **Desktop mode** notice.
 
-The Tauri HTTP permission is intentionally unrestricted (`http://**`, `https://**`): MCP servers are configured at runtime, so a static allowlist cannot know them. The plugin only issues the requests the MCP client makes. Tool results go to the model and are never rendered as HTML in the UI. If you consider the desktop app's network surface sensitive, keep only the servers you trust enabled.
+The Tauri HTTP permission is intentionally unrestricted (`http://*:*`, `https://*:*`, so any host on any port): MCP servers are configured at runtime, so a static allowlist cannot know them. The plugin only issues the requests the MCP client makes. Tool results go to the model and are never rendered as HTML in the UI. If you consider the desktop app's network surface sensitive, keep only the servers you trust enabled.
 
 The per-server switch is the desktop off switch: turn all servers off and the companion stops using MCP tools. A local server that only offers stdio (like Brave) can still be used on desktop by running it in HTTP mode yourself and pointing Utsuwa at it:
 
