@@ -45,9 +45,9 @@
 	import { personaStore } from '$lib/stores/persona.svelte';
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { startWaitTone, stopWaitTone, destroyWaitTone } from '$lib/utils/wait-tone';
-	import { getLLMProvider, providerSupportsVision, visionDependsOnModel } from '$lib/services/providers/registry';
+	import { getLLMProvider } from '$lib/services/providers/registry';
 	import { isLocalLLMProvider } from '$lib/services/providers/local-endpoints';
-	import { canShowImages } from '$lib/services/providers/vision';
+	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { sendCompanionMessage, type SendCompanionMessageOptions } from '$lib/services/chat/companion-chat';
 	import { reminderStore } from '$lib/stores/reminders.svelte';
@@ -126,7 +126,7 @@
 		const provider = cs.activeProvider;
 		const model = cs.activeModel;
 		if (!provider) return false;
-		return canShowImages(providerSupportsVision(provider), visionDependsOnModel(provider), model);
+		return settingsStore.resolveModelVision(provider, model).capable;
 	});
 
 	// Provider info for the one-time "where do photos go" disclosure.

@@ -27,8 +27,10 @@ export interface ProviderConfig {
 	speed?: number;
 	pitch?: number;
 	volume?: number;
-	cachedModels?: Array<{ id: string; name: string }>;
+	cachedModels?: Array<{ id: string; name: string; vision?: boolean }>;
 	modelsFetchedAt?: number;
+	// User's answer to "can this model see images?", keyed by model id
+	visionOverrides?: Record<string, boolean>;
 	// Request timeout in ms; used by STT
 	timeoutMs?: number;
 }

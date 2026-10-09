@@ -10,10 +10,12 @@ import {
 import { assertSafeProviderTarget, createGuardedFetch } from '$lib/services/providers/url-guard.server';
 import { sanitizeProviderError } from '$lib/services/providers/provider-errors';
 import { CHAT_MODEL_FILTERS, DEFAULT_MODELS_BASE_URLS } from '$lib/services/providers/provider-defaults';
+import { addLMStudioVision, addOllamaVision, reportedVision } from '$lib/services/providers/vision';
 
 interface ModelInfo {
 	id: string;
 	name: string;
+	vision?: boolean;
 }
 
 interface FetchModelsResponse {
@@ -24,14 +26,18 @@ interface FetchModelsResponse {
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
 
-type GetJson = <T>(path: string, headers?: Record<string, string>) => Promise<T>;
+type GetJson = <T>(path: string, headers?: Record<string, string>, body?: unknown) => Promise<T>;
 
 // Paths are resolved against the base (never string-appended), and upstream
 // text never reaches the error message: only the status or a fixed phrase.
 function createGetJson(base: string, fetchImpl: typeof fetch, signal: AbortSignal): GetJson {
 	const root = new URL(base.endsWith('/') ? base : `${base}/`);
-	return async <T>(path: string, headers: Record<string, string> = {}) => {
-		const response = await fetchImpl(new URL(path, root), { headers, signal });
+	return async <T>(path: string, headers: Record<string, string> = {}, body?: unknown) => {
+		const init: RequestInit =
+			body === undefined
+				? { headers, signal }
+				: { method: 'POST', headers, signal, body: JSON.stringify(body) };
+		const response = await fetchImpl(new URL(path, root), init);
 		if (!response.ok) {
 			await response.body?.cancel();
 			throw new Error(`Failed to fetch models: HTTP ${response.status}`);
@@ -106,7 +112,8 @@ async function fetchOpenAIModels(get: GetJson, apiKey?: string): Promise<ModelIn
 	const data = await get<ModelList<{ id: string }>>('models', headers);
 	return (data.data || []).map((m) => ({
 		id: m.id,
-		name: normalizeModelName(m.id, 'openai')
+		name: normalizeModelName(m.id, 'openai'),
+		vision: reportedVision(m)
 	}));
 }
 
@@ -123,18 +130,14 @@ async function fetchAnthropicModels(get: GetJson, apiKey: string): Promise<Model
 
 async function fetchOllamaModels(get: GetJson): Promise<ModelInfo[]> {
 	const data = await get<{ models?: Array<{ name: string }> }>('api/tags');
-	return (data.models || []).map((m) => ({
-		id: m.name,
-		name: m.name
-	}));
+	const models = (data.models || []).map((m) => ({ id: m.name, name: m.name }));
+	return addOllamaVision(models, (path, body) => get(path, {}, body));
 }
 
 async function fetchLMStudioModels(get: GetJson): Promise<ModelInfo[]> {
 	const data = await get<Required<ModelList<{ id: string }>>>('models');
-	return data.data.map((m) => ({
-		id: m.id,
-		name: m.id
-	}));
+	const models = data.data.map((m) => ({ id: m.id, name: m.id }));
+	return addLMStudioVision(models, (path) => get(path));
 }
 
 // DeepSeek and xAI share the OpenAI list shape with a required key.

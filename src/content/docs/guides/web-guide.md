@@ -115,7 +115,7 @@ With a vision-capable model, she can see images you show her.
 - The first time, a notice tells you where photos go. With a cloud provider, the photo is sent to that provider. With Ollama or LM Studio, it stays on your machine.
 - After she replies, the photo is kept on your device on the photoboard, with her impression as a note.
 
-Photos need a vision model, such as GPT-4o, Claude, Gemini, DeepSeek Flash, or LLaVA on Ollama or LM Studio. Utsuwa decides from the model name, which also covers vision models behind the OpenAI-Compatible provider. With a text-only model, the paperclip shows a hint instead.
+Photos need a vision model, such as GPT-4o, Claude, Gemini, DeepSeek Flash, or Gemma, LLaVA, or Qwen-VL on Ollama or LM Studio. Ollama, LM Studio, and OpenRouter-style providers report which of their models take images. For the rest, Utsuwa guesses from the model name. If it guesses wrong, flip **Can see images** under the model in Settings > LLM Model. With a text-only model, the paperclip shows a hint instead.
 
 If your chat model can't see images, or image tokens cost too much there, turn on **Vision** in Settings > LLM Model and pick a separate model for photos. It describes each photo, and your chat model replies from the description. The privacy notice then names the vision model's provider, since that's where the photo goes.
 

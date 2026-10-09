@@ -2,8 +2,8 @@
 	import { rangeProgress } from '$lib/utils/range-progress';
 	import Switch from '$lib/components/ui/Switch.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
-	import { getLLMProvider, providerSupportsVision, visionDependsOnModel } from '$lib/services/providers/registry';
-	import { canShowImages } from '$lib/services/providers/vision';
+	import { getLLMProvider } from '$lib/services/providers/registry';
+	import type { VisionSource } from '$lib/services/providers/vision';
 	import { Icon, ProviderDropdown, ModelDropdown, ContextSizeSlider } from '$lib/components/ui';
 	import { DOCS_URL } from '$lib/config/site';
 	import { isTauri } from '$lib/services/platform';
@@ -29,6 +29,14 @@
 
 	function handleContextSizeChange(value: number | undefined) {
 		state.handleLLMNumberSetting('contextSize', value);
+	}
+
+	function visionNote(capable: boolean, source: VisionSource, providerName = 'the provider') {
+		if (source === 'you') return 'Set by you.';
+		if (source === 'provider') return `Reported by ${providerName}.`;
+		return capable
+			? 'Guessed from the model name. Turn this off if photos fail.'
+			: 'Guessed from the model name. Turn this on if the model takes images.';
 	}
 </script>
 
@@ -248,14 +256,24 @@
 					</div>
 				{/if}
 
-				{#if vision}
-					{#if state.activeModel && !canShowImages(providerSupportsVision(state.activeProvider), visionDependsOnModel(state.activeProvider), state.activeModel)}
-						<p class="hint warn">
-							<Icon name="alert-circle" size={14} />
-							This model might not accept images. Pick a vision model (GPT-4o, Claude, Gemini, DeepSeek Flash, or a local one like llava).
-						</p>
-					{/if}
-				{:else}
+				{#if state.activeModel}
+					{@const model = state.activeModel}
+					{@const sight = settingsStore.resolveModelVision(state.activeProvider, model)}
+					<div class="setting-row">
+						<div class="setting-info">
+							<span class="setting-label">Can see images</span>
+							<span class="setting-desc">{visionNote(sight.capable, sight.source, provider?.name)}</span>
+						</div>
+						<Switch
+							id="{idp}-sees-images"
+							label="This model can see images"
+							checked={sight.capable}
+							onchange={(on) => settingsStore.setVisionOverride(state.activeProvider, model, on)}
+						/>
+					</div>
+				{/if}
+
+				{#if !vision}
 					<ContextSizeSlider
 						contextSize={state.consciousnessSettings.contextSize}
 						onChange={handleContextSizeChange}
@@ -274,8 +292,7 @@
 </SettingsSection>
 
 <style>
-	.hint.error,
-	.hint.warn {
+	.hint.error {
 		display: flex;
 		align-items: flex-start;
 		gap: 6px;
