@@ -124,19 +124,22 @@ test('addOllamaVision asks /api/show per model and survives failures', async () 
 });
 
 test('addLMStudioVision matches native keys and leaves models alone when the API is missing', async () => {
-	const models = [{ id: 'google/gemma-4-e4b' }, { id: 'deepseek-r1' }, { id: 'unlisted' }];
+	const models = [{ id: 'google/gemma-4-e4b' }, { id: 'deepseek-r1' }, { id: 'my-eyes:2' }, { id: 'unlisted' }];
 	const withVision = await addLMStudioVision(models, async (path) => {
 		assert.equal(path, '/api/v1/models');
 		return {
 			models: [
 				{ key: 'google/gemma-4-e4b', capabilities: { vision: true } },
-				{ key: 'deepseek-r1', capabilities: { vision: false } }
+				{ key: 'deepseek-r1', capabilities: { vision: false } },
+				// Loaded instances can carry their own identifier
+				{ key: 'qwen/qwen3-vl-4b', loaded_instances: [{ id: 'my-eyes:2' }], capabilities: { vision: true } }
 			]
 		};
 	});
 	assert.deepEqual(withVision, [
 		{ id: 'google/gemma-4-e4b', vision: true },
 		{ id: 'deepseek-r1', vision: false },
+		{ id: 'my-eyes:2', vision: true },
 		{ id: 'unlisted', vision: undefined }
 	]);
 

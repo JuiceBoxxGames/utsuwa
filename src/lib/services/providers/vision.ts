@@ -116,6 +116,12 @@ export async function addLMStudioVision<T extends { id: string }>(models: T[], f
 	const native = await fetchJson('/api/v1/models').catch(() => null);
 	const list = (native as { models?: unknown } | null)?.models;
 	if (!Array.isArray(list)) return models;
-	const byKey = new Map(list.map((n: { key?: unknown }) => [n?.key, reportedVision(n)]));
-	return models.map((m) => ({ ...m, vision: byKey.get(m.id) }));
+	// The OpenAI list may name a model by its key or by a loaded instance's id
+	const byId = new Map<unknown, boolean | undefined>();
+	for (const n of list as Array<{ key?: unknown; loaded_instances?: Array<{ id?: unknown }> }>) {
+		const vision = reportedVision(n);
+		byId.set(n?.key, vision);
+		if (Array.isArray(n?.loaded_instances)) for (const i of n.loaded_instances) byId.set(i?.id, vision);
+	}
+	return models.map((m) => ({ ...m, vision: byId.get(m.id) }));
 }

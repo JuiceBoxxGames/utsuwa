@@ -277,6 +277,33 @@ test('vision follows what the provider reports, and the user can override it', a
 	await expect(attach).toHaveAttribute('title', 'This model cannot see images');
 });
 
+test('the separate vision model gates photos by its own Can see images switch', async ({ page }) => {
+	await openApp(page);
+	await page.goto('/app/settings/llm');
+	await waitForHydration(page);
+	await page.getByRole('switch', { name: 'Separate vision model', exact: true }).click();
+	await page.getByText('Select vision provider...').click();
+	await page.getByRole('menuitem', { name: 'OpenAI-Compatible' }).click();
+	await page.locator('#vision-base-url').fill('http://localhost:9/v1');
+	await page.locator('#vision-custom-model').fill('llava:13b');
+	const sees = page.locator('#vision-sees-images');
+	await expect(sees).toBeChecked();
+	await sees.click();
+	await expect(page.getByText('Set by you.')).toBeVisible();
+
+	await page.goto('/app');
+	await waitForHydration(page);
+	const attach = page.getByRole('button', { name: 'Attach an image' });
+	await expect(attach).toHaveAttribute('title', 'This model cannot see images');
+
+	await page.goto('/app/settings/llm');
+	await waitForHydration(page);
+	await sees.click();
+	await page.goto('/app');
+	await waitForHydration(page);
+	await expect(attach).toHaveAttribute('title', 'Attach an image');
+});
+
 test('settings search finds categories and Escape clears it without leaving settings', async ({ page }) => {
 	await page.goto('/app/settings/display');
 	await waitForHydration(page);

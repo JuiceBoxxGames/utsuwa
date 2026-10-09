@@ -151,7 +151,7 @@ An optional second model that looks at photos for the chat model. When it's on, 
 | Control | What it does | Default |
 |---|---|---|
 | Separate vision model | Routes photos through the vision model. Off sends them to the chat model as before. | Off |
-| Provider, API key, Base URL, Model | The same fields as the chat model. Keys and base URLs are shared per provider, so using one provider for both needs one key. The same **Can see images** switch appears under the model. | None |
+| Provider, API key, Base URL, Model | The same fields as the chat model. Keys and base URLs are shared per provider, so using one provider for both needs one key. The same **Can see images** switch appears under the model and decides whether the paperclip works while this is on. | None |
 
 If the vision model is on but not set up, or can't be reached, sending a photo shows an error that starts with **Vision model:** and puts the message and photo back in the composer. Photos never fall back to the chat model while this is on.
 
