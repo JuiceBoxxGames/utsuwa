@@ -37,6 +37,8 @@ MCP is off unless a self-hosted deployment sets `MCP_ENABLED=server`, and the `/
 
 The desktop app has no standing read access to your files. It reads only files you drag into the window (the file system plugin adds dropped paths to its scope), and writes only to your Downloads folder.
 
+On Linux, WebKitGTK has no microphone prompt of its own, so the desktop app grants microphone access to its own windows without asking. Recording only starts when you press the mic button or the push-to-talk shortcut. Camera and other permissions keep the webview's defaults. On macOS and Windows the system prompt still applies.
+
 ### Web Security Headers
 
 Server responses carry `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy` that allows the microphone and WebXR on the app's own origin only.
