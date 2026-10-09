@@ -54,7 +54,7 @@
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3",
 		"vite": "^7.2.6",
-		"wrangler": "^4.143.1"
+		"wrangler": "^4.147.0"
 	},
 	"dependencies": {
 		"@fontsource-variable/inter": "^5.2.8",
