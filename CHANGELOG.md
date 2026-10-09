@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.3] - 2026-10-09
+
+### Added
+- A **Can see images** switch under the model in Settings > LLM Model, for the chat model and the separate vision model. The note under it says whether the provider reported the answer, it was guessed from the model name, or you set it. Flipping it back to the detected answer clears your choice. The paperclip follows the switch for whichever model gets photos ([#275](https://github.com/JuiceBoxxGames/utsuwa/pull/275)).
+
+### Changed
+- Utsuwa asks the provider which models take images instead of checking the name against a list. Ollama, LM Studio, and OpenRouter-style providers report it with their model lists, so a model like Gemma 4 in LM Studio works without an app update. On OpenAI, Anthropic, Google, and xAI, a new model can see photos unless it is a known text-only one. DeepSeek still trusts only Flash, because it ignores images it can't read instead of returning an error ([#275](https://github.com/JuiceBoxxGames/utsuwa/pull/275), closes [#265](https://github.com/JuiceBoxxGames/utsuwa/issues/265)).
+
+### Fixed
+- Some VRM models loaded too low in the frame, with only the upper body showing. Cleaning up unused joints applied the mesh's own offset a second time, so the avatar was placed from the wrong bounds ([#264](https://github.com/JuiceBoxxGames/utsuwa/pull/264)).
+
 ## [0.20.2] - 2026-10-05
 
 ### Fixed
