@@ -6,6 +6,8 @@ import { getTTSProvider } from './registry';
 export interface ModelInfo {
 	id: string;
 	name: string;
+	/** Whether the provider says this model takes images, when it says */
+	vision?: boolean;
 }
 
 export interface FetchModelsResult {

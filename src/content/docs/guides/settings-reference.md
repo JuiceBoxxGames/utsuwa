@@ -131,6 +131,7 @@ Settings > LLM Model configures the chat model.
 | API key | Shown for cloud providers. For OpenAI-Compatible it reads **API key (optional)**. | Empty |
 | Base URL | Shown for Ollama, LM Studio, and OpenAI-Compatible. Leave it empty to use the default (`http://localhost:11434` for Ollama, `http://localhost:1234/v1/` for LM Studio). A **Having trouble?** link opens the Ollama origin guide. | Empty |
 | Model | A dropdown of models from your provider. Cloud providers list models after you enter a key. Ollama and LM Studio list what is installed. The refresh button reloads the list. | None |
+| Can see images | Whether the model gets photos. The note under it says where the answer came from: **Reported by** the provider (Ollama, LM Studio, and OpenRouter-style lists say so), **Guessed from the model name**, or **Set by you** once you flip it. Flipping it back to the detected answer clears your choice. | Detected |
 | Context Window | Off means **Default**. On, a slider from 1k to 128k scales memory and chat history to fit your model's context window. | Off (8k when first turned on) |
 
 For **OpenAI-Compatible** the Model field is a text box, with a **Pick a fetched model...** dropdown once a base URL is set. This provider also has **Advanced Parameters**:
@@ -150,7 +151,7 @@ An optional second model that looks at photos for the chat model. When it's on, 
 | Control | What it does | Default |
 |---|---|---|
 | Separate vision model | Routes photos through the vision model. Off sends them to the chat model as before. | Off |
-| Provider, API key, Base URL, Model | The same fields as the chat model. Keys and base URLs are shared per provider, so using one provider for both needs one key. A note appears when the picked model's name doesn't look like a vision model. | None |
+| Provider, API key, Base URL, Model | The same fields as the chat model. Keys and base URLs are shared per provider, so using one provider for both needs one key. The same **Can see images** switch appears under the model and decides whether the paperclip works while this is on. | None |
 
 If the vision model is on but not set up, or can't be reached, sending a photo shows an error that starts with **Vision model:** and puts the message and photo back in the composer. Photos never fall back to the chat model while this is on.
 

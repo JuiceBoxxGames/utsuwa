@@ -45,9 +45,9 @@
 	import { personaStore } from '$lib/stores/persona.svelte';
 	import { displayStore } from '$lib/stores/display.svelte';
 	import { startWaitTone, stopWaitTone, destroyWaitTone } from '$lib/utils/wait-tone';
-	import { getLLMProvider, providerSupportsVision, visionDependsOnModel } from '$lib/services/providers/registry';
+	import { getLLMProvider } from '$lib/services/providers/registry';
 	import { isLocalLLMProvider } from '$lib/services/providers/local-endpoints';
-	import { canShowImages } from '$lib/services/providers/vision';
+	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { sendCompanionMessage, type SendCompanionMessageOptions } from '$lib/services/chat/companion-chat';
 	import { reminderStore } from '$lib/stores/reminders.svelte';
@@ -118,15 +118,13 @@
 	const imageModule = $derived(modulesStore.isModuleEnabled('vision') ? 'vision' : 'consciousness');
 
 	// Can the model that gets photos see them? Gates the "show" affordance. A
-	// separate vision model is the user saying it can; a misconfigured one
-	// fails the send with a pointer to settings instead of silently hiding.
+	// separate vision model that isn't set up yet stays enabled, so the send
+	// fails with a pointer to settings instead of silently hiding.
 	const visionCapable = $derived.by(() => {
-		if (imageModule === 'vision') return true;
-		const cs = modulesStore.getModuleSettings('consciousness');
-		const provider = cs.activeProvider;
-		const model = cs.activeModel;
-		if (!provider) return false;
-		return canShowImages(providerSupportsVision(provider), visionDependsOnModel(provider), model);
+		const { activeProvider, activeModel } = modulesStore.getModuleSettings(imageModule);
+		if (imageModule === 'vision' && (!activeProvider || !activeModel)) return true;
+		if (!activeProvider) return false;
+		return settingsStore.resolveModelVision(activeProvider, activeModel).capable;
 	});
 
 	// Provider info for the one-time "where do photos go" disclosure.

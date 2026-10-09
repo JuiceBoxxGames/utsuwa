@@ -207,10 +207,12 @@ test('the separate vision model keeps its own provider and model next to chat', 
 	await page.getByText('Select vision provider...').click();
 	await page.getByRole('menuitem', { name: 'OpenAI-Compatible' }).click();
 	await page.locator('#vision-base-url').fill('http://localhost:9/v1');
+	const sees = page.locator('#vision-sees-images');
 	await page.locator('#vision-custom-model').fill('some-text-model');
-	await expect(page.getByText('This model might not accept images')).toBeVisible();
+	await expect(sees).not.toBeChecked();
+	await expect(page.getByText('Turn this on if the model takes images.')).toBeVisible();
 	await page.locator('#vision-custom-model').fill('llava:13b');
-	await expect(page.getByText('This model might not accept images')).toHaveCount(0);
+	await expect(sees).toBeChecked();
 	await expect(page.locator('details.llm-advanced-params')).toHaveCount(0);
 	await page.reload();
 	await waitForHydration(page);
@@ -221,6 +223,85 @@ test('the separate vision model keeps its own provider and model next to chat', 
 		vision: JSON.parse(localStorage.getItem('utsuwa-module-vision') ?? '{}').settings
 	}));
 	expect(saved).toEqual({ chat: 'openai', vision: { activeProvider: 'openai-compatible', activeModel: 'llava:13b' } });
+});
+
+test('vision follows what the provider reports, and the user can override it', async ({ page }) => {
+	await page.route('**/api/providers/models', (route) =>
+		route.fulfill({
+			json: {
+				models: [
+					{ id: 'google/gemma-4-e4b', name: 'google/gemma-4-e4b', vision: true },
+					{ id: 'plain-text-model', name: 'plain-text-model', vision: false }
+				]
+			}
+		})
+	);
+	await openApp(page);
+	await page.goto('/app/settings/llm');
+	await waitForHydration(page);
+	await page.getByRole('switch', { name: 'Chat (LLM)', exact: true }).click();
+	await page.getByText('Select LLM provider...').click();
+	await page.getByRole('menuitem', { name: 'OpenAI-Compatible' }).click();
+	await page.locator('#llm-base-url').fill('http://localhost:9/v1');
+	await page.getByRole('button', { name: 'Refresh models' }).click();
+	await page.locator('#llm-custom-model').fill('google/gemma-4-e4b');
+
+	// No name hint covers Gemma 4; the provider's answer does (#265)
+	const sees = page.locator('#llm-sees-images');
+	await expect(sees).toBeChecked();
+	await expect(page.getByText('Reported by OpenAI-Compatible.')).toBeVisible();
+
+	await page.locator('#llm-custom-model').fill('plain-text-model');
+	await expect(sees).not.toBeChecked();
+	await sees.click();
+	await expect(sees).toBeChecked();
+	await expect(page.getByText('Set by you.')).toBeVisible();
+
+	await page.goto('/app');
+	await waitForHydration(page);
+	const attach = page.getByRole('button', { name: 'Attach an image' });
+	await expect(attach).toHaveAttribute('title', 'Attach an image');
+
+	// Switching back to the detected answer drops the override
+	await page.goto('/app/settings/llm');
+	await waitForHydration(page);
+	await sees.click();
+	await expect(sees).not.toBeChecked();
+	await expect(page.getByText('Reported by OpenAI-Compatible.')).toBeVisible();
+	const overrides = await page.evaluate(
+		() => JSON.parse(localStorage.getItem('utsuwa-settings') ?? '{}').providerConfigs?.['openai-compatible']?.visionOverrides
+	);
+	expect(overrides).toEqual({});
+	await page.goto('/app');
+	await waitForHydration(page);
+	await expect(attach).toHaveAttribute('title', 'This model cannot see images');
+});
+
+test('the separate vision model gates photos by its own Can see images switch', async ({ page }) => {
+	await openApp(page);
+	await page.goto('/app/settings/llm');
+	await waitForHydration(page);
+	await page.getByRole('switch', { name: 'Separate vision model', exact: true }).click();
+	await page.getByText('Select vision provider...').click();
+	await page.getByRole('menuitem', { name: 'OpenAI-Compatible' }).click();
+	await page.locator('#vision-base-url').fill('http://localhost:9/v1');
+	await page.locator('#vision-custom-model').fill('llava:13b');
+	const sees = page.locator('#vision-sees-images');
+	await expect(sees).toBeChecked();
+	await sees.click();
+	await expect(page.getByText('Set by you.')).toBeVisible();
+
+	await page.goto('/app');
+	await waitForHydration(page);
+	const attach = page.getByRole('button', { name: 'Attach an image' });
+	await expect(attach).toHaveAttribute('title', 'This model cannot see images');
+
+	await page.goto('/app/settings/llm');
+	await waitForHydration(page);
+	await sees.click();
+	await page.goto('/app');
+	await waitForHydration(page);
+	await expect(attach).toHaveAttribute('title', 'Attach an image');
 });
 
 test('settings search finds categories and Escape clears it without leaving settings', async ({ page }) => {

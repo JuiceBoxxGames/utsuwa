@@ -1,10 +1,9 @@
-// Can she actually see what you show her? Vision support is two-layered:
-// cloud providers carry a coarse `supportsVision` flag (see providerSupportsVision
-// in registry.ts), while local and custom OpenAI-compatible providers depend on
-// the model behind them, so we sniff the model id here. Kept import-free so it stays
-// unit-testable on its own.
+// Can she actually see what you show her? Three answers, strongest first:
+// the user's own say, what the provider's model list reports (LM Studio,
+// Ollama, OpenRouter-style lists), then a guess from the model id. Kept
+// import-free so it stays unit-testable on its own.
 
-/** Substrings that strongly imply a model can accept images. Lowercased. */
+/** Substrings that strongly imply a local or custom model can accept images. Lowercased. */
 const VISION_MODEL_HINTS = [
 	'vision',
 	'-vl',
@@ -13,59 +12,116 @@ const VISION_MODEL_HINTS = [
 	'bakllava',
 	'moondream',
 	'minicpm-v',
-	'llama3.2-vision',
-	'llama-3.2-vision',
 	'qwen2-vl',
 	'qwen2.5-vl',
 	'gemma3',
+	'gemma-3',
+	'gemma4',
+	'gemma-4',
 	'pixtral',
 	'internvl',
 	'gpt-4o',
 	'gpt-4.1',
 	'gpt-4-turbo',
-	'gpt-4-vision',
 	'gpt-5',
 	'o3',
 	'o4',
-	'claude-3',
-	'claude-4',
-	'claude-opus',
-	'claude-sonnet',
-	'claude-haiku',
+	'claude',
 	'gemini',
-	'grok-2-vision',
 	'grok-4',
 	'llama4',
 	'llama-4',
 	'mistral-small-3',
-	'phi-3.5-vision',
 	'phi-4-multimodal',
-	// V4.1 Flash; deepseek-v4-pro stays text-only
 	'deepseek-flash'
 ];
 
-// Names that match a hint but are actually text-only (e.g. small Gemma 3 has
-// no vision; only the 4b+ variants do).
-const TEXT_ONLY_MODELS = ['gemma3:1b', 'gemma-3-1b', 'gemma3:270m'];
+// Text-only models that a hint or a vision provider would otherwise let through.
+const TEXT_ONLY_MODELS = [
+	/gemma-?3:?-?(1b|270m)/,
+	/gpt-3\.5/,
+	/(^|\/)gpt-4(-32k)?(-\d{4})?(-preview)?$/,
+	/(^|\/)o1-(mini|preview)/,
+	/(^|\/)o3-mini/,
+	/(^|\/)grok-3/,
+	/(^|\/)grok-2(-\d{4})?$/,
+	/grok-code/,
+	// DeepSeek drops images it can't read instead of erroring, so only Flash is trusted
+	/(^|\/)deepseek-(?!flash)/
+];
 
-export function modelSupportsVision(modelId: string | undefined | null): boolean {
-	if (!modelId) return false;
+export type VisionSource = 'you' | 'provider' | 'name';
+
+export interface VisionCheck {
+	/** Cloud provider whose models broadly see images */
+	providerHasVision: boolean;
+	/** Local or custom endpoint, where the model alone decides */
+	modelDecides: boolean;
+	modelId?: string | null;
+	/** What the provider's model list said, if anything */
+	reported?: boolean;
+	/** The user's own answer from settings */
+	override?: boolean;
+}
+
+function guessFromName({ providerHasVision, modelDecides, modelId }: VisionCheck): boolean {
+	if (!modelId || (!providerHasVision && !modelDecides)) return false;
 	const m = modelId.toLowerCase();
-	if (TEXT_ONLY_MODELS.some((t) => m.includes(t))) return false;
-	return VISION_MODEL_HINTS.some((hint) => m.includes(hint));
+	if (TEXT_ONLY_MODELS.some((re) => re.test(m))) return false;
+	return providerHasVision || VISION_MODEL_HINTS.some((hint) => m.includes(hint));
+}
+
+export function resolveVision(check: VisionCheck): { capable: boolean; source: VisionSource } {
+	if (check.override !== undefined) return { capable: check.override, source: 'you' };
+	if (check.reported !== undefined) return { capable: check.reported, source: 'provider' };
+	return { capable: guessFromName(check), source: 'name' };
 }
 
 /**
- * The gate the UI uses to decide whether "showing her something" is possible
- * right now. The provider must at least potentially do vision (a flagged cloud
- * provider, or a local/custom one), AND the selected model must look vision-capable.
- * So a text-only model on any provider returns false, prompting the user.
+ * Pull a vision answer out of one model entry, in whichever shape the server
+ * uses: Ollama /api/show (`capabilities: [..., 'vision']`), LM Studio
+ * /api/v1/models (`capabilities.vision`), or OpenRouter-style lists
+ * (`architecture.input_modalities`). Anything else stays undefined.
  */
-export function canShowImages(
-	providerHasVision: boolean,
-	modelDecides: boolean,
-	modelId?: string | null
-): boolean {
-	if (!providerHasVision && !modelDecides) return false;
-	return modelSupportsVision(modelId);
+export function reportedVision(entry: unknown): boolean | undefined {
+	if (!entry || typeof entry !== 'object') return undefined;
+	const { capabilities, architecture } = entry as { capabilities?: unknown; architecture?: unknown };
+	if (Array.isArray(capabilities)) return capabilities.includes('vision');
+	if (capabilities && typeof capabilities === 'object' && 'vision' in capabilities) {
+		const { vision } = capabilities as { vision: unknown };
+		if (typeof vision === 'boolean') return vision;
+	}
+	if (architecture && typeof architecture === 'object' && 'input_modalities' in architecture) {
+		const { input_modalities } = architecture as { input_modalities: unknown };
+		if (Array.isArray(input_modalities)) return input_modalities.includes('image');
+	}
+	return undefined;
+}
+
+/** GET when there's no body, POST JSON when there is. Rejects on HTTP errors. */
+export type FetchJson = (path: string, body?: unknown) => Promise<unknown>;
+
+/** Ollama's /api/tags has no capabilities, so ask /api/show per model. Best effort. */
+export function addOllamaVision<T extends { id: string }>(models: T[], fetchJson: FetchJson) {
+	return Promise.all(
+		models.map(async (m) => ({
+			...m,
+			vision: reportedVision(await fetchJson('/api/show', { model: m.id }).catch(() => null))
+		}))
+	);
+}
+
+/** LM Studio's native API knows which models take images; its OpenAI one doesn't. Best effort. */
+export async function addLMStudioVision<T extends { id: string }>(models: T[], fetchJson: FetchJson) {
+	const native = await fetchJson('/api/v1/models').catch(() => null);
+	const list = (native as { models?: unknown } | null)?.models;
+	if (!Array.isArray(list)) return models;
+	// The OpenAI list may name a model by its key or by a loaded instance's id
+	const byId = new Map<unknown, boolean | undefined>();
+	for (const n of list as Array<{ key?: unknown; loaded_instances?: Array<{ id?: unknown }> }>) {
+		const vision = reportedVision(n);
+		byId.set(n?.key, vision);
+		if (Array.isArray(n?.loaded_instances)) for (const i of n.loaded_instances) byId.set(i?.id, vision);
+	}
+	return models.map((m) => ({ ...m, vision: byId.get(m.id) }));
 }

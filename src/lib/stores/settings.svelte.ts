@@ -1,7 +1,14 @@
 import { browser } from '$app/environment';
 import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import type { ProviderConfig } from '$lib/types';
-import { LLM_PROVIDERS, TTS_PROVIDERS, STT_PROVIDERS } from '$lib/services/providers/registry';
+import {
+	LLM_PROVIDERS,
+	TTS_PROVIDERS,
+	STT_PROVIDERS,
+	providerSupportsVision,
+	visionDependsOnModel
+} from '$lib/services/providers/registry';
+import { resolveVision } from '$lib/services/providers/vision';
 import { DEFAULT_HOTKEYS, type HotkeyConfig } from '$lib/services/platform/hotkeys';
 
 export type ProviderCategory = 'llm' | 'tts' | 'stt';
@@ -197,14 +204,14 @@ function createSettingsStore() {
 	// Cached models management
 	const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-	function setCachedModels(providerId: string, models: Array<{ id: string; name: string }>) {
+	function setCachedModels(providerId: string, models: Array<{ id: string; name: string; vision?: boolean }>) {
 		setProviderConfig(providerId, {
 			cachedModels: models,
 			modelsFetchedAt: Date.now()
 		});
 	}
 
-	function getCachedModels(providerId: string): Array<{ id: string; name: string }> | null {
+	function getCachedModels(providerId: string): Array<{ id: string; name: string; vision?: boolean }> | null {
 		const config = providerConfigs[providerId];
 		if (!config?.cachedModels) return null;
 
@@ -213,6 +220,27 @@ function createSettingsStore() {
 		if (age > CACHE_TTL_MS) return null;
 
 		return config.cachedModels;
+	}
+
+	// Ignores the cache TTL on purpose: a model's vision support doesn't expire.
+	function resolveModelVision(providerId: string, modelId: string | undefined) {
+		const config = providerConfigs[providerId];
+		return resolveVision({
+			providerHasVision: providerSupportsVision(providerId),
+			modelDecides: visionDependsOnModel(providerId),
+			modelId,
+			reported: config?.cachedModels?.find((m) => m.id === modelId)?.vision,
+			override: modelId ? config?.visionOverrides?.[modelId] : undefined
+		});
+	}
+
+	// Flipping back to what was detected clears the override, so it follows the provider again.
+	function setVisionOverride(providerId: string, modelId: string, capable: boolean) {
+		const overrides = { ...providerConfigs[providerId]?.visionOverrides };
+		delete overrides[modelId];
+		providerConfigs[providerId] = { ...providerConfigs[providerId], visionOverrides: overrides };
+		if (resolveModelVision(providerId, modelId).capable !== capable) overrides[modelId] = capable;
+		setProviderConfig(providerId, { visionOverrides: overrides });
 	}
 
 	// Hotkey configuration
@@ -264,6 +292,8 @@ function createSettingsStore() {
 		// Cached models
 		setCachedModels,
 		getCachedModels,
+		resolveModelVision,
+		setVisionOverride,
 
 		// Hotkeys
 		get hotkeys() {
