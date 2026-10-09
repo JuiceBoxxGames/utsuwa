@@ -72,6 +72,11 @@
     "windows": {
       "wix": null,
       "nsis": null
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      }
     }
   }
 }
