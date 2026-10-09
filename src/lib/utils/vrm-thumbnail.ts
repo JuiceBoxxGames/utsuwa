@@ -124,7 +124,6 @@ export async function generateVrmThumbnail(url: string): Promise<string | null> 
 
 				try {
 					VRMUtils.removeUnnecessaryVertices(vrm.scene);
-					VRMUtils.removeUnnecessaryJoints(vrm.scene);
 
 					applyRelaxedPose(vrm);
 

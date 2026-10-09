@@ -348,7 +348,6 @@
 
 				// Optimize VRM
 				VRMUtils.removeUnnecessaryVertices(loadedVrm.scene);
-				VRMUtils.removeUnnecessaryJoints(loadedVrm.scene);
 
 				// Skip frustum culling so animated meshes never pop out at the edges
 				loadedVrm.scene.traverse((obj) => {
