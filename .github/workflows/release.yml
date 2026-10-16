@@ -61,7 +61,9 @@ jobs:
             patchelf \
             libxdo-dev \
             libssl-dev \
-            build-essential
+            build-essential \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -80,6 +82,8 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          # Manual runs keep the installers as workflow artifacts so they can be tested before a release.
+          uploadWorkflowArtifacts: ${{ github.ref_type != 'tag' }}
           releaseBody: |
             Desktop builds for macOS, Windows, and Linux.
 

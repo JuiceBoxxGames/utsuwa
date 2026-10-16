@@ -40,6 +40,14 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
 
+    // WebKitGTK denies getUserMedia unless the app answers the permission request,
+    // so voice input never worked on Linux. Mac and Windows keep their own prompts.
+    #[cfg(target_os = "linux")]
+    let builder = builder.on_permission_request(|_, kind| match kind {
+        tauri::webview::PermissionKind::Microphone => tauri::webview::PermissionResponse::Allow,
+        _ => tauri::webview::PermissionResponse::Default,
+    });
+
     builder
         .invoke_handler(tauri::generate_handler![
             show_overlay,
