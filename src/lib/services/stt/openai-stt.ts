@@ -53,6 +53,38 @@ export function buildTranscriptionRequest(
 	return { url: `${base}/audio/transcriptions`, headers, body: form };
 }
 
+// 16-bit mono PCM WAV. Every Whisper-style endpoint accepts it, so it's the
+// fallback when MediaRecorder can't encode anything.
+export function encodeWav(chunks: Float32Array[], sampleRate: number): Blob {
+	const length = chunks.reduce((n, c) => n + c.length, 0);
+	const view = new DataView(new ArrayBuffer(44 + length * 2));
+	const ascii = (at: number, text: string) => {
+		for (let i = 0; i < text.length; i++) view.setUint8(at + i, text.charCodeAt(i));
+	};
+	ascii(0, 'RIFF');
+	view.setUint32(4, 36 + length * 2, true);
+	ascii(8, 'WAVE');
+	ascii(12, 'fmt ');
+	view.setUint32(16, 16, true);
+	view.setUint16(20, 1, true);
+	view.setUint16(22, 1, true);
+	view.setUint32(24, sampleRate, true);
+	view.setUint32(28, sampleRate * 2, true);
+	view.setUint16(32, 2, true);
+	view.setUint16(34, 16, true);
+	ascii(36, 'data');
+	view.setUint32(40, length * 2, true);
+	let offset = 44;
+	for (const chunk of chunks) {
+		for (const sample of chunk) {
+			const s = Math.max(-1, Math.min(1, sample));
+			view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+			offset += 2;
+		}
+	}
+	return new Blob([view.buffer], { type: 'audio/wav' });
+}
+
 // Records mic audio and transcribes it via any OpenAI-compatible
 // /v1/audio/transcriptions endpoint. Groq and local servers (Speaches,
 // faster-whisper-server, whisper.cpp) share this exact client — only the base
@@ -61,6 +93,8 @@ class OpenAiSttService {
 	private config: OpenAiSttConfig | null = null;
 	private mediaRecorder: MediaRecorder | null = null;
 	private audioChunks: Blob[] = [];
+	private pcmChunks: Float32Array[] = [];
+	private processor: ScriptProcessorNode | null = null;
 	private stream: MediaStream | null = null;
 	private analyser: AnalyserNode | null = null;
 	private audioContext: AudioContext | null = null;
@@ -137,12 +171,17 @@ class OpenAiSttService {
 		source.connect(this.analyser);
 		this.startLevelMonitoring();
 
-		// Record audio — mimeType may be undefined to let browser pick default
 		const mimeType = this.getSupportedMimeType();
+		if (!mimeType) {
+			// The Linux AppImage's bundled WebKitGTK has MediaRecorder but encodes
+			// nothing, so record raw PCM and send WAV instead (#277).
+			this.startPcmCapture(source);
+			this.listening = true;
+			return true;
+		}
+
 		try {
-			this.mediaRecorder = mimeType
-				? new MediaRecorder(this.stream, { mimeType })
-				: new MediaRecorder(this.stream);
+			this.mediaRecorder = new MediaRecorder(this.stream, { mimeType });
 		} catch {
 			callbacks.onError('Audio recording not supported on this platform');
 			this.releaseStream();
@@ -161,9 +200,9 @@ class OpenAiSttService {
 	}
 
 	stopListening(): void {
-		if (this.mediaRecorder && this.listening) {
-			this.mediaRecorder.stop();
-		}
+		if (!this.listening) return;
+		if (this.processor) this.handleRecordingStop();
+		else this.mediaRecorder?.stop();
 	}
 
 	abort(): void {
@@ -176,13 +215,46 @@ class OpenAiSttService {
 	}
 
 	private getSupportedMimeType(): string | undefined {
+		if (typeof MediaRecorder === 'undefined') return undefined;
 		// mp4/m4a first for Safari/WKWebView, then webm for Chromium
 		const types = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
-		for (const type of types) {
-			if (MediaRecorder.isTypeSupported(type)) return type;
+		return types.find((type) => MediaRecorder.isTypeSupported(type));
+	}
+
+	private startPcmCapture(source: MediaStreamAudioSourceNode) {
+		if (!this.audioContext) return;
+		// ponytail: ScriptProcessorNode is deprecated but needs no worklet module; move to AudioWorklet if a webview drops it
+		this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+		this.processor.onaudioprocess = (e) => {
+			this.pcmChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+		};
+		source.connect(this.processor);
+		// Only fires while connected to the graph; its output buffer stays silent
+		this.processor.connect(this.audioContext.destination);
+	}
+
+	private stopPcmCapture() {
+		if (!this.processor) return;
+		this.processor.onaudioprocess = null;
+		this.processor.disconnect();
+		this.processor = null;
+	}
+
+	// Collects what was recorded on either path, before the stream is released
+	private takeRecording(): { blob: Blob; ext: string } | null {
+		if (this.processor) {
+			const sampleRate = this.audioContext?.sampleRate ?? 48_000;
+			this.stopPcmCapture();
+			const chunks = this.pcmChunks;
+			this.pcmChunks = [];
+			return chunks.length ? { blob: encodeWav(chunks, sampleRate), ext: 'wav' } : null;
 		}
-		// Let browser pick its default
-		return undefined;
+		if (this.audioChunks.length === 0) return null;
+		const mime = this.mediaRecorder?.mimeType || 'audio/mp4';
+		const blob = new Blob(this.audioChunks, { type: mime });
+		this.audioChunks = [];
+		const ext = mime.includes('webm') ? 'webm' : mime.includes('ogg') ? 'ogg' : 'm4a';
+		return { blob, ext };
 	}
 
 	private startLevelMonitoring() {
@@ -202,6 +274,7 @@ class OpenAiSttService {
 	}
 
 	private async handleRecordingStop() {
+		const recording = this.takeRecording();
 		this.listening = false;
 		this.stopLevelMonitoring();
 		this.releaseStream();
@@ -209,17 +282,13 @@ class OpenAiSttService {
 		// abort() was called — don't transcribe or fire callbacks
 		if (!this.callbacks || !this.config) return;
 
-		if (this.audioChunks.length === 0) {
+		if (!recording) {
 			this.callbacks?.onEnd();
 			return;
 		}
 
 		this.transcribing = true;
-		const actualMime = this.mediaRecorder?.mimeType || 'audio/mp4';
-		const audioBlob = new Blob(this.audioChunks, { type: actualMime });
-		this.audioChunks = [];
-
-		const ext = actualMime.includes('webm') ? 'webm' : actualMime.includes('ogg') ? 'ogg' : 'm4a';
+		const { blob: audioBlob, ext } = recording;
 
 		this.abortController = new AbortController();
 		const timeoutMs = this.config.timeoutMs ?? DEFAULT_STT_TIMEOUT_MS;
@@ -312,6 +381,8 @@ class OpenAiSttService {
 		}
 		this.mediaRecorder = null;
 		this.audioChunks = [];
+		this.stopPcmCapture();
+		this.pcmChunks = [];
 		this.releaseStream();
 	}
 }
