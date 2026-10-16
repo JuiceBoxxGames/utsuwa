@@ -25,6 +25,15 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: '@huggingface/transformers'
         update-types: ['version-update:semver-major']
+      # Kit 3 needs TypeScript 6 and a config migration; do it as a planned upgrade.
+      - dependency-name: '@sveltejs/kit'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@sveltejs/vite-plugin-svelte'
+        update-types: ['version-update:semver-major']
+      - dependency-name: vite
+        update-types: ['version-update:semver-major']
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
 
   # Tauri crate minors must match the @tauri-apps/* packages; see CONTRIBUTING.
   - package-ecosystem: cargo
