@@ -68,7 +68,7 @@
 		"@tauri-apps/plugin-updater": "~2.13.1",
 		"@threlte/core": "^8.6.1",
 		"@threlte/xr": "^1.6.1",
-		"@xsai/stream-text": "^0.4.2",
+		"@xsai/stream-text": "^0.5.1",
 		"bits-ui": "^2.15.4",
 		"dexie": "^4.4.6",
 		"eld": "^2.0.3",
