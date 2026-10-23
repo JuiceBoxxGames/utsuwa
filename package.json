@@ -46,7 +46,7 @@
 		"@tauri-apps/plugin-global-shortcut": "~2.4.0",
 		"@types/three": "^0.186.0",
 		"mdsvex": "^0.12.6",
-		"pagefind": "^1.4.0",
+		"pagefind": "^1.5.2",
 		"rehype-slug": "^6.0.0",
 		"shiki": "^3.21.0",
 		"svelte": "^5.45.6",
