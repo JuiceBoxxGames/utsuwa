@@ -25,6 +25,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/DasterProkio/awesome-ai-companion#visual-presence--vtuber-style-companions"><img src="https://raw.githubusercontent.com/DasterProkio/awesome-ai-companion/main/assets/featured-in-awesome-ai-companion.png" alt="Featured in Awesome AI Companion" height="24"></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/JuiceBoxxGames/utsuwa/releases/latest">
     <img alt="Download for macOS" src="static/brand-assets/download-buttons/macos-light.avif" width="31%">
   </a>
