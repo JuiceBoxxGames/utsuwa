@@ -74,6 +74,10 @@ export interface CompanionChatHooks {
 	setPhase?: (phase: ThinkingPhase) => void;
 }
 
+// The event text itself lives in the system prompt's <event> block.
+const SYSTEM_EVENT_NUDGE =
+	'System note: the <event> in your instructions just happened. React to it now. This is not a message from the user.';
+
 async function buildCompanionPrompt(
 	userMessage: string,
 	hasImages: boolean,
@@ -236,6 +240,10 @@ export async function sendCompanionMessage(
 
 		chatStore.addMessage('assistant', '');
 		let messages: ChatLoopMessage[] = buildMessages(chatStore.messages.slice(0, -1), images, imageDescription);
+		// A system event adds no chat bubble, so the history would end on her last
+		// reply. DeepSeek thinking mode rejects that (#288) and other providers
+		// read it as a reply to continue, so the request always ends on a user turn.
+		if (systemEvent) messages.push({ role: 'user', content: SYSTEM_EVENT_NUDGE });
 		const currentQuestion = [...messages].reverse().find((message) => message.role === 'user');
 
 		// Snapshot speech settings at turn start so mid-stream changes cannot
@@ -294,6 +302,12 @@ export async function sendCompanionMessage(
 		for (let round = 0; round < maxRounds; round++) {
 			stream.startRound();
 			const roundCalls: McpCollectedToolCall[] = [];
+			let roundReasoning: string | undefined;
+			const onReasoning = (reasoning: string) => {
+				if (signal.aborted) return;
+				bumpStall();
+				roundReasoning = reasoning;
+			};
 
 			// Re-budget before every round: tool results from earlier rounds grow
 			// the history. Truncation runs per round (not once before the loop)
@@ -330,7 +344,7 @@ export async function sendCompanionMessage(
 			bumpStall();
 			const roundText = await untilAborted(
 				streamChat(
-					{ ...llm, messages, systemPrompt, tools: sendTools, signal, onRetry, ...advancedParams },
+					{ ...llm, messages, systemPrompt, tools: sendTools, signal, onRetry, onReasoning, ...advancedParams },
 					onDelta,
 					onToolCall
 				)
@@ -345,7 +359,7 @@ export async function sendCompanionMessage(
 			// Feed the results back and let the model continue. Every call gets
 			// a result — the OpenAI protocol requires it — including speech
 			// tools, which get a small ack instead of an execution.
-			messages.push(buildAssistantToolMessage(stripFromStateFence(roundText), roundCalls));
+			messages.push(buildAssistantToolMessage(stripFromStateFence(roundText), roundCalls, roundReasoning));
 			// Bound the work one round may trigger: excess calls are answered
 			// with an error instead of spawning dozens of processes/requests.
 			const { run, skipped } = splitToolCalls(roundCalls);
@@ -448,8 +462,8 @@ function startTurnGuard(stallTimeoutMs: number, turnTimeoutMs: number) {
 	return {
 		signal,
 		untilAborted: <T>(work: Promise<T>) => Promise.race([work, aborted]),
-		// ponytail: counts visible text and tool calls only, so a reasoning model that
-		// thinks silently past the stall limit gets cut off; bump on raw bytes if that bites.
+		// Text, tool calls and streamed reasoning count as progress. A model that
+		// thinks without streaming its reasoning can still hit the stall limit.
 		bumpStall: () => {
 			clearTimeout(stallTimer);
 			stallTimer = setTimeout(timeOut, stallTimeoutMs);

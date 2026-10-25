@@ -14,6 +14,7 @@ export interface ChatLoopMessage {
 	content: string | ContentPart[];
 	tool_calls?: OpenAiToolCall[];
 	tool_call_id?: string;
+	reasoning_content?: string;
 }
 
 interface HistoryMessage {

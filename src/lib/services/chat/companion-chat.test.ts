@@ -1097,6 +1097,87 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			assert.equal(fixtures.chatDraftStore.draft, 'my next thought');
 			assert.equal(messages[0]?.content, 'Hello');
 		});
+		// DeepSeek thinking mode treats assistant messages after the last user
+		// message as the turn in progress and 400s without their reasoning (#288).
+		for (const transport of ['direct', 'hosted']) {
+			await t.test(`${transport}: a reminder turn ends the request on a user message`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = true; resetTurn();
+				chatStore.addMessage('user', 'Remind me in a minute');
+				chatStore.addMessage('assistant', 'Sure, one minute.');
+				let sent: { role: string; content: unknown }[] = [];
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					sent = JSON.parse(String(init.body)).messages;
+					return new Response(sse('Time is up!') + 'data: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+				await sendCompanionMessage('REMINDER TRIGGERED: "stretch"', [], hooks, { systemEvent: true });
+				assert.equal(chatStore.error, null);
+				assert.equal(sent.at(-1)?.role, 'user');
+				assert.equal(sent.at(-2)?.content, 'Sure, one minute.');
+				assert.match(String(sent[0].content), /REMINDER TRIGGERED: "stretch"/);
+				// The nudge is request-only; the visible chat gets no user bubble
+				assert.deepEqual(messages.map((m) => m.role), ['user', 'assistant', 'assistant']);
+				assert.equal(latest, 'Time is up!');
+			});
+			await t.test(`${transport}: reasoning from a tool round is passed back to the next round`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+				const mcp = fixtures.mcpStore as { hasActiveTools: boolean; tools: unknown[]; servers: unknown[] };
+				mcp.hasActiveTools = true;
+				mcp.tools = [{ serverId: 'ha', serverName: 'Home Assistant', name: 'get_state', description: 'Read', inputSchema: { type: 'object' } }];
+				mcp.servers = [{ id: 'ha', name: 'Home Assistant', transport: 'http', url: 'http://ha.local/api/mcp', enabled: true }];
+				const delta = (d: object) => `data: ${JSON.stringify({ choices: [{ delta: d }] })}\n\n`;
+				const call = delta({ tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'get_state', arguments: '{}' } }] });
+				// Thinking that produced text, thinking that produced nothing (the
+				// field still arrives, empty), and a provider with no reasoning at all.
+				for (const [reasoning, expected] of [
+					[delta({ role: 'assistant', content: null, reasoning_content: '' }) + delta({ reasoning_content: 'Check the ' }) + delta({ reasoning_content: 'sensor.' }), 'Check the sensor.'],
+					[delta({ role: 'assistant', content: null, reasoning_content: '' }), ''],
+					['', undefined]
+				] as const) {
+					resetTurn();
+					const bodies: { messages: { role: string; reasoning_content?: string }[] }[] = [];
+					t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+						if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+						if (url === '/api/mcp/call') {
+							return new Response(JSON.stringify({ toolName: 'get_state', content: 'ok', isError: false }), { headers: { 'Content-Type': 'application/json' } });
+						}
+						bodies.push(JSON.parse(String(init.body)));
+						const wire = bodies.length === 1 ? reasoning + call : sse('All good.');
+						return new Response(wire + 'data: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+					});
+					await sendCompanionMessage('Is the sensor on?', [], hooks);
+					assert.equal(chatStore.error, null);
+					assert.equal(bodies.length, 2);
+					const toolTurn = bodies[1].messages.find((m) => m.role === 'assistant');
+					assert.equal(toolTurn?.reasoning_content, expected);
+					// Providers that never sent reasoning must not get the field back
+					assert.equal('reasoning_content' in (toolTurn ?? {}), expected !== undefined);
+					assert.equal(latest, 'All good.');
+				}
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
+			});
+			await t.test(`${transport}: a model that is still thinking does not stall out`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+				const think = `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: 'hmm ' } }] })}\n\n`;
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					const encoder = new TextEncoder();
+					return new Response(new ReadableStream({ async start(controller) {
+						// Thinks for 5x the stall limit before the first visible word
+						for (let i = 0; i < 10; i++) {
+							controller.enqueue(encoder.encode(think));
+							await new Promise((r) => setTimeout(r, 15));
+						}
+						controller.enqueue(encoder.encode(sse('Done thinking.') + 'data: [DONE]\n\n'));
+						controller.close();
+					} }), { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+				await sendCompanionMessage('Hard question', [], hooks, { stallTimeoutMs: 30 });
+				assert.deepEqual(hints, []);
+				assert.equal(chatStore.error, null);
+				assert.equal(latest, 'Done thinking.');
+			});
+		}
 	} finally {
 		buffer?.reset();
 		await server.close();

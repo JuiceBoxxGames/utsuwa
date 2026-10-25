@@ -44,6 +44,8 @@ export interface ChatMessage {
 	tool_calls?: ChatToolCall[];
 	/** Tool-role result messages reference the call they answer. */
 	tool_call_id?: string;
+	/** Thinking from a tool round, sent back so the next round can continue it. */
+	reasoning_content?: string;
 }
 
 export interface ChatRequest extends LLMTarget {
@@ -59,6 +61,9 @@ export interface ChatRequest extends LLMTarget {
 	signal?: AbortSignal;
 	/** Called before each automatic retry of a temporary failure. */
 	onRetry?: (attempt: number, delayMs: number) => void;
+	/** Gets the reasoning so far whenever a thinking model streams more of it.
+	 *  Never called for providers that send no reasoning field. */
+	onReasoning?: (fullReasoning: string) => void;
 }
 
 export interface JsonRequest extends LLMTarget {
@@ -69,6 +74,27 @@ export interface JsonRequest extends LLMTarget {
 }
 
 type OnToolCall = (name: string, args: Record<string, unknown>, id?: string) => void;
+
+// OpenAI-shaped message for the wire, shared by both transports.
+function toWireMessage(m: ChatMessage) {
+	return {
+		role: m.role,
+		content: toOpenAIContent(m.content),
+		...(m.tool_calls?.length ? { tool_calls: m.tool_calls } : {}),
+		...(m.tool_call_id && { tool_call_id: m.tool_call_id }),
+		...(m.reasoning_content !== undefined && { reasoning_content: m.reasoning_content })
+	};
+}
+
+// Accumulates streamed reasoning. It stays undefined until the field shows up,
+// because DeepSeek wants an empty string back while others want no field at all.
+function reasoningCollector(onReasoning?: (fullReasoning: string) => void) {
+	let reasoning: string | undefined;
+	return (chunk: string) => {
+		reasoning = (reasoning ?? '') + chunk;
+		onReasoning?.(reasoning);
+	};
+}
 
 export type Transport = 'direct' | 'server';
 
@@ -145,12 +171,7 @@ async function streamOnce(
 	const { messages, provider, model, apiKey, baseURL, custom, systemPrompt, tools, signal } = request;
 	return await streamServer(
 		{
-			messages: messages.map((m) => ({
-				role: m.role,
-				content: toOpenAIContent(m.content),
-				...(m.tool_calls?.length ? { tool_calls: m.tool_calls } : {}),
-				...(m.tool_call_id && { tool_call_id: m.tool_call_id })
-			})),
+			messages: messages.map(toWireMessage),
 			provider,
 			model,
 			apiKey: apiKey || (custom ? undefined : 'not-needed'),
@@ -165,6 +186,7 @@ async function streamOnce(
 		},
 		onText,
 		onToolCall,
+		reasoningCollector(request.onReasoning),
 		signal
 	);
 }
@@ -220,12 +242,7 @@ async function streamDirect(
 				})
 			: JSON.stringify({
 					model,
-					messages: messagesWithSystem.map((m) => ({
-						role: m.role,
-						content: toOpenAIContent(m.content),
-						...(m.tool_calls?.length ? { tool_calls: m.tool_calls } : {}),
-						...(m.tool_call_id && { tool_call_id: m.tool_call_id })
-					})),
+					messages: messagesWithSystem.map(toWireMessage),
 					stream: true,
 					...(options.temperature !== undefined && { temperature: options.temperature }),
 					...(options.maxTokens !== undefined && { max_tokens: options.maxTokens }),
@@ -282,6 +299,7 @@ async function streamDirect(
 	// Each delta contains one index/fragment; we aggregate by index and
 	// fire the callback when the function name + arguments are complete.
 	const toolCallBuffers: Map<number, ToolCallBuffer> = new Map();
+	const onReasoning = reasoningCollector(options.onReasoning);
 
 	while (true) {
 		const { done, value } = await reader.read();
@@ -292,13 +310,13 @@ async function streamDirect(
 		buffer = lines.pop() || '';
 
 		for (const line of lines) {
-			processStreamLine(line, onChunk, onToolCall, toolCallBuffers);
+			processStreamLine(line, onChunk, onReasoning, onToolCall, toolCallBuffers);
 		}
 	}
 
 	// Flush the decoder and any final line that arrived without a trailing newline
 	buffer += decoder.decode();
-	processStreamLine(buffer, onChunk, onToolCall, toolCallBuffers);
+	processStreamLine(buffer, onChunk, onReasoning, onToolCall, toolCallBuffers);
 
 	// Fire onToolCall for each collected tool call after the stream ends
 	emitToolCalls(toolCallBuffers, onToolCall);
@@ -308,6 +326,7 @@ async function streamDirect(
 function processStreamLine(
 	line: string,
 	onChunk: (text: string) => void,
+	onReasoning: (text: string) => void,
 	onToolCall?: OnToolCall,
 	toolCallBuffers?: Map<number, ToolCallBuffer>
 ): void {
@@ -321,6 +340,10 @@ function processStreamLine(
 		// OpenAI-compatible format
 		if (json.choices?.[0]?.delta?.content) {
 			onChunk(json.choices[0].delta.content);
+		}
+		// DeepSeek-style thinking; the empty opening delta still counts
+		if (typeof json.choices?.[0]?.delta?.reasoning_content === 'string') {
+			onReasoning(json.choices[0].delta.reasoning_content);
 		}
 		// OpenAI-compatible tool calls
 		if (json.choices?.[0]?.delta?.tool_calls && onToolCall && toolCallBuffers) {
@@ -384,6 +407,7 @@ async function streamServer(
 	body: unknown,
 	onText: (fullText: string) => void,
 	onToolCall?: OnToolCall,
+	onReasoning?: (text: string) => void,
 	signal?: AbortSignal
 ): Promise<string> {
 	let response: Response;
@@ -426,6 +450,8 @@ async function streamServer(
 				args: Record<string, unknown>;
 			};
 			onToolCall?.(name, args, id);
+		} else if (line.startsWith('r:')) {
+			onReasoning?.(JSON.parse(line.slice(2)));
 		} else if (line.startsWith('e:')) {
 			const { error, transient, retryAfterMs } = JSON.parse(line.slice(2));
 			throw new ProviderError(error, transient === true, retryAfterMs);
