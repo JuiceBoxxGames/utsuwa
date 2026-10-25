@@ -18,6 +18,7 @@ export const STORAGE_INVENTORY = {
 		overlaySize: 'utsuwa-overlay-size',
 		overlayLocked: 'utsuwa-overlay-locked',
 		imagePrivacyAck: 'utsuwa-image-privacy-ack',
+		imageSearchTool: 'utsuwa-image-search-tool-v1',
 		legacyPersonaCards: 'utsuwa-persona-cards',
 		legacyPersonaActiveId: 'utsuwa-persona-active-id',
 		// Read before hydration by src/app.html, which can't import this
@@ -27,7 +28,8 @@ export const STORAGE_INVENTORY = {
 	broadcast: {
 		character: 'utsuwa-character-state',
 		reminders: 'utsuwa-reminders',
-		memory: 'utsuwa-memory'
+		memory: 'utsuwa-memory',
+		images: 'utsuwa-images'
 	}
 } as const;
 

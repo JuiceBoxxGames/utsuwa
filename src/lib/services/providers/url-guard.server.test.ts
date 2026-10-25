@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+	assertSafeFetchTarget,
 	assertSafeProviderTarget,
 	createGuardedFetch,
 	lookupWithDnsFallback,
@@ -12,6 +13,31 @@ const resolvesTo =
 	(...addresses: string[]): Resolver =>
 	async () =>
 		addresses.map((address) => ({ address }));
+
+test('assertSafeFetchTarget allows a query/fragment but still blocks unsafe hosts', async () => {
+	// Image URLs carry a query and often a fragment; unlike a provider base URL
+	// they must be allowed through.
+	const url = await assertSafeFetchTarget(
+		'https://cdn.example.com/a.jpg?w=100&h=100#x',
+		false,
+		resolvesTo('8.8.8.8')
+	);
+	assert.equal(url.search, '?w=100&h=100');
+	assert.equal(url.hash, '#x');
+
+	await assert.rejects(
+		assertSafeFetchTarget('http://169.254.169.254/latest/meta-data', false, resolvesTo('169.254.169.254'))
+	);
+	await assert.rejects(assertSafeFetchTarget('http://10.0.0.5/a.png', false, resolvesTo('10.0.0.5')));
+	await assertSafeFetchTarget('http://10.0.0.5/a.png', true, resolvesTo('10.0.0.5'));
+	await assert.rejects(assertSafeFetchTarget('ftp://x/a.png', false, resolvesTo('8.8.8.8')));
+
+	// The resolved address counts, not just the literal hostname.
+	await assert.rejects(assertSafeFetchTarget('http://evil.example/a.png', false, resolvesTo('10.0.0.5')));
+	await assert.rejects(assertSafeFetchTarget('http://imds.example/a.png', false, resolvesTo('169.254.169.254')));
+	// allowPrivate opens private ranges, never link-local/metadata.
+	await assert.rejects(assertSafeFetchTarget('http://imds.example/a.png', true, resolvesTo('169.254.169.254')));
+});
 
 test('names that resolve to private addresses are rejected', async () => {
 	await assert.rejects(assertSafeProviderTarget('http://127.0.0.1.nip.io:8890', false, resolvesTo('127.0.0.1')));

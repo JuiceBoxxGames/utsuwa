@@ -6,8 +6,14 @@
  */
 import { browser } from '$app/environment';
 import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
-import type { McpServerConfig, McpServerError, McpTool } from '$lib/types/mcp';
+import type {
+	ImageSearchToolSelection,
+	McpServerConfig,
+	McpServerError,
+	McpTool
+} from '$lib/types/mcp';
 import { getMcpCapability, listTools } from '$lib/services/mcp/capability';
+import { parseImageSearchTool, serializeImageSearchTool } from './mcp-image-tool-storage.ts';
 import {
 	resolveCapabilityFromProbe,
 	singleFlight,
@@ -15,6 +21,16 @@ import {
 } from '$lib/services/mcp/protocol';
 
 const STORAGE_KEY = STORAGE_INVENTORY.localStorage.mcp;
+const IMAGE_SEARCH_KEY = STORAGE_INVENTORY.localStorage.imageSearchTool;
+
+function loadImageSearchTool(): ImageSearchToolSelection | null {
+	if (!browser) return null;
+	try {
+		return parseImageSearchTool(localStorage.getItem(IMAGE_SEARCH_KEY));
+	} catch {
+		return null;
+	}
+}
 
 function loadSaved(): McpServerConfig[] {
 	if (!browser) return [];
@@ -32,7 +48,30 @@ function persist(next: McpServerConfig[]) {
 	if (browser) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
 
+function persistImageSearchTool(next: ImageSearchToolSelection | null) {
+	if (!browser) return;
+	const raw = serializeImageSearchTool(next);
+	if (raw) localStorage.setItem(IMAGE_SEARCH_KEY, raw);
+	else localStorage.removeItem(IMAGE_SEARCH_KEY);
+}
+
+// The app and the desktop overlay are separate webviews with one localStorage.
+// Keep their MCP snapshots (and the picture-tool choice) in step.
+if (browser) {
+	window.addEventListener('storage', (event) => {
+		if (event.key === STORAGE_KEY) {
+			servers = loadSaved();
+			tools = [];
+			serverErrors = [];
+			if (servers.some((server) => server.enabled)) void fetchTools();
+		} else if (event.key === IMAGE_SEARCH_KEY) {
+			imageSearchTool = loadImageSearchTool();
+		}
+	});
+}
+
 let servers = $state<McpServerConfig[]>(loadSaved());
+let imageSearchTool = $state<ImageSearchToolSelection | null>(loadImageSearchTool());
 let tools = $state<McpTool[]>([]);
 let serverErrors = $state<McpServerError[]>([]);
 let isLoadingTools = $state(false);
@@ -140,6 +179,9 @@ export const mcpStore = {
 	get servers() {
 		return servers;
 	},
+	get imageSearchTool() {
+		return imageSearchTool;
+	},
 	get tools() {
 		return tools;
 	},
@@ -205,6 +247,11 @@ export const mcpStore = {
 		if (!first) return;
 		confirmations = rest;
 		first.resolve(run);
+	},
+
+	setImageSearchTool(next: ImageSearchToolSelection | null) {
+		imageSearchTool = next;
+		persistImageSearchTool(next);
 	},
 
 	refreshTools,
