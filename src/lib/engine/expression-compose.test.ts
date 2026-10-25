@@ -168,6 +168,19 @@ test('visemes map onto VRM 1.0, VRM 0.x, and ARKit mouth names', () => {
 	});
 });
 
+test('mouth movement scales every mouth name and never pushes one past full', () => {
+	const visemes = { aa: 0.8, ee: 0.2, ih: 0.1, oh: 0.4, ou: 0.3 };
+	const big = composeExpressionWeights(input(quiet(), { visemes, mouthIntensity: 1.5 })).mouth;
+	assert.equal(big.get('aa'), 1);
+	assert.equal(big.get('a'), 1);
+	assert.ok(Math.abs(big.get('oh')! - 0.6) < 1e-9);
+	assert.ok(Math.abs(big.get('jawOpen')! - 0.84) < 1e-9);
+	const small = composeExpressionWeights(input(quiet(), { visemes, mouthIntensity: 0.5 })).mouth;
+	assert.equal(small.get('aa'), 0.4);
+	assert.equal(small.get('ee'), 0.1);
+	assert.ok(Math.abs(small.get('jawOpen')! - 0.28) < 1e-9);
+});
+
 test('input state is left untouched', () => {
 	const state = { ...quiet(), flash: { name: 'surprised', weight: 0.6, t: 0, holdUntil: null } };
 	const snapshot = structuredClone(state);

@@ -71,9 +71,12 @@ LLM, TTS, and STT providers follow an established pattern. If you're adding or e
 
 ## Adding Strings (Translations)
 
-Utsuwa uses [Paraglide JS](https://paraglidejs.com) for translations. Only the landing page is localized so far (English at `/`, Japanese at `/ja`); the app, docs, and blog are still English-only.
+Utsuwa uses [Paraglide JS](https://paraglidejs.com) for translations. Only the landing page is localized so far (English at `/`, Japanese at `/ja`); the app, docs, and blog are still English-only. App localization is tracked in #290.
 
-- Messages live in `messages/en.json` (the source of truth) and `messages/ja.json`. Add every new key to both files; a missing or renamed key fails `pnpm check`.
+- Messages live in `messages/{locale}.json`. `messages/en.json` is the source of truth: every new key goes there, and a key missing from it fails `pnpm check`.
+- Other locales are allowed to lag behind. A key missing from a non-English file falls back to English, so a feature PR only needs `en.json`. Translations can come in the same PR or a follow-up.
+- Machine-translated drafts are fine as a starting point, but a native speaker should read a locale before it ships.
+- Everything sent to the model (system prompt, framing, tool descriptions) stays in English regardless of the UI language, so prompt behavior doesn't change with the locale.
 - Use them in components as `m.key_name()` from `$lib/paraglide/messages`, with named parameters like `m.stories_show({ title })`.
 - The code in `src/lib/paraglide/` is generated and ignored by git. `pnpm check` and `pnpm build` regenerate it, and `pnpm dev` compiles it on startup. A running dev server may not notice message edits, so run `pnpm check` (or restart the server) after changing them.
 - Which URLs get a locale prefix is set in `project.inlang/paraglide.config.js`. Both the Vite plugin and `pnpm check` read it, so change routing there rather than in `vite.config.ts`.

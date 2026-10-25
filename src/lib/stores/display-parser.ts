@@ -1,4 +1,5 @@
 import { clampPhysicsIntensity, PHYSICS_INTENSITY_DEFAULT } from '../engine/spring-physics.ts';
+import { clampLipSyncIntensity, LIPSYNC_INTENSITY_DEFAULT } from '../services/lipsync/analyzer.ts';
 import {
 	sanitizeSceneBackground,
 	type SceneBackground
@@ -55,6 +56,7 @@ export interface ParsedDisplaySettings {
 	camera: CameraSettings;
 	overlayCamera: CameraSettings;
 	physicsIntensity: number;
+	lipSyncIntensity: number;
 	sceneBackground: SceneBackground;
 	chatDisplayMode: ChatDisplayMode;
 	sidebarPosition: SidebarPosition;
@@ -90,6 +92,7 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 			camera: { ...CAMERA_DEFAULTS },
 			overlayCamera: { ...CAMERA_DEFAULTS },
 			physicsIntensity: PHYSICS_INTENSITY_DEFAULT,
+			lipSyncIntensity: LIPSYNC_INTENSITY_DEFAULT,
 			sceneBackground: sanitizeSceneBackground(undefined),
 			chatDisplayMode: DEFAULT_CHAT_DISPLAY_MODE,
 			sidebarPosition: DEFAULT_SIDEBAR_POSITION,
@@ -129,6 +132,9 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 		physicsIntensity = clampPhysicsIntensity(parsed.physicsIntensity);
 	}
 
+	const lipSyncIntensity =
+		typeof parsed.lipSyncIntensity === 'number' ? clampLipSyncIntensity(parsed.lipSyncIntensity) : LIPSYNC_INTENSITY_DEFAULT;
+
 	const sceneBackground = sanitizeSceneBackground(parsed.sceneBackground);
 
 	const chatDisplayMode = parsed.chatDisplayMode === 'both' ? 'sidebar' : isChatDisplayMode(parsed.chatDisplayMode)
@@ -157,5 +163,5 @@ export function parseDisplaySettings(raw: unknown): ParsedDisplaySettings {
 		? parsed.chatBarAlignment
 		: DEFAULT_CHAT_BAR_ALIGNMENT;
 
-	return { keepScreenAwake: parsed.keepScreenAwake === true, moodExpressions: parsed.moodExpressions !== false, generatedMoments: parsed.generatedMoments !== false, camera, overlayCamera, physicsIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
+	return { keepScreenAwake: parsed.keepScreenAwake === true, moodExpressions: parsed.moodExpressions !== false, generatedMoments: parsed.generatedMoments !== false, camera, overlayCamera, physicsIntensity, lipSyncIntensity, sceneBackground, chatDisplayMode, sidebarPosition, waitToneEnabled, typingIndicatorDelayMs, textRevealSpeed, chatBarAlignment };
 }

@@ -64,6 +64,7 @@ export interface LoopMessage {
 	content: string;
 	tool_calls?: OpenAiToolCall[];
 	tool_call_id?: string;
+	reasoning_content?: string;
 }
 
 export interface ToolResultEntry {
@@ -113,11 +114,15 @@ export function toOpenAiToolCalls(calls: McpCollectedToolCall[]): OpenAiToolCall
 	}));
 }
 
-export function buildAssistantToolMessage(text: string, calls: McpCollectedToolCall[]): LoopMessage {
+/** `reasoning` is the round's thinking, if the provider streamed any. DeepSeek's
+ *  thinking mode requires it back, even as an empty string; it only forgives a
+ *  missing one when it still recognizes the tool call id. */
+export function buildAssistantToolMessage(text: string, calls: McpCollectedToolCall[], reasoning?: string): LoopMessage {
 	return {
 		role: 'assistant',
 		content: text,
-		tool_calls: toOpenAiToolCalls(calls)
+		tool_calls: toOpenAiToolCalls(calls),
+		...(reasoning !== undefined && { reasoning_content: reasoning })
 	};
 }
 

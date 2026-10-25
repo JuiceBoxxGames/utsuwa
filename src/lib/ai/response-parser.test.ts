@@ -263,6 +263,14 @@ test('a dangling reasoning block is cut like the streaming path does', () => {
 	assert.equal(dialogue, 'Hola!');
 });
 
+// --- dialogue cleanup ---
+
+test('markdown bold keeps its words while *actions* are still dropped', () => {
+	assert.equal(parseResponse("Here's the exact count: **42**.").dialogue, "Here's the exact count: 42.");
+	assert.equal(parseResponse("It's **cloudy, 19°C** in Osaka.").dialogue, "It's cloudy, 19°C in Osaka.");
+	assert.equal(parseResponse('*smiles* That is **great** news!').dialogue, 'That is great news!');
+});
+
 // --- action ---
 
 test('action ids are trimmed and lowercased', () => {

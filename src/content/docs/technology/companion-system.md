@@ -403,7 +403,7 @@ If a turn still fails before she says anything, the message goes back into the c
 
 The companion can schedule reminders with a `[reminder:5min]content[/reminder]` tag in her reply. If the user phrases a reminder naturally ("remind me in 10 minutes") and the model emits no tag, a client-side fallback schedules it. Reminders persist in the `reminders` table, fire from a poll loop that survives reloads, and ones missed while the app was closed surface on the next launch.
 
-A fired reminder is delivered as a **system event**. The trigger text enters through the `<event>` layer instead of a user turn. Sentiment heuristics, baseline stat updates, streak and interaction counting, fact extraction, and event checks are all skipped. Her reply is still parsed, spoken, and can schedule more reminders. Machine-generated turns never advance the relationship or reset the away-time clock.
+A fired reminder is delivered as a **system event**. The trigger text enters through the `<event>` layer instead of a user turn. The request still ends with a short user-role note pointing at that layer, because a request that ends on her last reply is rejected by DeepSeek's thinking mode and read as a reply to continue elsewhere. The note never shows in the chat. Sentiment heuristics, baseline stat updates, streak and interaction counting, fact extraction, and event checks are all skipped. Her reply is still parsed, spoken, and can schedule more reminders. Machine-generated turns never advance the relationship or reset the away-time clock.
 
 ## LLM Output Format
 

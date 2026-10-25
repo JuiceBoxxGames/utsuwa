@@ -14,6 +14,12 @@
 	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
 	import { Button } from '$lib/components/ui';
 	import { wakeLockStore } from '$lib/stores/wake-lock.svelte';
+	import { rangeProgress } from '$lib/utils/range-progress';
+	import {
+		LIPSYNC_INTENSITY_DEFAULT,
+		LIPSYNC_INTENSITY_MAX,
+		LIPSYNC_INTENSITY_MIN
+	} from '$lib/services/lipsync/analyzer';
 	import {
 		displayStore,
 		type ChatDisplayMode,
@@ -53,6 +59,12 @@
 		const next = Math.round((current + delta) * 10) / 10;
 		displayStore.setTypingIndicatorDelayMs(next * 1000);
 	}
+
+	const mouthLabel = $derived(
+		displayStore.lipSyncIntensity === LIPSYNC_INTENSITY_DEFAULT
+			? 'Default'
+			: `${displayStore.lipSyncIntensity.toFixed(2)}x`
+	);
 </script>
 
 <div class="display-page">
@@ -125,6 +137,26 @@
 		</div>
 		<div class="setting-row">
 			<div class="setting-info">
+				<label class="setting-label" for="mouth-movement">Mouth movement</label>
+				<span class="setting-desc">How far her mouth opens when she talks. Lower it if your model's mouth opens too wide, raise it if it barely moves.</span>
+			</div>
+			<div class="range-control">
+				<input
+					id="mouth-movement"
+					type="range" use:rangeProgress={displayStore.lipSyncIntensity}
+					class="settings-range"
+					min={LIPSYNC_INTENSITY_MIN}
+					max={LIPSYNC_INTENSITY_MAX}
+					step="0.05"
+					value={displayStore.lipSyncIntensity}
+					aria-valuetext={mouthLabel}
+					oninput={(e) => displayStore.setLipSyncIntensity(parseFloat(e.currentTarget.value))}
+				/>
+				<span class="range-value" aria-hidden="true">{mouthLabel}</span>
+			</div>
+		</div>
+		<div class="setting-row">
+			<div class="setting-info">
 				<span class="setting-label">Personalized moments</span>
 				<span class="setting-desc">Let her write anniversary and story moments from what you have shared, in your language. Off plays the built-in scenes.</span>
 			</div>
@@ -152,6 +184,26 @@
 	.delay-input::-webkit-outer-spin-button,
 	.delay-input::-webkit-inner-spin-button {
 		-webkit-appearance: none;
+	}
+
+	.range-control {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 240px;
+		max-width: 100%;
+	}
+
+	@media (max-width: 640px) {
+		.range-control { width: 100%; }
+	}
+
+	.range-value {
+		min-width: 3.5rem;
+		font-size: 0.8rem;
+		font-variant-numeric: tabular-nums;
+		text-align: right;
+		color: var(--text-secondary);
 	}
 
 	.delay-unit {

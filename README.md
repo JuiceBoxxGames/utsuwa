@@ -25,6 +25,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/DasterProkio/awesome-ai-companion#visual-presence--vtuber-style-companions"><img src="https://raw.githubusercontent.com/DasterProkio/awesome-ai-companion/main/assets/featured-in-awesome-ai-companion.png" alt="Featured in Awesome AI Companion" height="24"></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/JuiceBoxxGames/utsuwa/releases/latest">
     <img alt="Download for macOS" src="static/brand-assets/download-buttons/macos-light.avif" width="31%">
   </a>
@@ -74,7 +78,7 @@
 - **MCP Tools**: Connect Model Context Protocol servers, such as Home Assistant's official MCP integration or web search via SearXNG, and let the companion call their tools during chat. Per-server HTTP/stdio transports, bearer-token authentication, and an `MCP_ENABLED=server` gate for self-hosted web deployments (see [MCP Servers](https://docs.utsuwa.ai/guides/mcp))
 - **Text-to-Speech**: Support for ElevenLabs, OpenAI TTS, and Fish Audio, local voices via any OpenAI-compatible server (Kokoro-FastAPI, openedai-speech), and local OmniVoice. OmniVoice streams: speech starts while the model is still writing, and foreign words can be spoken per word in their own language and voice. With OmniVoice + Alternative Voice, the model controls its spoken reply via native `speak_segment` / `pause_segment` / `gesture_segment` tool calls (when tool calling is enabled); otherwise the documented inline `speak()` / `pause()` / `gesture()` syntax is used
 - **Fully Local Option**: Run the whole stack offline: local LLM (Ollama/LM Studio), local TTS, and local Whisper STT, so nothing leaves your device
-- **Lip-sync**: Audio-driven mouth animation synced to TTS playback
+- **Lip-sync**: Audio-driven mouth animation synced to TTS playback, with a Mouth movement slider in Settings > Display for models whose mouth opens too wide or too little
 - **Animations**: VRMA-based idle and talking animations with automatic blinking
 - **Character Customization**: Customize your companion's name and personality, or replace the built-in system prompt framing with your own. `{{char}}` and `{{user}}` macros work in both
 - **Avatar Tasks & Timers**: Your companion can schedule reminders for itself, e.g. to check back with you later. Fired and missed timers appear in the reminder dropdown (bell icon) so you can see what happened and dismiss them. Reminders persist across browser reloads and stay in sync between the main app and the desktop overlay
@@ -359,6 +363,7 @@ pnpm tauri build  # Build desktop app installer
 - [x] Relationship-staged touch reactions
 - [x] Persistent scene backgrounds (pastel gradients, patterns, and your own image)
 - [x] Spring-bone physics intensity slider
+- [x] Mouth movement slider for custom avatars
 - [x] OmniVoice Local TTS - Self-hosted OmniVoice proxy support for local text-to-speech
 - [x] MCP Tool Calling - Connect Model Context Protocol servers (HTTP + stdio) and let the companion call their tools during chat, with per-server toggles and an `MCP_ENABLED=server` gate for self-hosted web deployments
 - [x] Chat layouts - Choose an immersive composer or a docked conversation window, with character stats available from either composer

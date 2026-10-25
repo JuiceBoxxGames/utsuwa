@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { parseDisplaySettings, sanitizeCamera } from './display-parser.ts';
 import { PHYSICS_INTENSITY_DEFAULT } from '../engine/spring-physics.ts';
+import { LIPSYNC_INTENSITY_DEFAULT, LIPSYNC_INTENSITY_MAX, LIPSYNC_INTENSITY_MIN } from '../services/lipsync/analyzer.ts';
 import {
 	CAMERA_DEFAULTS,
 	CAMERA_LIMITS,
@@ -267,4 +268,14 @@ test('generated moments default on and only an explicit false turns them off', (
 
 test('retired off mode becomes immersive', () => {
 	assert.equal(parseDisplaySettings({ chatDisplayMode: 'off' }).chatDisplayMode, 'bubble');
+});
+
+test('mouth movement defaults, keeps valid values, and clamps the rest', () => {
+	assert.equal(parseDisplaySettings(null).lipSyncIntensity, LIPSYNC_INTENSITY_DEFAULT);
+	assert.equal(parseDisplaySettings({}).lipSyncIntensity, LIPSYNC_INTENSITY_DEFAULT);
+	assert.equal(parseDisplaySettings({ lipSyncIntensity: 0.75 }).lipSyncIntensity, 0.75);
+	assert.equal(parseDisplaySettings({ lipSyncIntensity: 9 }).lipSyncIntensity, LIPSYNC_INTENSITY_MAX);
+	assert.equal(parseDisplaySettings({ lipSyncIntensity: 0 }).lipSyncIntensity, LIPSYNC_INTENSITY_MIN);
+	assert.equal(parseDisplaySettings({ lipSyncIntensity: 'loud' }).lipSyncIntensity, LIPSYNC_INTENSITY_DEFAULT);
+	assert.equal(parseDisplaySettings({ lipSyncIntensity: Number.NaN }).lipSyncIntensity, LIPSYNC_INTENSITY_DEFAULT);
 });
