@@ -243,6 +243,20 @@ test('systemEvent renders an <event> layer in both modes', () => {
 	assert.ok(!plain.includes('<event>'));
 });
 
+test('extraction prompt can recover a motion and a face reaction (#298)', () => {
+	const actions = [{ id: 'vrma_05', description: 'Spin around once' }, { id: 'wave_big', description: 'Wave with both arms' }];
+	const withActions = buildExtractionSystemPrompt(false, actions);
+	assert.ok(withActions.includes('"action": null | "animation_id"'));
+	assert.ok(withActions.includes('- vrma_05: Spin around once'));
+	assert.ok(withActions.includes('- wave_big: Wave with both arms'));
+	assert.ok(withActions.includes('"expression": null | "emotion_name"'));
+	// Nothing to pick from: no action field at all, expression stays
+	const without = buildExtractionSystemPrompt(false, []);
+	assert.ok(!without.includes('"action"'));
+	assert.ok(without.includes('"expression": null | "emotion_name"'));
+	assert.ok(!buildExtractionSystemPrompt().includes('"action"'));
+});
+
 test('extraction prompt only mentions images when there are images', () => {
 	assert.ok(buildExtractionSystemPrompt(true).includes('showed the companion an image'));
 	assert.ok(!buildExtractionSystemPrompt(false).includes('showed the companion an image'));

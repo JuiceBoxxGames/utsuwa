@@ -7,6 +7,7 @@ import {
 	parseAnimationMetadata,
 	applyBuiltinOverrides,
 	resolveIdlePool,
+	toPromptActions,
 	type AnimationEntry
 } from './animation-library-parser.ts';
 
@@ -152,4 +153,14 @@ test('resolveIdlePool: existing ids in pool order, unknown ids ignored', () => {
 
 test('resolveIdlePool: only unknown ids falls back', () => {
 	assert.deepEqual(resolveIdlePool({ idlePool: ['gone', 'vrma_02'], thinkingId: null }, candidates, fallback), fallback);
+});
+
+test('prompt actions fall back to the name when a description is blank', () => {
+	assert.deepEqual(
+		toPromptActions([
+			{ ...BUILTIN_ANIMATIONS[4] },
+			{ ...BUILTIN_ANIMATIONS[0], id: 'custom_1', name: 'Somersault', description: '  ' }
+		]),
+		[{ id: 'vrma_05', description: 'Spin around once' }, { id: 'custom_1', description: 'Somersault' }]
+	);
 });

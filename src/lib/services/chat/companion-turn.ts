@@ -13,6 +13,8 @@ import { completeJson, type LLMTarget } from '$lib/services/llm/transport';
 import { extractReminderTags } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { requestAvatarAction } from '$lib/services/animation-actions';
+import { animationLibraryStore } from '$lib/stores/animation-library.svelte';
+import { toPromptActions } from '$lib/stores/animation-library-parser';
 import type { EventDefinition } from '$lib/types/events';
 
 export interface CompanionTurnInput {
@@ -83,7 +85,7 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 	if (!llmUpdates) {
 		const extracted = await completeJson({
 			...llm,
-			system: buildExtractionSystemPrompt(llm.hasImages),
+			system: buildExtractionSystemPrompt(llm.hasImages, toPromptActions(animationLibraryStore.enabledForLlm)),
 			user: `User: ${userMessage}\nCompanion: ${dialogue}\n\nReturn the JSON.`,
 			maxTokens: 400
 		});
