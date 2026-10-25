@@ -15,6 +15,11 @@ export class LipSyncAnalyzer {
 	private readonly ATTACK = 0.3; // Speed to reach target
 	private readonly RELEASE = 0.15; // Speed to return to zero
 	private readonly VOLUME_THRESHOLD = 0.05; // Silence threshold
+	// VRM blends expressions additively, so the visemes stack on one mouth.
+	// Their sum is capped at most one full shape, or the jaw clips through
+	// the face on loud audio (#289).
+	private readonly MOUTH_BUDGET = 1;
+	private readonly VOLUME_GAIN = 1.3;
 
 	setAnalyser(analyser: AnalyserNode | null) {
 		this.analyser = analyser;
@@ -86,15 +91,22 @@ export class LipSyncAnalyzer {
 		const high = this.averageRange(midEnd, highEnd) / 255;
 
 		// Map to visemes with volume scaling
-		const scale = Math.min(volume * 2, 1);
+		const scale = Math.min(volume * this.VOLUME_GAIN, 1);
 
-		return {
+		const weights = {
 			aa: Math.min(low * 1.5 * scale, 0.8),
 			oh: Math.min(lowMid * 1.3 * scale, 0.7),
 			ee: Math.min(mid * 1.2 * scale, 0.6),
 			ih: Math.min(high * 1.0 * scale, 0.5),
 			ou: Math.min((low + lowMid) * 0.5 * scale, 0.6)
 		};
+		// Shrink the whole mix rather than clip one viseme, so the shape stays
+		const sum = weights.aa + weights.oh + weights.ee + weights.ih + weights.ou;
+		if (sum > this.MOUTH_BUDGET) {
+			const k = this.MOUTH_BUDGET / sum;
+			for (const key of Object.keys(weights) as (keyof VisemeWeights)[]) weights[key] *= k;
+		}
+		return weights;
 	}
 
 	private averageRange(start: number, end: number): number {
