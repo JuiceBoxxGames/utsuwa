@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-10-25
+
+### Added
+- **Mouth movement** in Settings > Display, for custom avatars whose mouth opens too wide or barely moves when she talks. It goes from 0.5x to 1.5x, and the desktop overlay follows it ([#304](https://github.com/JuiceBoxxGames/utsuwa/pull/304)).
+
+### Fixed
+- **DeepSeek reminders never fired** when tools were on (an MCP server, or OmniVoice with native tool calling). The wake-up request ended on her last reply, which DeepSeek's thinking mode rejects with "reasoning_content must be passed back". Reminders now go out as their own turn, and nothing extra shows in the chat ([#301](https://github.com/JuiceBoxxGames/utsuwa/pull/301), closes [#288](https://github.com/JuiceBoxxGames/utsuwa/issues/288)).
+- Models that think for a long time before the first word, like DeepSeek V4 Pro on a hard question, were cut off with "Reply timed out" after 90 seconds. Streamed thinking now counts as progress ([#301](https://github.com/JuiceBoxxGames/utsuwa/pull/301)).
+- MCP tool rounds send the model's reasoning back, as DeepSeek's API requires ([#301](https://github.com/JuiceBoxxGames/utsuwa/pull/301)).
+- Asking for a motion did nothing with OmniVoice native tool calling on. In that mode models reply with tool calls only and skip the block that carries motions and expressions. Both are now recovered, for built-in and custom motions ([#305](https://github.com/JuiceBoxxGames/utsuwa/pull/305), closes [#298](https://github.com/JuiceBoxxGames/utsuwa/issues/298)).
+- Lip sync opened the mouth so far on loud audio that the jaw clipped through the face, on the stock avatars too. The five mouth shapes were stacking on top of each other; together they now open at most one full mouth ([#303](https://github.com/JuiceBoxxGames/utsuwa/pull/303), closes [#289](https://github.com/JuiceBoxxGames/utsuwa/issues/289)).
+- Bold text vanished from replies and left `**` behind, so "the count is **42**" showed as "the count is **" ([#302](https://github.com/JuiceBoxxGames/utsuwa/pull/302)).
+- **Linux:** voice input recorded nothing in the AppImage, whose bundled WebKitGTK can't record with MediaRecorder. It now records WAV in that case ([#285](https://github.com/JuiceBoxxGames/utsuwa/pull/285), closes [#277](https://github.com/JuiceBoxxGames/utsuwa/issues/277)).
+- **Linux:** the desktop app always denied the microphone, and on hosts with a newer GStreamer the AppImage played no voice audio. The app now allows microphone access on Linux, and the AppImage bundles its own GStreamer plugins. The AppImage and its updates grow by about 11 MB ([#274](https://github.com/JuiceBoxxGames/utsuwa/pull/274), closes [#273](https://github.com/JuiceBoxxGames/utsuwa/issues/273) and [#272](https://github.com/JuiceBoxxGames/utsuwa/issues/272)).
+
+### Changed
+- Dependency rollup: Tauri 2.12.2 with plugin-fs 2.7.0 (which includes a security fix), three.js 0.186, and in-range updates that clear 15 of 18 audit advisories ([#283](https://github.com/JuiceBoxxGames/utsuwa/pull/283)).
+
 ## [0.20.3] - 2026-10-09
 
 ### Added
