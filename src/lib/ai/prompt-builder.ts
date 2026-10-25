@@ -16,6 +16,20 @@ export interface PromptContext {
 	// True when the user has shown her an image this turn. Adds the
 	// "being shown" reception layer so she receives it like a person.
 	hasImages?: boolean;
+	// True when MCP is available, so the companion can ask the app to search
+	// for pictures through the configured tool (image_search in the JSON).
+	showImagesEnabled?: boolean;
+	// True when a query-taking MCP picture tool is actually configured. False
+	// still keeps the field available so the app can show the missing-tool error.
+	imageSearchAvailable?: boolean;
+	// Whether the image popup is currently open, and for which query. Lets her
+	// reference what the user is looking at and close it again.
+	imageModalOpen?: boolean;
+	imageModalQuery?: string;
+	imageModalPage?: number;
+	// What the shown picture actually contains (from a separate vision model),
+	// so she can talk about what is on screen.
+	imageModalDescription?: string;
 	// Configured context window size in tokens. Used to scale memory injection
 	// and truncate history. When unset, historical defaults (6 turns, 5 facts)
 	// are preserved.
@@ -97,6 +111,13 @@ function actionField(ctx: PromptContext): string {
 	return ctx.avatarActions?.length ? ',\n  "action": null | "animation_id"' : '';
 }
 
+// Image fields, only offered when MCP tools are available.
+function showImagesField(ctx: PromptContext): string {
+	return ctx.showImagesEnabled
+		? ',\n  "image_search": null | "search query for pictures to show",\n  "image_page": null | 2,\n  "close_images": false'
+		: '';
+}
+
 function buildEventLayer(ctx: PromptContext): string | null {
 	if (!ctx.systemEvent) return null;
 	return `<event>\n${ctx.systemEvent}\n</event>`;
@@ -114,6 +135,7 @@ export function buildSystemPrompt(context: PromptContext): string {
 		buildStateLayer(context),
 		buildMemoryLayer(context),
 		...(context.hasImages ? [buildBeingShownLayer()] : []),
+		buildImageSearchLayer(context),
 		buildEventLayer(context),
 		buildOmniVoiceLayer(context),
 		buildAvatarActionsLayer(context.avatarActions ?? []) || null,
@@ -181,6 +203,7 @@ Rules:
 - No quote marks inside text.
 ${altToolRules}
 - End with the JSON state block. No spoken text after it.
+${ctx.showImagesEnabled ? '- When the user asked for pictures, the JSON state block MUST include image_search (and image_page for more) after your speak_segment calls. The JSON block is not spoken.' : ''}
 </speech_output_control>`;
 	}
 
@@ -261,6 +284,9 @@ Energy: ${energyDesc} (${ctx.state.energy}/100)
 
 	if (ctx.hasImages) parts.push(buildBeingShownLayer());
 
+	const imageSearchLayer = buildImageSearchLayer(ctx);
+	if (imageSearchLayer) parts.push(imageSearchLayer);
+
 	const eventLayer = buildEventLayer(ctx);
 	if (eventLayer) parts.push(eventLayer);
 
@@ -277,7 +303,7 @@ After your reply, ALWAYS end with a JSON block, even when little changed:
 \`\`\`json
 {
   "mood_change": { "emotion": "emotion_name", "intensity_delta": number },
-  "new_memory": null | "something specific worth remembering about them"${actionField(ctx)},
+  "new_memory": null | "something specific worth remembering about them"${actionField(ctx)}${showImagesField(ctx)},
   "expression": null | "emotion_name"
 }
 \`\`\`
@@ -469,13 +495,84 @@ If it is worth keeping, put it in new_memory as your impression in your own word
 </being_shown>`;
 }
 
+// Showing pictures. The model only supplies a query in the JSON; the app runs
+// the configured MCP search tool. This works without model tool-calling.
+function buildImageSearchLayer(ctx: PromptContext): string | null {
+	if (!ctx.showImagesEnabled) return null;
+
+	const parts: string[] = [];
+
+	parts.push(
+		`SHOWING PICTURES\n\n` +
+			`You can show the user pictures. Say a short sentence and set "image_search" to what the pictures should be of — the application searches with the user's configured tool and shows the results in a popup. You never search yourself and you never embed images.`
+	);
+
+	if (!ctx.imageSearchAvailable) {
+		parts.push(
+			`No usable picture search tool is configured right now. If the user asks for pictures, say that a search tool must be selected in Settings > MCP, and still set "image_search" so the app can show the exact error. Do not claim you showed pictures.`
+		);
+	}
+
+	parts.push(
+		`HOW TO USE:\n` +
+			`  - Set "image_search" to a short, concrete query, e.g. "cute cats" or "beautiful mountain landscape".\n` +
+			`  - Do NOT call a search tool for this — the application searches. Just set "image_search".\n` +
+			`  - Use null when you are not showing pictures.\n` +
+			`  - Set "close_images": true when the user asks you to close the pictures.\n` +
+			`  - For "more", keep the same query and set "image_page" to the next page; otherwise use null.`
+	);
+
+	parts.push(
+		`EXAMPLES:\n` +
+			`  User: "Show me some cats"\n` +
+			`  You: "With pleasure! Here are a few sweet cats."\n` +
+			`  ... { "image_search": "cute cats", "image_page": null, ... }\n\n` +
+			`  User: "Show me more of those"\n` +
+			`  You: "There is more where that came from."\n` +
+			`  ... { "image_search": "cute cats", "image_page": 2, ... }\n\n` +
+			`  User: "Can you close the pictures again?"\n` +
+			`  You: "Sure!"\n` +
+			`  ... { "close_images": true, ... }`
+	);
+
+	parts.push(
+		`WRONG — never answer like this:\n` +
+			`  "I cannot show images" ✗\n` +
+			`  "I am only a text model" ✗\n` +
+			`  "I have no internet access" ✗\n\n` +
+			`Those answers are incorrect: just set "image_search" and the application shows the pictures.`
+	);
+
+	parts.push(
+		`WHEN TO USE:\n` +
+			`  - The user asks to see images, pictures, photos or visual references\n` +
+			`  - A topic naturally calls for something visual (landscapes, animals, art, food)\n` +
+			`  - You want to surprise them with something beautiful or interesting\n` +
+			`  Whenever you say you are showing a picture, you MUST also set "image_search" in that same reply.`
+	);
+
+	if (ctx.imageModalOpen) {
+		const shown = ctx.imageModalDescription
+			? `\nThe picture they have selected (what your own eyes see): ${ctx.imageModalDescription}`
+			: '';
+		const query = ctx.imageModalQuery ? `\nCurrent search: "${ctx.imageModalQuery}" (page ${ctx.imageModalPage ?? 1}).` : '';
+		parts.push(
+			`CURRENTLY OPEN: A picture popup is open.${query}${shown}\n` +
+				`Their question refers to the selected picture. You can refer to it, ask what they think, show more with "image_page", or close the popup with "close_images": true.`
+		);
+	}
+
+	return `<showing_pictures>\n${parts.join('\n\n')}\n</showing_pictures>`;
+}
+
 // Decoupled extraction: a tight, forced-JSON prompt used as a fallback when the
 // chat model didn't append a usable state block. A separate call derives it.
 // Also the only path for motions and face reactions when a model skips its own
 // state block, like replies made purely of native speech tool calls (#298).
 export function buildExtractionSystemPrompt(
 	hasImages = false,
-	avatarActions: { id: string; description: string }[] = []
+	avatarActions: { id: string; description: string }[] = [],
+	showImagesEnabled = false
 ): string {
 	const imageLine = hasImages
 		? " The user showed the companion an image this turn, so new_memory should capture the companion's impression of what they were shown."
@@ -484,6 +581,14 @@ export function buildExtractionSystemPrompt(
 	const actionField = actionLines.length ? ',\n  "action": null | "animation_id"' : '';
 	const actionRules = actionLines.length
 		? `\n\naction: one of these motion ids, only when the user asked for that motion or the companion said she is doing it. Otherwise null.\n${actionLines.join('\n')}`
+		: '';
+	const imageFields = showImagesEnabled
+		? ',\n  "image_search": null | "short search query",\n  "image_page": null | 2,\n  "close_images": false'
+		: '';
+	const imageGuidance = showImagesEnabled
+		? `
+
+Picture intent — set image_search to a short subject when the USER asks to see pictures, images, photos or something visual (including "show me ..." without the word picture), or when they ask for more of the pictures already shown. Set image_page to the next page only for more. Set close_images true only for a close/hide request. Otherwise null/false. Never output image URLs.`
 		: '';
 	return `You read a short exchange between a user and their AI companion and output ONLY a JSON object describing what changed. No prose, no markdown fences, just the JSON object.
 
@@ -494,11 +599,11 @@ Shape:
   "trust_delta": -10 to 10,
   "intimacy_delta": -10 to 10,
   "comfort_delta": -10 to 10,
-  "new_memory": null | "a fact about the user"${actionField},
+  "new_memory": null | "a fact about the user"${actionField}${imageFields},
   "expression": null | "emotion_name"
 }
 
-The four *_delta values are small numbers for how this exchange moved the relationship: positive when they open up, share, or warm to the companion; near 0 for neutral chat; negative if it went badly. Usually between -3 and 5.
+The four *_delta values are small numbers for how this exchange moved the relationship: positive when they open up, share, or warm to the companion; near 0 for neutral chat; negative if it went badly. Usually between -3 and 5.${imageGuidance}
 
 new_memory — when to write one:
 - Capture it whenever they reveal something real about themselves or their life: a fact, a preference, a plan, a feeling, their job, or someone in their life (family, friends, pets).${imageLine} When in doubt, capture it.
@@ -517,6 +622,29 @@ Examples:
 {"mood_change":{"emotion":"excited","intensity_delta":4},"new_memory":"Their sister is visiting next weekend; they haven't seen each other in a year"}
 {"mood_change":{"emotion":"content","intensity_delta":3},"new_memory":"They don't open up to many people"}
 {"mood_change":{"emotion":"neutral","intensity_delta":0},"new_memory":null}`;
+}
+
+/**
+ * Query-only recovery for the app-driven picture path. Used when the chat model
+ * used native speech tools and forgot the state block: the app asks a cheap
+ * forced-JSON call for the subject/page, never for URLs.
+ */
+export function buildImageIntentSystemPrompt(): string {
+	return `You extract picture-search intent from one user message. Output ONLY a JSON object, no prose and no markdown fences.
+
+Shape:
+{
+  "image_search": null | "short search query",
+  "image_page": null | 2,
+  "close_images": false
+}
+
+Rules:
+- Set image_search when the USER asks to see pictures, images, photos or something visual. Keep their subject, in their language, short.
+- Set image_page to the next page only when they ask for more of the pictures already shown.
+- Set close_images true only when they ask to close/hide the picture popup.
+- Otherwise use null/false. Do not invent a query for unrelated questions.
+- Never output image URLs.`;
 }
 
 // Instruction layer - how to respond
@@ -553,7 +681,7 @@ After your reply, ALWAYS end with a JSON block, even when little changed:
   "intimacy_delta": number,
   "comfort_delta": number,
   "new_memory": null | "something specific worth remembering about them",
-  "triggered_event": null | "event_id"${actionField(ctx)},
+  "triggered_event": null | "event_id"${actionField(ctx)}${showImagesField(ctx)},
   "expression": null | "emotion_name"
 }
 \`\`\`

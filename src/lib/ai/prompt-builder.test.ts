@@ -721,3 +721,80 @@ test('macros also work in the personality field', () => {
 	assert.ok(prompt.includes('Mika adores the user.'));
 	assert.ok(!prompt.includes('{{char}}'));
 });
+
+test('the showing-pictures layer and JSON fields appear only when enabled', () => {
+	const without = buildSystemPrompt(makeContext());
+	assert.ok(!without.includes('<showing_pictures>'));
+	assert.ok(!without.includes('"image_search"'));
+
+	const withShow = buildSystemPrompt(makeContext({ showImagesEnabled: true }));
+	assert.ok(withShow.includes('<showing_pictures>'));
+	assert.ok(withShow.includes('"image_search": null |'));
+	assert.ok(withShow.includes('"image_page": null | 2'));
+	assert.ok(withShow.includes('"close_images": false'));
+	assert.ok(!withShow.includes('"show_images"'));
+});
+
+test('an open popup adds currently-open context', () => {
+	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true, imageModalOpen: true }));
+	assert.ok(prompt.includes('<showing_pictures>'));
+	assert.ok(prompt.includes('CURRENTLY OPEN'));
+});
+
+test('a closed popup adds no currently-open context', () => {
+	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true }));
+	assert.ok(prompt.includes('<showing_pictures>'));
+	assert.ok(!prompt.includes('CURRENTLY OPEN'));
+});
+
+test('an open popup names its query and page and offers the more/close fields', () => {
+	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true, imageModalOpen: true, imageModalQuery: 'cats', imageModalPage: 2 }));
+	assert.ok(prompt.includes('Current search: "cats" (page 2).'));
+	assert.ok(prompt.includes('"image_page": null | 2'));
+	assert.ok(prompt.includes('"close_images": false'));
+});
+
+test('a missing picture tool is called out in the prompt', () => {
+	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true, imageSearchAvailable: false }));
+	assert.ok(prompt.includes('No usable picture search tool is configured right now.'));
+});
+
+test('a vision description is woven into the open-popup context', () => {
+	const withDesc = buildSystemPrompt(
+		makeContext({
+			showImagesEnabled: true,
+			imageModalOpen: true,
+			imageModalDescription: 'A red panda perched on a mossy branch.'
+		})
+	);
+	assert.ok(withDesc.includes('A red panda perched on a mossy branch.'));
+	assert.ok(withDesc.includes('The picture they have selected'));
+
+	const withoutDesc = buildSystemPrompt(
+		makeContext({ showImagesEnabled: true, imageModalOpen: true })
+	);
+	assert.ok(!withoutDesc.includes('The picture they have selected'));
+});
+
+test('companion mode also gets the showing-pictures layer when enabled', () => {
+	const ctx = makeContext({
+		state: makeState({ appMode: 'companion' }),
+		showImagesEnabled: true
+	});
+	assert.ok(buildSystemPrompt(ctx).includes('<showing_pictures>'));
+});
+
+test('the extraction prompt adds query-only picture fields when enabled', () => {
+	const plain = buildExtractionSystemPrompt(false);
+	assert.ok(!plain.includes('"show_images"'));
+	assert.ok(!plain.includes('"image_search"'));
+	assert.ok(!plain.includes('"say"'));
+
+	const withPhoto = buildExtractionSystemPrompt(true, [], true);
+	assert.ok(withPhoto.includes('showed the companion an image'));
+	assert.ok(withPhoto.includes('"image_search": null |'));
+	assert.ok(withPhoto.includes('"image_page": null | 2'));
+	assert.ok(withPhoto.includes('"close_images": false'));
+	assert.ok(withPhoto.includes('Never output image URLs.'));
+	assert.ok(!withPhoto.includes('"show_images"'));
+});

@@ -2,10 +2,12 @@
 	import WakeLockIndicator from '$lib/components/display/WakeLockIndicator.svelte';
 	import VrmScene from '$lib/components/vrm/VrmScene.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
-	import { TopRightButtons, TopLeftButtons, InfoModal } from '$lib/components/ui';
+	import { TopRightButtons, TopLeftButtons, InfoModal, ImageSearchModal } from '$lib/components/ui';
 	import Toasts from '$lib/components/ui/Toasts.svelte';
 	import BottomChatBar from '$lib/components/chat/BottomChatBar.svelte';
 	import McpConfirmDialog from '$lib/components/mcp/McpConfirmDialog.svelte';
+	import { onImageShowEvent } from '$lib/services/image-search/events';
+	import { imageSearchStore } from '$lib/stores/image-search.svelte';
 	import PhotoModeDock from '$lib/components/photomode/PhotoModeDock.svelte';
 	import PhotoStickerLayer from '$lib/components/photomode/PhotoStickerLayer.svelte';
 	import PhotoFramePreview from '$lib/components/photomode/PhotoFramePreview.svelte';
@@ -148,12 +150,17 @@
 		}
 	});
 
-	onMount(() =>
-		startCompanionSession({
+	onMount(() => {
+		const stopSession = startCompanionSession({
 			send: (content, options) => handleSend(content, [], options),
 			onEvent: events.open
-		})
-	);
+		});
+		const stopImages = onImageShowEvent((event) => imageSearchStore.applyImageEvent(event));
+		return () => {
+			stopSession();
+			stopImages();
+		};
+	});
 
 	// Shown-image previews are blob: URLs (shared between the chat history and the
 	// thinking overlay). Free them all when leaving the app so a long session's
@@ -309,6 +316,9 @@
 		{/if}
 
 		<Toasts />
+
+		<!-- Companion-triggered image search results -->
+		<ImageSearchModal />
 
 		<!-- Event Scene Overlay (deferred while posing; renders on exit) -->
 		{#if events.activeEvent?.scene && !photomodeStore.active}

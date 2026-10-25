@@ -3,6 +3,7 @@
 	import { mcpStore } from '$lib/stores/mcp.svelte';
 	import type { McpAuth, McpServerConfig, McpTransport } from '$lib/types/mcp';
 	import { parseEnvLines, parseQuotedArgs } from '$lib/services/mcp/protocol';
+	import { isPictureSearchTool } from '$lib/utils/image-search';
 	import { Button, Icon } from '$lib/components/ui';
 	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
 	import Switch from '$lib/components/ui/Switch.svelte';
@@ -23,6 +24,34 @@
 	let formError = $state('');
 
 	const isEditing = $derived(editingId !== null);
+
+	const queryTools = $derived(mcpStore.tools.filter((tool) => isPictureSearchTool(tool)));
+	const imageToolValue = $derived(
+		mcpStore.imageSearchTool
+			? `${mcpStore.imageSearchTool.serverId}::${mcpStore.imageSearchTool.toolName}`
+			: ''
+	);
+	const selectedImageToolMissing = $derived(
+		!!mcpStore.imageSearchTool &&
+			!mcpStore.tools.some(
+				(tool) =>
+					tool.serverId === mcpStore.imageSearchTool?.serverId &&
+					tool.name === mcpStore.imageSearchTool?.toolName
+			)
+	);
+
+	function setImageTool(value: string) {
+		if (!value) {
+			mcpStore.setImageSearchTool(null);
+			return;
+		}
+		const separator = value.indexOf('::');
+		if (separator < 0) return;
+		mcpStore.setImageSearchTool({
+			serverId: value.slice(0, separator),
+			toolName: value.slice(separator + 2)
+		});
+	}
 
 	function resetForm() {
 		formName = '';
@@ -345,6 +374,34 @@
 					</li>
 				{/each}
 			</ul>
+		</SettingsSection>
+
+		<SettingsSection title="Picture search">
+			<div class="form-row">
+				<label class="form-label" for="image-search-tool">Tool für Bildersuche</label>
+				<select
+					id="image-search-tool"
+					class="settings-field"
+					value={imageToolValue}
+					onchange={(event) => setImageTool((event.currentTarget as HTMLSelectElement).value)}
+				>
+					<option value="">Automatic (best match)</option>
+					{#each queryTools as tool (tool.serverId + '::' + tool.name)}
+						<option value={`${tool.serverId}::${tool.name}`}>
+							{tool.serverName} / {tool.name}
+						</option>
+					{/each}
+				</select>
+				<p class="form-hint">
+					The app searches with this MCP tool when the companion wants to show pictures.
+					Automatic picks a query-taking tool for now; an explicit choice is never replaced silently.
+				</p>
+			</div>
+			{#if selectedImageToolMissing}
+				<p class="form-error">The selected picture tool is not available. Pick another one or use Automatic.</p>
+			{:else if queryTools.length === 0}
+				<p class="empty-hint">No picture-capable MCP tools found. Refresh the tool list or add an image/stock search server.</p>
+			{/if}
 		</SettingsSection>
 
 		<SettingsSection title="Available Tools">

@@ -30,6 +30,7 @@ Cloud chat providers, model lists, and Fish Audio go through the app's own serve
 
 - `ALLOW_LOCAL_PROVIDER_HOSTS=true` lets the server reach providers on private addresses. It also lets it relay speech to a local TTS engine that blocks the browser. See [Voice Providers](/docs/guides/voice-providers#local-tts-and-omnivoice).
 - `MCP_ENABLED=server` turns on MCP tools. See [MCP Servers](/docs/guides/mcp).
+- The companion can show pictures: she names a topic and Utsuwa searches through the picture tool selected under Settings > MCP, then shows structured results. No environment variable is needed, and the model does not need tool-calling. See [MCP Servers](/docs/guides/mcp#showing-pictures).
 
 ## First-run setup
 

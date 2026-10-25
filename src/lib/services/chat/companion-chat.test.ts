@@ -84,6 +84,8 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		mcpStore: {
 			ensureTools: async () => {},
 			hasActiveTools: false,
+			serverEnabled: false,
+			enabledServers: [],
 			tools: [],
 			servers: [],
 			confirmations: [] as Array<{ serverName: string; toolName: string; args: Record<string, unknown> }>,
@@ -95,6 +97,22 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		},
 		publicEnv: {} as Record<string, string>,
 		privateEnv: {} as Record<string, string>,
+		imageSearchStore: {
+			isOpen: false,
+			isLoading: false,
+			error: null as string | null,
+			currentQuery: '',
+			currentPage: 1,
+			currentDescription: null as string | null,
+			focusedIndex: 0,
+			results: [] as unknown[],
+			setLoading: () => {},
+			openModal: () => {},
+			closeModal: () => {},
+			setError: () => {},
+			setDescription: () => {},
+			setFocus: () => {}
+		},
 		isTauri: () => direct,
 		processCompanionTurn: async ({ companionResponse }: { companionResponse: string }) => {
 			const parsed = parseResponse(companionResponse);
@@ -117,7 +135,8 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	};
 	for (const [path, name] of Object.entries({
 		chat: 'chatStore', character: 'characterStore', persona: 'personaStore', settings: 'settingsStore',
-		modules: 'modulesStore', vrm: 'vrmStore', 'animation-library': 'animationLibraryStore', reminders: 'reminderStore', tts: 'ttsStore', mcp: 'mcpStore', 'chat-hint': 'chatHintStore', 'chat-draft': 'chatDraftStore'
+		modules: 'modulesStore', vrm: 'vrmStore', 'animation-library': 'animationLibraryStore', reminders: 'reminderStore', tts: 'ttsStore', mcp: 'mcpStore', 'chat-hint': 'chatHintStore', 'chat-draft': 'chatDraftStore',
+		'image-search': 'imageSearchStore'
 	})) replacements[`src/lib/stores/${path}.svelte`] = `export const ${name} = globalThis.__utsuwaChatIntegration.${name};`;
 	const server = await createServer({
 		root, configFile: false, server: { middlewareMode: true }, appType: 'custom',
@@ -1447,6 +1466,72 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			assert.equal(fixtures.chatDraftStore.draft, 'Look at this');
 			assert.equal(fixtures.chatDraftStore.pending.length, 1);
 			assert.equal(messages.length, 0);
+		});
+		await t.test('a missing image_search is recovered with a query-only JSON call', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const server = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [server];
+			mcp.servers = [server];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'searxng_image_search', description: 'Search pictures', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			let providerCalls = 0;
+			let mcpArgs: Record<string, unknown> | null = null;
+			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+				if (url === '/api/mcp/call') {
+					mcpArgs = JSON.parse(String(init.body)).args;
+					return new Response(JSON.stringify({ toolName: 'searxng_image_search', isError: false, content: JSON.stringify({ results: [{ title: 'Cat', url: 'https://x/cat', img_src: 'https://x/cat.jpg', source: 'x' }] }) }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				assert.equal(url, '/api/chat');
+				providerCalls++;
+				const text = providerCalls === 1
+					? 'Sure!\n```json\n{"mood_change":{"emotion":"happy"}}\n```'
+					: '{"image_search":"Katzen","image_page":2}';
+				return new Response(`0:${JSON.stringify(text)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			await sendCompanionMessage('Zeig mir Bilder von Katzen.', [], hooks);
+			assert.equal(providerCalls, 2, 'the recovery call runs once');
+			assert.deepEqual(mcpArgs, { query: 'Katzen' });
+			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+		});
+		await t.test('tool discovery finishes before the prompt is built', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+				ensureTools: () => Promise<void>;
+			};
+			mcp.servers = [{ id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true }];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'searxng_image_search', description: 'Search pictures', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			mcp.serverEnabled = false;
+			mcp.enabledServers = [];
+			let ready = false;
+			mcp.ensureTools = async () => {
+				ready = true;
+				mcp.serverEnabled = true;
+				mcp.enabledServers = mcp.servers;
+			};
+			let system = '';
+			t.mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
+				const body = JSON.parse(String(init.body));
+				system = String(body.messages?.[0]?.content ?? body.system ?? "");
+				return new Response(sse('Hello!'));
+			});
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.equal(ready, true);
+			assert.ok(system.includes('<showing_pictures>'), 'prompt sees the capability discovered in this turn');
+			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.serverEnabled = false; mcp.enabledServers = [];
 		});
 	} finally {
 		buffer?.reset();

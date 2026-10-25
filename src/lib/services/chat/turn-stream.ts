@@ -46,7 +46,10 @@ export class TurnStream {
 	delta(roundFull: string) {
 		if (!this.omnivoice) {
 			// Across MCP rounds the message shows everything produced so far.
-			this.sinks.show(this.assembled + roundFull);
+			// Never show the JSON state block: the parser cuts it from the final
+			// message anyway, and streaming it looks like leaked instructions.
+			const cut = cutAtStateFence(roundFull);
+			this.sinks.show(this.assembled + (cut.capped ? cut.visible : roundFull));
 			this.roundTextLen = roundFull.length;
 			return;
 		}

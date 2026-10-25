@@ -18,16 +18,24 @@ import { toPromptActions } from '$lib/stores/animation-library-parser';
 import { getTTSProvider } from '$lib/services/providers/registry';
 import { buildTTSOptions } from '$lib/services/tts/tts-options';
 import { cleanSpeechMarkers, stripThinkingBlocks } from '$lib/services/tts/chat-text';
-import { streamChat } from '$lib/services/llm/transport';
+import { completeJson, streamChat } from '$lib/services/llm/transport';
 import { RETRY_DELAYS_MS } from '$lib/services/llm/retry';
 import { missingLLMMessage, resolveActiveLLM, resolveVisionLLM, visionModelEnabled } from '$lib/services/llm/active-llm';
 
 import { processCompanionTurn } from '$lib/services/chat/companion-turn';
 import { parseResponse } from '$lib/ai/response-parser';
 import { retrieveRelevantContext } from '$lib/engine/memory';
-import { buildSystemPrompt, buildMcpSecurityInstructions, truncateChatHistory, type PromptContext } from '$lib/ai/prompt-builder';
+import { buildImageIntentSystemPrompt, buildSystemPrompt, buildMcpSecurityInstructions, truncateChatHistory, type PromptContext } from '$lib/ai/prompt-builder';
 import { keepImage, type PreparedImage } from '$lib/services/storage/keepsakes';
 import { extractReminderTags, tryExtractReminderFromUserMessage } from '$lib/utils/reminders';
+import { imageSearchStore } from '$lib/stores/image-search.svelte';
+import {
+	closeImages,
+	hasConfiguredImageSearchTool,
+	isShowImagesEnabled,
+	searchImages
+} from '$lib/services/image-search';
+import { isCloseImagesRequest, isImageRequest, isMoreImagesRequest } from '$lib/utils/image-search';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { getWorkingMemory, ensureSession } from '$lib/engine/memory-session';
 import { buildAdvancedParams, buildMessages, describeImagesRequest, type ChatLoopMessage } from '$lib/services/chat/turn-context';
@@ -98,6 +106,14 @@ async function buildCompanionPrompt(
 		userMessage,
 		systemTime: new Date(),
 		hasImages,
+		showImagesEnabled: isShowImagesEnabled(),
+		imageSearchAvailable: hasConfiguredImageSearchTool(),
+		imageModalOpen: imageSearchStore.isOpen,
+		imageModalQuery: imageSearchStore.isOpen ? imageSearchStore.currentQuery : undefined,
+		imageModalPage: imageSearchStore.isOpen ? imageSearchStore.currentPage : undefined,
+		imageModalDescription: imageSearchStore.isOpen
+			? imageSearchStore.currentDescription ?? undefined
+			: undefined,
 		contextSize,
 		pendingReminders: reminderStore.upcoming.map((r) => ({ triggerAt: r.triggerAt, content: r.content })),
 		sessionStartedAt: workingMemory.sessionStartedAt,
@@ -134,6 +150,34 @@ let activeTurn: AbortController | null = null;
 /** Stop the reply in flight, if any. */
 export function cancelActiveTurn() {
 	activeTurn?.abort(new Error('Stopped'));
+}
+
+/**
+ * Query-only recovery when native speech tools swallowed the state block.
+ * It never asks for URLs and never runs a search tool.
+ */
+async function recoverImageIntent(
+	content: string,
+	llm: NonNullable<ReturnType<typeof resolveActiveLLM>>,
+	signal: AbortSignal,
+	currentQuery?: string,
+	currentPage?: number
+) {
+	const extracted = await completeJson({
+		...llm,
+		system: buildImageIntentSystemPrompt(),
+		user: `User: ${content}
+Currently open picture popup: ${currentQuery ?? 'none'} (page ${currentPage ?? 1}).`,
+		maxTokens: 180,
+		signal
+	});
+	if (!extracted) return null;
+	const parsed = parseResponse(extracted);
+	return {
+		imageSearch: parsed.imageSearch,
+		imagePage: parsed.imagePage,
+		closeImages: parsed.closeImages
+	};
 }
 
 export async function sendCompanionMessage(
@@ -205,6 +249,12 @@ export async function sendCompanionMessage(
 		const { provider } = llm;
 
 		const contextSize = consciousnessSettings.contextSize || undefined;
+
+		// Tool discovery must finish before the prompt is built: the image layer
+		// and MCP security text depend on the actual capability/tool snapshot.
+		const { mcpTools, mcpToolNames, confirmToolNames, security } = await untilAborted(
+			prepareMcpTurn(provider)
+		);
 
 		let systemPrompt = await untilAborted(buildCompanionPrompt(
 			content,
@@ -292,7 +342,6 @@ export async function sendCompanionMessage(
 			stream.delta(roundFull);
 		};
 
-		const { mcpTools, mcpToolNames, confirmToolNames, security } = await prepareMcpTurn(provider);
 		const useMcpLoop = mcpTools.length > 0;
 		// Added before truncation so the layer counts against the context budget.
 		if (security) systemPrompt += '\n\n' + security;
@@ -382,7 +431,10 @@ export async function sendCompanionMessage(
 			const settled = await untilAborted(Promise.allSettled(
 				run.map((call) => runToolCall(call, mcpTools, mcpToolNames, confirmToolNames, signal))
 			));
-			messages.push(...buildToolResultMessages(collectToolResults(settled, run, skipped)));
+			const toolEntries = collectToolResults(settled, run, skipped);
+			for (const entry of toolEntries) {
+			}
+			messages.push(...buildToolResultMessages(toolEntries));
 		}
 
 		// Native dialogue is kept in the saved response here, not replayed
@@ -421,7 +473,7 @@ export async function sendCompanionMessage(
 			companionResponse: cleanedCompanionResponse,
 			llm: { ...llm, hasImages: images.length > 0 },
 			systemEvent,
-			debug: import.meta.env.DEV
+			showImagesEnabled: isShowImagesEnabled(),
 		}));
 
 		if (directReminder) await scheduleReminderFallback(directReminder, fullContent);
@@ -429,14 +481,59 @@ export async function sendCompanionMessage(
 		hooks.onNewMemory?.(turn.newMemory);
 		if (turn.triggeredEvent) hooks.setActiveEvent(turn.triggeredEvent);
 
-		// turn.dialogue is already clean for OmniVoice because companionResponse
-		// was stripped of speak()/gesture() syntax before processCompanionTurn.
 		const displayDialogue = turn.dialogue;
+
+		// The model hands image intent over as a query in the state JSON. The app
+		// runs the configured MCP search tool and publishes structured results.
+		// A clear close request is honored even when the model forgets the field.
+		let imageSearch = turn.imageSearch;
+		let imagePage = turn.imagePage;
+		let closeRequested = turn.closeImages || isCloseImagesRequest(content);
+		const canRecover =
+			!imageSearch &&
+			!closeRequested &&
+			isShowImagesEnabled() &&
+			(isImageRequest(content) || isMoreImagesRequest(content));
+		if (canRecover) {
+			try {
+				const recovered = await untilAborted(
+					recoverImageIntent(
+						content,
+						llm,
+						signal,
+						imageSearchStore.isOpen ? imageSearchStore.currentQuery : undefined,
+						imageSearchStore.isOpen ? imageSearchStore.currentPage : undefined
+					)
+				);
+				if (recovered?.closeImages) closeRequested = true;
+				if (recovered?.imageSearch) {
+					imageSearch = recovered.imageSearch;
+					imagePage = recovered.imagePage;
+				}
+			} catch (err) {
+				if (signal.aborted) throw err;
+			}
+		}
+		if (!closeRequested && !imageSearch && isMoreImagesRequest(content) && imageSearchStore.isOpen && imageSearchStore.currentQuery) {
+			imageSearch = imageSearchStore.currentQuery;
+			imagePage = imageSearchStore.currentPage + 1;
+		}
+		if (closeRequested) closeImages();
+		if (!closeRequested && imageSearch && isShowImagesEnabled()) {
+			const sameQuery =
+				imageSearchStore.currentQuery.trim().toLowerCase() === imageSearch.trim().toLowerCase();
+			const nextPage =
+				imagePage ??
+				(isMoreImagesRequest(content) && imageSearchStore.isOpen && sameQuery
+					? imageSearchStore.currentPage + 1
+					: 1);
+			void searchImages(imageSearch, nextPage);
+		}
 
 		chatStore.updateLastMessage(displayDialogue);
 		hooks.setLatestResponse(displayDialogue);
 
-		if (turn.dialogue) {
+		if (displayDialogue) {
 			// During OmniVoice streaming the avatar is driven by ttsStore.isSpeaking
 			// and the real audio analyser, so a text-length estimate would desync.
 			// Only fall back to the estimated talking timer for non-streaming paths.
@@ -445,7 +542,7 @@ export async function sendCompanionMessage(
 			}
 
 			if (speechState?.enabled && !streamingTTS) {
-				ttsStore.speak(turn.dialogue, ttsOptions);
+				ttsStore.speak(displayDialogue, ttsOptions);
 			}
 		}
 

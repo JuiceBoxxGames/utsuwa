@@ -48,6 +48,8 @@ Open **Settings > MCP**.
 - **Env Vars** takes one `KEY=value` per line; blank lines and `#` comments are ignored.
 - **Inject text tool results as user messages** repeats each result as a user-side note. It helps local or SLIM models that ignore the strict tool role.
 
+**Picture search**: choose the tool Utsuwa uses when the companion shows pictures. **Automatic** picks a query-taking tool; an explicit choice is never replaced silently. If it disappears, the popup reports that no picture tool is configured.
+
 **Available Tools**: press **Refresh** to list the tools of all enabled servers. Each entry shows the tool name, its server, and the description the model sees. Per-server failures (bad token, wrong URL, spawn error) are shown right here instead of silently producing an empty list.
 
 Tokens are stored locally (like other API keys) and are only sent to the server you configured. They never go to the LLM and are never logged.
@@ -114,6 +116,54 @@ Any MCP server that speaks stdio can be spawned by the server build. Example wit
 
 stdio servers are spawned per request with a 15-second timeout and run with a minimal slice of the server's environment plus the variables you configure here. Only enable MCP on a deployment you control, and allowlist the command line with `MCP_STDIO_ALLOWED_COMMANDS=npx -y mcp-searxng` and the variable with `MCP_STDIO_ENV_ALLOWLIST=SEARXNG_URL` (stdio is fail-closed).
 
+Like Brave, the first `npx` start downloads the package and can exceed the 15-second timeout; if that happens, press **Refresh** in the tool list once and it stays warm afterwards.
+
+### Showing pictures
+
+The companion can show you pictures without needing model tool-calling. When the user asks for pictures, she puts a short subject in her state JSON (`image_search`); Utsuwa runs the **Picture search tool** selected under **Settings > MCP** and shows the structured results in a popup. `image_page` asks for the next page ("show me more"), and `close_images` closes it. The model never supplies image URLs, so it cannot invent one.
+
+The selection is explicit:
+
+- **Automatic (best matching)** picks a query-taking tool. This is the default.
+- Choosing a server/tool pins it. If that tool disappears or stops taking a query, the app shows **No picture search tool configured** / a missing-tool error instead of silently switching to another server.
+- A clear close request is honored even if the model forgets the JSON field. "More" reuses the current query and page when needed.
+
+**Backends:** the app is not SearXNG-specific. Any MCP tool that takes a query and is recognisable as image/stock search can be selected: SearXNG's `searxng_web_search` (with `categories=images` and JSON results), Brave's `brave_image_search`, and Pexafy's `search_photos`, for example. Suggestions, page-readers, file-fetch and unrelated web/video/news tools are filtered out of the picker. The parser accepts SearXNG, Brave (`properties.url`) and Pexafy (`urls`, `attribution`) result shapes; license and credit are shown when the backend returns them. Pexafy's hosted endpoint may use OAuth or an MCP Bearer key; Utsuwa currently supports HTTP servers with no auth or a Bearer token, not OAuth. License metadata from open web image search is not a guarantee that an image is free to reuse.
+
+Concrete examples:
+
+- **SearXNG**: `searxng_web_search` with `categories=images`; Utsuwa sets JSON/result-detail arguments for you.
+- **Brave**: `brave_image_search` from Brave's MCP server; Utsuwa reads `items[].url` plus `properties.url`.
+- **Pexafy**: HTTP `https://mcp.pexafy.com/mcp`, tool `search_photos`; free stock photos with licence and attribution. Utsuwa's MCP client supports no auth or a Bearer MCP key, not OAuth; the anonymous endpoint may work, but verify it on your deployment.
+
+**No backend:** without a configured picture tool the feature is unavailable. The prompt says so, and an attempted search produces `No picture search tool configured`; there is no silent fallback to a different provider. A model's built-in web search is not visible to the app and is therefore not used as a picture backend yet.
+
+**Status and errors:** the popup opens immediately with **Searching…**, then shows the results, **No pictures found**, or **Search failed**. Search errors are never swallowed. With OmniVoice native speech tools, the generic state extraction also recovers the picture query when the speech tool calls swallowed the state block, and a small forced-JSON pass covers the case where a state block arrived without picture fields. Both ask only for a query, never for URLs.
+
+**Privacy:** thumbnails are not hotlinked from the source host. Utsuwa loads them through the MCP file-fetch tool and shows a neutral placeholder when no such tool exists. Opening a full picture is an explicit user action. Without a file-fetch tool the popup still lists titles, sources and optional licenses, but it does not automatically request third-party images.
+
+To load a picture's bytes (so a hotlink-protected or CORS-blocked source still displays, and a vision model can look at it), enable a server that exposes **`fetch_file_from_url`**. The reference server is the self-hosted `filefetcher`:
+
+- **Name**: `Filefetcher`
+- **Transport**: `HTTP`
+- **URL**: `http://your-filefetcher-host:8000/mcp`
+- **Auth**: `none`
+- **Tool**: `fetch_file_from_url` with `{ "url": "<image url>", "max_dimension": 1280 }`
+
+The tool must return the picture as an MCP **image content block** — `{"type":"image","data":"<base64>","mimeType":"image/png"}` — and not as base64 embedded in a text block. `max_dimension` caps the longest edge (the server never upscales), so the request stays small. When a vision model is configured, the selected picture is also described to the companion.
+
+> If a picture server has **Ask before running tools** enabled, the search asks once for confirmation. Automatic thumbnail prefetch is skipped for such a server (the popup keeps placeholders) rather than queueing one dialog per image; opening one picture asks once.
+
+> The fetched URL and the search come from the app, but the web server still SSRF-guards the file fetch: only `http(s)` is allowed, and metadata/link-local/private hosts are blocked unless `ALLOW_LOCAL_PROVIDER_HOSTS=true`. The guard resolves DNS and follows no redirects. On desktop there is no server relay.
+
+> The app also applies a browser-safe blocked-host check before handing an image URL to `fetch_file_from_url`, including on the Tauri desktop path. It blocks link-local/metadata hosts and credentials; private/loopback is left to the web server's ALLOW_LOCAL_PROVIDER_HOSTS policy (and is allowed on desktop). DNS rebinding inside the external filefetcher remains a residual risk.
+
+> MCP HTTP responses are capped at 12 MB; inline image blocks are capped at 12 images / 10 MB. Image blocks are replaced by `[image: mime]` in the model-facing text and carried separately as structured data.
+
+> The selected server must return image URLs — an `img_src`/`thumbnail` field, or links ending in an image extension. A server that only returns page URLs will not produce pictures.
+
+> The picture event is window-independent, but the desktop overlay is not wired in this change. Use the main window for now; an overlay presenter can be added later without changing the search core.
+
 ## Desktop builds (Tauri)
 
 The desktop app is the MCP host itself: there is no backend to gate, so no `MCP_ENABLED` variable exists there. **HTTP** servers connect directly through the Tauri HTTP plugin (CORS-free) and work exactly as on web; **stdio** servers are not available (the app cannot spawn local MCP processes yet, so stdio entries show a per-server error in the tool list). The MCP page says so in a **Desktop mode** notice.
@@ -141,6 +191,7 @@ Known limitations:
 - The **Anthropic** provider path does not receive MCP tool definitions; use an OpenAI-compatible provider for MCP.
 - Tools from all servers share one flat namespace. If two servers expose the same tool name, the first server in the list wins, so keep names unique.
 - Authentication supports `none` and `bearer` only. Servers that need custom headers (for example `X-Api-Key`) are not supported yet.
+- stdio servers are spawned per request. A server started via `npx` downloads its package on first use; if that cold start exceeds the 15-second timeout, press **Refresh** in the tool list again (the package cache is warm afterwards).
 
 ## Hardening
 
