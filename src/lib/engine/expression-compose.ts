@@ -47,6 +47,8 @@ export interface ComposeInput {
 	photoActive: boolean;
 	speaking: boolean;
 	visemes: Visemes;
+	// The Mouth movement setting; 1 leaves the analyzer's weights as they are
+	mouthIntensity?: number;
 	random: () => number;
 	// Weights set by hand on the Developer page; they beat every layer above
 	manual: ReadonlyMap<string, number>;
@@ -150,18 +152,20 @@ export function composeExpressionWeights(input: ComposeInput): ComposeOutput {
 
 	// === Lip sync: VRM 1.0, VRM 0.x, and ARKit names ===
 	const v = input.visemes;
+	const k = input.mouthIntensity ?? 1;
+	const w = (weight: number) => Math.min(weight * k, 1);
 	const mouth = new Map<string, number>([
-		['aa', v.aa],
-		['ee', v.ee],
-		['ih', v.ih],
-		['oh', v.oh],
-		['ou', v.ou],
-		['a', v.aa],
-		['i', v.ih],
-		['u', v.ou],
-		['e', v.ee],
-		['o', v.oh],
-		['jawOpen', v.aa * 0.7]
+		['aa', w(v.aa)],
+		['ee', w(v.ee)],
+		['ih', w(v.ih)],
+		['oh', w(v.oh)],
+		['ou', w(v.ou)],
+		['a', w(v.aa)],
+		['i', w(v.ih)],
+		['u', w(v.ou)],
+		['e', w(v.ee)],
+		['o', w(v.oh)],
+		['jawOpen', w(v.aa * 0.7)]
 	]);
 
 	for (const [name, weight] of input.manual) {

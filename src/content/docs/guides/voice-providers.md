@@ -67,7 +67,7 @@ A TTS error shows above the chat bar for a few seconds. The text reply still app
 
 ### Lip sync
 
-While she speaks, Utsuwa analyzes the audio and drives her mouth. It sets the VRM 1.0 mouth expressions `aa`, `ee`, `ih`, `oh`, and `ou`, the VRM 0.x names `a`, `i`, `u`, `e`, and `o`, and `jawOpen` when a model has it. A model without any of these keeps her mouth still.
+While she speaks, Utsuwa analyzes the audio and drives her mouth. It sets the VRM 1.0 mouth expressions `aa`, `ee`, `ih`, `oh`, and `ou`, the VRM 0.x names `a`, `i`, `u`, `e`, and `o`, and `jawOpen` when a model has it. A model without any of these keeps her mouth still. If her mouth opens too wide or too little for your model, adjust **Mouth movement** in Settings > Display.
 
 With TTS off, she plays her talking motion for about as long as it would take to read the reply, but her mouth does not move.
 

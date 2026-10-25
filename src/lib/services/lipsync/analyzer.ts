@@ -6,6 +6,17 @@ export interface VisemeWeights {
 	ou: number; // Pursed (U sound)
 }
 
+// The Mouth movement setting. Rigs differ, so some custom models need a
+// smaller or bigger mouth than the stock ones.
+export const LIPSYNC_INTENSITY_MIN = 0.5;
+export const LIPSYNC_INTENSITY_MAX = 1.5;
+export const LIPSYNC_INTENSITY_DEFAULT = 1.0;
+
+export function clampLipSyncIntensity(intensity: number): number {
+	if (!Number.isFinite(intensity)) return LIPSYNC_INTENSITY_DEFAULT;
+	return Math.min(Math.max(intensity, LIPSYNC_INTENSITY_MIN), LIPSYNC_INTENSITY_MAX);
+}
+
 export class LipSyncAnalyzer {
 	private analyser: AnalyserNode | null = null;
 	private dataArray: Uint8Array | null = null;
