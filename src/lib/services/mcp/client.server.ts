@@ -14,6 +14,7 @@ import {
 	nextRpcId,
 	parseToolsList,
 	pickStdioEnv,
+	extractToolResultImages,
 	stringifyToolResult
 } from './protocol.ts';
 import { STDIO_MAX_STDOUT_BUFFER } from './stdio-policy.ts';
@@ -304,7 +305,13 @@ export async function callTool(
 	try {
 		session = await createStdioSession(config);
 		const result = await session.request('tools/call', { name: toolName, arguments: args });
-		return { toolName, content: stringifyToolResult(result), isError: false };
+		const images = extractToolResultImages(result);
+		return {
+			toolName,
+			content: stringifyToolResult(result),
+			isError: false,
+			...(images.length ? { images } : {})
+		};
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		console.error(`[MCP] callTool failed for "${config.name}/${toolName}":`, message);

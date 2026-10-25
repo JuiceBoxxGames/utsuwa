@@ -15,6 +15,7 @@ import {
 	parseJsonRpcResult,
 	parseSseResult,
 	parseToolsList,
+	extractToolResultImages,
 	stringifyToolResult
 } from './protocol.ts';
 
@@ -24,6 +25,41 @@ export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Res
 type RedirectCapableInit = RequestInit & { maxRedirections?: number };
 
 const MAX_REDIRECTS = 3;
+const MAX_RESPONSE_BYTES = 12 * 1024 * 1024;
+
+async function readResponseText(response: Response): Promise<string> {
+	const declared = Number(response.headers.get('content-length'));
+	if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+		void response.body?.cancel().catch(() => {});
+		throw new Error('MCP HTTP response is too large');
+	}
+	if (!response.body) return response.text();
+	const reader = response.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			if (!value) continue;
+			total += value.byteLength;
+			if (total > MAX_RESPONSE_BYTES) {
+				await reader.cancel();
+				throw new Error('MCP HTTP response is too large');
+			}
+			chunks.push(value);
+		}
+	} finally {
+		reader.releaseLock();
+	}
+	const merged = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		merged.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return new TextDecoder().decode(merged);
+}
 
 function isRedirectStatus(status: number): boolean {
 	return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
@@ -180,7 +216,7 @@ export function createHttpMcpClient(
 				headers,
 				body: JSON.stringify(buildRpcRequest(id, method, params))
 			}, async (res) => {
-				const text = await res.text();
+				const text = await readResponseText(res);
 				return {
 					res,
 					errText: res.ok ? '' : text,
@@ -269,7 +305,13 @@ export function createHttpMcpClient(
 		try {
 			await initialize(config);
 			const result = await rpc(config, 'tools/call', { name: toolName, arguments: args });
-			return { toolName, content: stringifyToolResult(result), isError: false };
+			const images = extractToolResultImages(result);
+			return {
+				toolName,
+				content: stringifyToolResult(result),
+				isError: false,
+				...(images.length ? { images } : {})
+			};
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			console.error(`[MCP] callTool failed for "${config.name}/${toolName}":`, message);

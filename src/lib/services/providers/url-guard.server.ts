@@ -59,6 +59,20 @@ export async function assertSafeProviderTarget(
 	return url;
 }
 
+// Validates a URL the server relays a fetch to (e.g. an MCP file-fetch tool
+// argument). Unlike a provider base URL, a query/fragment is normal here
+// (image URLs carry them), so only the scheme and host are enforced, including
+// DNS resolution.
+export async function assertSafeFetchTarget(
+	rawUrl: string,
+	allowPrivate = false,
+	resolve: Resolver = lookupAll
+): Promise<URL> {
+	const url = assertSafeProviderUrl(rawUrl, allowPrivate);
+	await assertResolvesSafe(url, allowPrivate, resolve);
+	return url;
+}
+
 // fetch that re-checks every request, refuses redirects (a public host could
 // 302 to a private one), and gives up if no response headers arrive in time.
 // The timer stops once headers land so long streamed replies are not cut off.
