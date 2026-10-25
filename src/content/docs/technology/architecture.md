@@ -171,7 +171,7 @@ Local TTS and OmniVoice share the `openai-tts.ts` client. If the browser's direc
 1. The reply is split into sentences (or OmniVoice segments with a language each).
 2. The scheduler hands segments to the orchestrator, which synthesizes ahead of playback.
 3. Web Audio plays each buffer through an `AnalyserNode`.
-4. The lip-sync analyzer reads the analyser every frame and sets mouth weights.
+4. The lip-sync analyzer reads the analyser every frame and sets mouth weights. The five visemes share one budget: VRM adds expressions together, so their sum is capped at one full mouth shape, or loud audio pushes the jaw through the face.
 
 With OmniVoice and Alternative Voice on, models that support tools receive `speak_segment`, `pause_segment`, and `gesture_segment` tools with a required `language`. Anthropic and models without tools use the inline `speak({...})` syntax instead. See [OmniVoice Setup](/docs/guides/omnivoice).
 
