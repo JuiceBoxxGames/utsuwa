@@ -183,6 +183,12 @@ test('still cuts the companion impersonating a later turn as itself', () => {
 // The extraction fallback feeds parseResponse the raw model output directly.
 // Some providers (Anthropic) fence it, some (OpenAI json_object) return bare
 // JSON. Both must parse — the caller must NOT re-wrap in another ```json fence.
+test('an extraction payload carries action and expression through', () => {
+	const parsed = parseResponse('{"mood_change":{"emotion":"playful","intensity_delta":2},"new_memory":null,"action":"vrma_05","expression":"happy"}');
+	assert.equal(parsed.stateUpdates?.action, 'vrma_05');
+	assert.equal(parsed.stateUpdates?.expression, 'happy');
+});
+
 test('parses an extraction payload whether fenced or bare', () => {
 	const fenced = parseResponse(
 		'```json\n{ "mood_change": { "emotion": "content", "intensity_delta": 2 }, "trust_delta": 2, "new_memory": "They are a graphic designer" }\n```'

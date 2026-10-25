@@ -14,6 +14,7 @@ import { ttsStore } from '$lib/stores/tts.svelte';
 import { personaStore } from '$lib/stores/persona.svelte';
 import { vrmStore } from '$lib/stores/vrm.svelte';
 import { animationLibraryStore } from '$lib/stores/animation-library.svelte';
+import { toPromptActions } from '$lib/stores/animation-library-parser';
 import { getTTSProvider } from '$lib/services/providers/registry';
 import { buildTTSOptions } from '$lib/services/tts/tts-options';
 import { cleanSpeechMarkers, stripThinkingBlocks } from '$lib/services/tts/chat-text';
@@ -107,11 +108,7 @@ async function buildCompanionPrompt(
 		// Same gate as the ttsTools injection in sendCompanionMessage: the
 		// speech layer must mandate tool calls exactly when the tools are sent.
 		ttsToolCalling: shouldUseSpeechTools(llmProvider, speechEnabled, speechSettings),
-		// An undescribed upload still gets its name, so the id means something
-		avatarActions: animationLibraryStore.enabledForLlm.map((a) => ({
-			id: a.id,
-			description: a.description.trim() || a.name
-		}))
+		avatarActions: toPromptActions(animationLibraryStore.enabledForLlm)
 	};
 	return buildSystemPrompt(context);
 }

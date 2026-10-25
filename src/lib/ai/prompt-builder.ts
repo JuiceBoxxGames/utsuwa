@@ -471,9 +471,19 @@ If it is worth keeping, put it in new_memory as your impression in your own word
 
 // Decoupled extraction: a tight, forced-JSON prompt used as a fallback when the
 // chat model didn't append a usable state block. A separate call derives it.
-export function buildExtractionSystemPrompt(hasImages = false): string {
+// Also the only path for motions and face reactions when a model skips its own
+// state block, like replies made purely of native speech tool calls (#298).
+export function buildExtractionSystemPrompt(
+	hasImages = false,
+	avatarActions: { id: string; description: string }[] = []
+): string {
 	const imageLine = hasImages
 		? " The user showed the companion an image this turn, so new_memory should capture the companion's impression of what they were shown."
+		: '';
+	const actionLines = avatarActions.map((a) => `- ${a.id}: ${a.description.replace(/\s+/g, ' ').trim()}`);
+	const actionField = actionLines.length ? ',\n  "action": null | "animation_id"' : '';
+	const actionRules = actionLines.length
+		? `\n\naction: one of these motion ids, only when the user asked for that motion or the companion said she is doing it. Otherwise null.\n${actionLines.join('\n')}`
 		: '';
 	return `You read a short exchange between a user and their AI companion and output ONLY a JSON object describing what changed. No prose, no markdown fences, just the JSON object.
 
@@ -484,7 +494,8 @@ Shape:
   "trust_delta": -10 to 10,
   "intimacy_delta": -10 to 10,
   "comfort_delta": -10 to 10,
-  "new_memory": null | "a fact about the user"
+  "new_memory": null | "a fact about the user"${actionField},
+  "expression": null | "emotion_name"
 }
 
 The four *_delta values are small numbers for how this exchange moved the relationship: positive when they open up, share, or warm to the companion; near 0 for neutral chat; negative if it went badly. Usually between -3 and 5.
@@ -496,6 +507,8 @@ new_memory — when to write one:
 new_memory — how to write it:
 - Third person about them, using "they/them". Never assume their gender or a name.
 - One short, plain, factual sentence stating only what they actually said this turn. No interpretation, no advice, no flourish. Never invent details that were not stated.
+
+expression: a visible reaction on the companion's face right now, such as being asked to smile, a surprise, a laugh, or a sad moment. Same emotion names as mood_change. Use null most of the time.${actionRules}
 
 Examples:
 {"mood_change":{"emotion":"frustrated","intensity_delta":3},"new_memory":"Their manager keeps assigning projects with no warning"}

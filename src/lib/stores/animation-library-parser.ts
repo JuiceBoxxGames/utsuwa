@@ -150,3 +150,9 @@ export function resolveIdlePool(
 	const urls = base.idlePool.flatMap((id) => candidates.find((c) => c.id === id)?.url ?? []);
 	return urls.length > 0 ? urls : [...fallbackUrls];
 }
+
+/** Motions as the prompts list them. An undescribed upload still gets its
+ *  name, so the id means something. */
+export function toPromptActions(entries: readonly AnimationEntry[]): { id: string; description: string }[] {
+	return entries.map((a) => ({ id: a.id, description: a.description.trim() || a.name }));
+}
