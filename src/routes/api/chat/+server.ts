@@ -167,6 +167,10 @@ export const POST: RequestHandler = async ({ request }) => {
 							// the full reply, so nothing may be dropped here.
 							const data = `0:${JSON.stringify(value.text)}\n`;
 							controller.enqueue(encoder.encode(data));
+						} else if (value.type === 'reasoning-delta') {
+							// Thinking models need this back in the next tool round,
+							// and it keeps the client's stall timer alive meanwhile.
+							controller.enqueue(encoder.encode(`r:${JSON.stringify(value.text)}\n`));
 						} else if (value.type === 'tool-call') {
 							// Keep native calls separate from text so the client can
 							// process speech even after the textual state fence. The
