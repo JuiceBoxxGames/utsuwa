@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { STORAGE_INVENTORY } from '$lib/db/storage-inventory';
 import { clampPhysicsIntensity, PHYSICS_INTENSITY_DEFAULT } from '../engine/spring-physics.ts';
+import { clampLipSyncIntensity, LIPSYNC_INTENSITY_DEFAULT } from '../services/lipsync/analyzer.ts';
 import {
 	CAMERA_DEFAULTS,
 	CAMERA_LIMITS,
@@ -58,6 +59,8 @@ function createDisplayStore() {
 	let overlayCamera = $state<CameraSettings>({ ...CAMERA_DEFAULTS });
 	// One physics intensity for both surfaces: it's a model-feel setting, not framing
 	let physicsIntensity = $state(PHYSICS_INTENSITY_DEFAULT);
+	// How far her mouth opens when she talks; rigs differ between models
+	let lipSyncIntensity = $state(LIPSYNC_INTENSITY_DEFAULT);
 	// Persistent backdrop for the regular scene ('default' = the theme backdrop)
 	let sceneBackground = $state<SceneBackground>({ type: 'default' });
 	// The stored user image, decoded. Kept while a preset is active so the
@@ -85,6 +88,7 @@ function createDisplayStore() {
 		camera = parsed.camera;
 		overlayCamera = parsed.overlayCamera;
 		physicsIntensity = parsed.physicsIntensity;
+		lipSyncIntensity = parsed.lipSyncIntensity;
 		sceneBackground = parsed.sceneBackground;
 		void refreshStoredImage();
 		chatDisplayMode = parsed.chatDisplayMode;
@@ -115,6 +119,7 @@ function createDisplayStore() {
 					camera: $state.snapshot(camera),
 					overlayCamera: $state.snapshot(overlayCamera),
 					physicsIntensity,
+					lipSyncIntensity,
 					sceneBackground: $state.snapshot(sceneBackground),
 					chatDisplayMode,
 					sidebarPosition,
@@ -152,6 +157,11 @@ function createDisplayStore() {
 
 	function setPhysicsIntensity(value: number) {
 		physicsIntensity = clampPhysicsIntensity(value);
+		save();
+	}
+
+	function setLipSyncIntensity(value: number) {
+		lipSyncIntensity = clampLipSyncIntensity(value);
 		save();
 	}
 
@@ -259,6 +269,9 @@ function createDisplayStore() {
 		get physicsIntensity() {
 			return physicsIntensity;
 		},
+		get lipSyncIntensity() {
+			return lipSyncIntensity;
+		},
 		get sceneBackground() {
 			return sceneBackground;
 		},
@@ -291,6 +304,7 @@ function createDisplayStore() {
 		setCamera,
 		resetCamera,
 		setPhysicsIntensity,
+		setLipSyncIntensity,
 		setSceneBackground,
 		setCustomBackgroundImage,
 		clearCustomBackgroundImage,

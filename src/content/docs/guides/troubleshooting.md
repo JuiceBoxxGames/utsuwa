@@ -175,6 +175,7 @@ Fish Audio returns 402 when your account has no API credits for the chosen model
 1. **Audio is required.** Her mouth only moves while TTS audio plays. With TTS off, she plays her talking motion without mouth movement.
 2. **Mouth shapes.** Your model needs mouth expressions such as `aa`, `ih`, `ou`, `ee`, and `oh`, or the older `a`, `i`, `u`, `e`, and `o`.
 3. **Very quiet audio** can fall below the level that moves her mouth.
+4. **Mouth opens too wide or barely moves.** Models are rigged differently. Adjust **Mouth movement** in Settings > Display, from 0.5x to 1.5x.
 
 ### Voice sounds wrong
 

@@ -500,6 +500,7 @@
 			photoActive: photomodeStore.active,
 			speaking: ttsStore.isSpeaking,
 			visemes: lipSyncAnalyzer.update(delta),
+			mouthIntensity: displayStore.lipSyncIntensity,
 			random: Math.random,
 			manual: vrmStore.manualExpressions
 		});
