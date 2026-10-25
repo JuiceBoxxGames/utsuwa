@@ -358,6 +358,9 @@ function cleanDialogue(text: string, companionName?: string): string {
 	// Remove any leftover (closed) JSON-like content
 	cleaned = cleaned.replace(/\{[^}]*"(?:mood|delta|emotion|action|expression)[^}]*\}/gi, '');
 
+	// Markdown bold is emphasis, not an action: keep the words
+	cleaned = cleaned.replace(/\*\*([^*\n]+)\*\*/g, '$1');
+
 	// Remove action asterisks (we want dialogue only)
 	cleaned = cleaned.replace(/\*[^*]+\*/g, '');
 
