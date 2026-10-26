@@ -5,9 +5,9 @@ import {
 	getModelsBaseUrl,
 	isLocalLLMProvider,
 	looksLikeOllama
-} from './local-endpoints';
+} from './local-endpoints.ts';
 import { CHAT_MODEL_FILTERS, DEFAULT_MODELS_BASE_URLS } from './provider-defaults.ts';
-import { addLMStudioVision, addOllamaVision, reportedVision, type FetchJson } from './vision';
+import { addLMStudioVision, addOllamaVision, reportedVision, type FetchJson } from './vision.ts';
 
 interface ModelInfo {
 	id: string;
@@ -114,7 +114,11 @@ export async function fetchModelsDirect(
 			case 'anthropic': {
 				if (!apiKey) throw new Error('API key required');
 				const res = await fetch(`${cleanBaseUrl}/models`, {
-					headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+					headers: {
+						'x-api-key': apiKey,
+						'anthropic-version': '2023-06-01',
+						'anthropic-dangerous-direct-browser-access': 'true'
+					}
 				});
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
 				const data = await res.json();
