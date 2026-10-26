@@ -3,6 +3,7 @@
 // the /api/chat server route (cloud providers on web, which mostly lack CORS).
 import type { LLMProvider } from '$lib/types';
 import { isTauri } from '$lib/services/platform';
+import { providerFetch } from '../platform/provider-fetch.ts';
 import {
 	ensureOpenAIPath,
 	getChatBaseUrl,
@@ -254,7 +255,7 @@ async function streamDirect(
 
 	let response: Response;
 	try {
-		response = await fetch(url, { method: 'POST', headers, body, signal: options.signal });
+		response = await providerFetch(url, { method: 'POST', headers, body, signal: options.signal });
 	} catch (err) {
 		if (options.signal?.aborted) throw err;
 		const rawMessage = err instanceof Error ? err.message : 'Failed to connect to provider';
@@ -392,7 +393,7 @@ async function requestJsonDirect(request: JsonRequest): Promise<string | null> {
 					max_tokens: maxTokens
 				});
 
-	const response = await fetch(url, { method: 'POST', headers, body, signal });
+	const response = await providerFetch(url, { method: 'POST', headers, body, signal });
 	if (!response.ok) return null;
 	const json = await response.json();
 	if (provider === 'anthropic') {

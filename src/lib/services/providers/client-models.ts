@@ -6,6 +6,7 @@ import {
 	isLocalLLMProvider,
 	looksLikeOllama
 } from './local-endpoints';
+import { providerFetch } from '../platform/provider-fetch.ts';
 import { CHAT_MODEL_FILTERS, DEFAULT_MODELS_BASE_URLS } from './provider-defaults.ts';
 import { addLMStudioVision, addOllamaVision, reportedVision, type FetchJson } from './vision';
 
@@ -17,7 +18,7 @@ interface ModelInfo {
 
 function jsonAt(base: string): FetchJson {
 	return async (path, body) => {
-		const res = await fetch(
+		const res = await providerFetch(
 			new URL(path, base),
 			body === undefined ? undefined : { method: 'POST', body: JSON.stringify(body) }
 		);
@@ -70,7 +71,7 @@ export async function fetchModelsDirect(
 			case 'deepseek':
 			case 'xai': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { Authorization: `Bearer ${apiKey}` }
 				});
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
@@ -90,7 +91,7 @@ export async function fetchModelsDirect(
 				// Ollama exposes an OpenAI-compatible chat endpoint but its model list
 				// lives at /api/tags rather than /v1/models.
 				if (looksLikeOllama(cleanBaseUrl)) {
-					const res = await fetch(`${cleanBaseUrl}/api/tags`, { headers });
+					const res = await providerFetch(`${cleanBaseUrl}/api/tags`, { headers });
 					if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
 					const data = await res.json();
 					models = (data.models || []).map((m: { name: string }) => ({
@@ -100,7 +101,7 @@ export async function fetchModelsDirect(
 					models = await addOllamaVision(models, jsonAt(cleanBaseUrl));
 				} else {
 					const normalizedUrl = ensureOpenAIPath(cleanBaseUrl);
-					const res = await fetch(`${normalizedUrl}/models`, { headers });
+					const res = await providerFetch(`${normalizedUrl}/models`, { headers });
 					if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
 					const data = await res.json();
 					models = (data.data || []).map((m: { id: string }) => ({
@@ -113,7 +114,7 @@ export async function fetchModelsDirect(
 			}
 			case 'anthropic': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
 				});
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
@@ -125,7 +126,7 @@ export async function fetchModelsDirect(
 				break;
 			}
 			case 'ollama': {
-				const res = await fetch(`${cleanBaseUrl}/api/tags`);
+				const res = await providerFetch(`${cleanBaseUrl}/api/tags`);
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
 				const data = await res.json();
 				models = (data.models || []).map((m: { name: string }) => ({
@@ -136,7 +137,7 @@ export async function fetchModelsDirect(
 				break;
 			}
 			case 'lmstudio': {
-				const res = await fetch(`${cleanBaseUrl}/models`);
+				const res = await providerFetch(`${cleanBaseUrl}/models`);
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
 				const data = await res.json();
 				models = data.data.map((m: { id: string }) => ({ id: m.id, name: m.id }));
@@ -145,7 +146,7 @@ export async function fetchModelsDirect(
 			}
 			case 'google': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { 'x-goog-api-key': apiKey }
 				});
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
@@ -160,7 +161,7 @@ export async function fetchModelsDirect(
 			}
 			case 'elevenlabs': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { 'xi-api-key': apiKey }
 				});
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);
@@ -175,7 +176,7 @@ export async function fetchModelsDirect(
 			}
 			case 'openai-tts': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { Authorization: `Bearer ${apiKey}` }
 				});
 				if (!res.ok) throw new Error(`Failed to fetch models: ${res.statusText}`);

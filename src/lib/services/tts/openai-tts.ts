@@ -1,4 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core';
+import { providerFetch } from '../platform/provider-fetch.ts';
 import {
 	getSharedAudioContext,
 	type ITTSProvider,
@@ -268,7 +269,7 @@ export class OpenAITTS implements ITTSProvider {
 
 		let response: Response;
 		try {
-			response = await fetch(`${this.baseUrl}audio/speech`, {
+			response = await providerFetch(`${this.baseUrl}audio/speech`, {
 				method: 'POST',
 				headers,
 				body: JSON.stringify(body),
