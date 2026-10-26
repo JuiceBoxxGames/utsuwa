@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.1] - 2026-10-26
+
+### Fixed
+- **Desktop:** an Anthropic API key got a red border and no model list, though the same key worked on the website. The app asked Anthropic for its models without the header Anthropic requires for requests made straight from an app window, so they were refused. Chat already sent it ([#310](https://github.com/JuiceBoxxGames/utsuwa/pull/310), closes [#309](https://github.com/JuiceBoxxGames/utsuwa/issues/309)).
+
 ## [0.21.0] - 2026-10-25
 
 ### Added
