@@ -1,3 +1,4 @@
+import { providerFetch } from '../platform/provider-fetch.ts';
 import { getTTSBaseUrl, isLocalTTSProvider } from './local-endpoints.ts';
 
 export type HealthStatus = 'unknown' | 'healthy' | 'unhealthy';
@@ -80,7 +81,7 @@ export async function checkTTSProviderHealth(
 	const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
 
 	try {
-		const response = await fetch(healthUrl, {
+		const response = await providerFetch(healthUrl, {
 			method: 'GET',
 			signal: controller.signal
 		});
