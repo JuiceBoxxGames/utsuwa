@@ -59,7 +59,7 @@ Local TTS works best in the **desktop app**, where it needs no extra setup. The 
 On the **hosted website** (`https://app.utsuwa.ai`) it can still work, but because a public HTTPS page is reaching a server on your own machine, the browser adds a few rules:
 
 - **Same machine only.** The server has to be on `localhost` or `127.0.0.1`. The browser blocks a TTS server on another machine over plain `http://` as mixed content. `localhost` is exempt from that block, which is why the local case works at all. The remote-machine base URL above works in the desktop app, not on the hosted site.
-- **The server must allow the site's origin.** Your TTS server needs to send CORS headers permitting `https://app.utsuwa.ai`. Kokoro-FastAPI and openedai-speech allow all origins by default, so this usually just works. A hardened or proxied server may need the origin added. For the desktop app, that origin is `tauri://localhost` on macOS and `http://tauri.localhost` on Windows and Linux.
+- **The server must allow the site's origin.** Your TTS server needs to send CORS headers permitting `https://app.utsuwa.ai`. Kokoro-FastAPI and openedai-speech allow all origins by default, so this usually just works. A hardened or proxied server may need the origin added.
 - **Your browser may ask permission.** Recent versions of Chrome treat a public site reaching `localhost` as a local-network request and may prompt you to allow it (or require the server to opt in). Allow it if asked.
 
 Local LLMs (Ollama, LM Studio) follow the same rules on the hosted site.
@@ -72,7 +72,7 @@ The proxy only forwards speech requests to `{base URL}/audio/speech`, caps the t
 
 ### Desktop app
 
-With the default servers, none of the browser rules apply to the desktop app. The only case that needs attention is a server you've hardened to restrict origins, which would need the desktop origin above allowed.
+The desktop app sends speech and transcription requests from its native core instead of the webview, so none of the browser rules apply and the server needs no CORS setup. The only case that needs attention is a server that rejects requests by their `Origin` header, which would need the desktop origin allowed: `tauri://localhost` on macOS and `http://tauri.localhost` on Windows and Linux.
 
 ## Troubleshooting
 
@@ -96,7 +96,7 @@ The server proxy is on, but the Utsuwa server itself can't connect to the TTS se
 
 ### "Local TTS server returned 400/404"
 
-The model or voice isn't valid for that server. Leave the model blank (Utsuwa sends `tts-1`, which most servers accept), and double-check the voice name against your server's voice list.
+The model or voice isn't valid for that server. Leave the model blank (Utsuwa sends `tts-1`, which most servers accept), and double-check the voice name against your server's voice list. Utsuwa asks local servers for WAV audio (`response_format: "wav"`), so the server has to support WAV output.
 
 ### Choppy or delayed speech
 

@@ -1,3 +1,4 @@
+import { providerFetch } from '../platform/provider-fetch.ts';
 import type { SpeechRecognitionCallbacks } from './web-speech';
 
 export interface OpenAiSttConfig {
@@ -305,7 +306,7 @@ class OpenAiSttService {
 				`recording.${ext}`
 			);
 
-			const response = await fetch(url, {
+			const response = await providerFetch(url, {
 				method: 'POST',
 				headers,
 				body,
