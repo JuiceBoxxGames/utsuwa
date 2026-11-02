@@ -1,3 +1,4 @@
+import { providerFetch } from '../platform/provider-fetch.ts';
 import { getTTSBaseUrl, isLocalTTSProvider } from './local-endpoints.ts';
 
 export type HealthStatus = 'unknown' | 'healthy' | 'unhealthy';
@@ -80,11 +81,13 @@ export async function checkTTSProviderHealth(
 	const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
 
 	try {
-		const response = await fetch(healthUrl, {
+		const response = await providerFetch(healthUrl, {
 			method: 'GET',
 			signal: controller.signal
 		});
-		const status = response.ok ? 'healthy' : 'unhealthy';
+		// The voice list is optional for local servers, so a 404 still means it's up.
+		const reachable = response.ok || (providerId === 'local-tts' && response.status === 404);
+		const status = reachable ? 'healthy' : 'unhealthy';
 		setTTSProviderHealth(providerId, baseUrl, status);
 		return status;
 	} catch {

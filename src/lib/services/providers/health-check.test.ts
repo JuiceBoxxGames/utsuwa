@@ -79,3 +79,19 @@ test('Health status is readable after check and notifies subscribers', async () 
 	unsubscribe();
 });
 
+
+test('Local TTS without a voice list (404) still counts as reachable', async () => {
+	globalThis.fetch = () => Promise.resolve({ ok: false, status: 404 } as Response);
+
+	const status = await checkTTSProviderHealth('local-tts', 'http://127.0.0.1:8080/v1');
+
+	assert.equal(status, 'healthy');
+});
+
+test('Local TTS returning a server error is unhealthy', async () => {
+	globalThis.fetch = () => Promise.resolve({ ok: false, status: 503 } as Response);
+
+	const status = await checkTTSProviderHealth('local-tts', 'http://127.0.0.1:8080/v1');
+
+	assert.equal(status, 'unhealthy');
+});

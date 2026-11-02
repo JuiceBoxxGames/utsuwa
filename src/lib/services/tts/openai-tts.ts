@@ -1,4 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core';
+import { providerFetch } from '../platform/provider-fetch.ts';
 import {
 	getSharedAudioContext,
 	type ITTSProvider,
@@ -131,7 +132,9 @@ export function buildOpenAITTSRequestBody(
 			: text,
 		voice: effectiveVoiceId,
 		speed: streamOptions?.speed ?? speed,
-		response_format: isOmnivoice ? 'wav' : 'mp3'
+		// Local servers get wav: it needs no encoder, and some (macos-speech-server)
+		// reject mp3 outright.
+		response_format: isLocalTTSProvider(providerId) ? 'wav' : 'mp3'
 	};
 
 	if (isOmnivoice) {
@@ -268,7 +271,7 @@ export class OpenAITTS implements ITTSProvider {
 
 		let response: Response;
 		try {
-			response = await fetch(`${this.baseUrl}audio/speech`, {
+			response = await providerFetch(`${this.baseUrl}audio/speech`, {
 				method: 'POST',
 				headers,
 				body: JSON.stringify(body),

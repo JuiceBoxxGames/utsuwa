@@ -102,7 +102,7 @@ test('OpenAI TTS request body remains unchanged (regression)', async () => {
 	assert.equal('language' in requests[0].body, false);
 });
 
-test('Local TTS request body remains unchanged and uses mp3 format (regression)', async () => {
+test('Local TTS asks for wav, which every local server speaks (some reject mp3)', async () => {
 	const requests: { body: Record<string, unknown> }[] = [];
 	// @ts-expect-error global fetch mock
 	globalThis.fetch = (_url: string, init: RequestInit) => {
@@ -122,7 +122,7 @@ test('Local TTS request body remains unchanged and uses mp3 format (regression)'
 
 	assert.equal(requests[0].body.model, 'kokoro');
 	assert.equal(requests[0].body.voice, 'af_bella');
-	assert.equal(requests[0].body.response_format, 'mp3');
+	assert.equal(requests[0].body.response_format, 'wav');
 	assert.equal(requests[0].body.speed, 1.0);
 	assert.equal('language' in requests[0].body, false);
 });
