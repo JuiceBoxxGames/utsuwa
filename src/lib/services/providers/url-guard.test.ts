@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isBlockedHost, assertSafeProviderUrl } from './url-guard.ts';
+import { isBlockedHost, assertSafeProviderUrl, assertSafeFetchUrl } from './url-guard.ts';
 
 const isPrivateHost = (h: string) => isBlockedHost(h);
 
@@ -156,4 +156,15 @@ test('allowPrivate never opens link-local, metadata, unspecified, or multicast',
 	assert.throws(() => assertSafeProviderUrl('http://169.254.169.254/', true));
 	assert.throws(() => assertSafeProviderUrl('http://[fe80::1]/', true));
 	assert.equal(assertSafeProviderUrl('http://127.0.0.1:8890', true).hostname, '127.0.0.1');
+});
+
+
+test('assertSafeFetchUrl allows image queries and private hosts by default, but blocks unsafe hosts and credentials', () => {
+	assert.equal(assertSafeFetchUrl('https://cdn.example/a.jpg?w=800').hostname, 'cdn.example');
+	assert.throws(() => assertSafeFetchUrl('http://169.254.169.254/latest/meta-data'));
+	assert.throws(() => assertSafeFetchUrl('http://127.0.0.1/a.png'));
+	assert.equal(assertSafeFetchUrl('http://127.0.0.1/a.png', true).hostname, '127.0.0.1');
+	assert.throws(() => assertSafeFetchUrl('https://user:pass@example.com/a.png'));
+	assert.throws(() => assertSafeFetchUrl('file:///etc/passwd'));
+	assert.throws(() => assertSafeFetchUrl('javascript:alert(1)'));
 });

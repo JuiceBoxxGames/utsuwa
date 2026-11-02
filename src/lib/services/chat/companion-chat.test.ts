@@ -514,6 +514,83 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			delete fixtures.privateEnv.MCP_ENABLED;
 			delete fixtures.privateEnv.MCP_STDIO_ALLOWED_COMMANDS;
 		});
+		await t.test('the file-fetch call route requires a url argument', async (t) => {
+			fixtures.privateEnv.MCP_ENABLED = 'server';
+			t.mock.method(globalThis, 'fetch', async () => {
+				throw new Error('the guard must reject before any fetch');
+			});
+			const { POST: callPOST } = await server.ssrLoadModule('/src/routes/api/mcp/call/+server.ts');
+			try {
+				const response = await callPOST({
+					request: new Request('http://localhost/api/mcp/call', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							server: { id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true },
+							toolName: 'fetch_file_from_url',
+							args: {}
+						})
+					})
+				});
+				assert.equal(response.status, 400);
+				const body = (await response.json()) as { error?: string };
+				assert.match(body.error ?? '', /needs a url argument/);
+			} finally {
+				delete fixtures.privateEnv.MCP_ENABLED;
+			}
+		});
+		await t.test('the file-fetch call route blocks private and metadata targets', async (t) => {
+			fixtures.privateEnv.MCP_ENABLED = 'server';
+			t.mock.method(globalThis, 'fetch', async () => {
+				throw new Error('the guard must reject before any fetch');
+			});
+			const { POST: callPOST } = await server.ssrLoadModule('/src/routes/api/mcp/call/+server.ts');
+			try {
+				for (const url of ['http://169.254.169.254/latest/meta-data', 'http://127.0.0.1:8890/a.png']) {
+					const response = await callPOST({
+						request: new Request('http://localhost/api/mcp/call', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								server: { id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true },
+								toolName: 'fetch_file_from_url',
+								args: { url }
+							})
+						})
+					});
+					assert.equal(response.status, 403, url);
+					const body = (await response.json()) as { error?: string };
+					assert.match(body.error ?? '', /not allowed/, url);
+				}
+			} finally {
+				delete fixtures.privateEnv.MCP_ENABLED;
+			}
+		});
+		await t.test('the file-fetch call route rejects non-http schemes', async (t) => {
+			fixtures.privateEnv.MCP_ENABLED = 'server';
+			t.mock.method(globalThis, 'fetch', async () => {
+				throw new Error('the guard must reject before any fetch');
+			});
+			const { POST: callPOST } = await server.ssrLoadModule('/src/routes/api/mcp/call/+server.ts');
+			try {
+				const response = await callPOST({
+					request: new Request('http://localhost/api/mcp/call', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							server: { id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true },
+							toolName: 'fetch_file_from_url',
+							args: { url: 'javascript:alert(1)' }
+						})
+					})
+				});
+				assert.equal(response.status, 403);
+				const body = (await response.json()) as { error?: string };
+				assert.match(body.error ?? '', /http or https/);
+			} finally {
+				delete fixtures.privateEnv.MCP_ENABLED;
+			}
+		});
 		await t.test('an unknown tool call is answered with an error result', async (t) => {
 			direct = true; llmProvider = 'openai-compatible';
 			speechEnabled = false; messages.length = 0; spoken = []; turns.length = 0;

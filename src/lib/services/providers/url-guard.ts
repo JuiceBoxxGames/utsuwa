@@ -102,3 +102,17 @@ export function assertSafeProviderUrl(rawUrl: string, allowPrivate = false): URL
 
 	return url;
 }
+
+
+/**
+ * Browser-safe guard for a URL the app is about to hand to an MCP file-fetch
+ * tool. It cannot stop DNS rebinding in the external fetcher, but it blocks
+ * literals such as 127.0.0.1, 169.254.169.254 and private hostnames on desktop
+ * and web alike. Private/loopback is allowed by default here; the web route still
+ * enforces ALLOW_LOCAL_PROVIDER_HOSTS, and the external fetcher performs the fetch.
+ */
+export function assertSafeFetchUrl(rawUrl: string, allowPrivate = false): URL {
+	const url = assertSafeProviderUrl(rawUrl, allowPrivate);
+	if (url.username || url.password) throw new Error('Fetch URL must not include credentials');
+	return url;
+}

@@ -9,6 +9,12 @@ import type { McpServerConfig } from '$lib/types/mcp';
 import { callTool } from '$lib/services/mcp/client.server';
 import { isAllowedMcpHttpUrl, isServerMcpEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
 import { applyStdioPolicy } from '$lib/services/mcp/stdio-policy';
+import { assertSafeFetchTarget } from '$lib/services/providers/url-guard.server';
+
+// A file-fetch tool downloads a URL supplied by the model, so guard it against
+// SSRF before relaying: block metadata/link-local/private targets (private only
+// opens with ALLOW_LOCAL_PROVIDER_HOSTS, consistent with the provider proxy).
+const FILE_FETCH_TOOL = 'fetch_file_from_url';
 
 export const POST: RequestHandler = async ({ request }) => {
 	if (!isServerMcpEnabled(env.MCP_ENABLED)) {
@@ -64,6 +70,30 @@ export const POST: RequestHandler = async ({ request }) => {
 			JSON.stringify({ error: `Tool "${toolName}" requires manual user confirmation` }),
 			{ status: 403, headers: { 'Content-Type': 'application/json' } }
 		);
+	}
+
+	// SSRF guard for the file-fetch tool: the URL comes from the model, so
+	// validate it before the fetch runs. The external MCP server performs the
+	// actual fetch, so redirects/DNS rebinding after this check are outside this
+	// guard; keep that residual risk in mind when choosing a filefetcher.
+	if (toolName === FILE_FETCH_TOOL) {
+		const url = args.url;
+		if (typeof url !== 'string' || !url.trim()) {
+			return new Response(JSON.stringify({ error: `${FILE_FETCH_TOOL} needs a url argument` }), {
+				status: 400,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+		const normalizedUrl = url.trim();
+		try {
+			await assertSafeFetchTarget(normalizedUrl, env.ALLOW_LOCAL_PROVIDER_HOSTS === 'true');
+		} catch (e) {
+			return new Response(
+				JSON.stringify({ error: e instanceof Error ? e.message : 'URL not allowed' }),
+				{ status: 403, headers: { 'Content-Type': 'application/json' } }
+			);
+		}
+		args.url = normalizedUrl;
 	}
 
 	const result = await callTool(target, toolName, args);

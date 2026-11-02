@@ -327,3 +327,38 @@ test('a server that expires every session is retried only once', async () => {
 	assert.equal(initializations, 2);
 	assert.equal(calls, 2);
 });
+
+test('rejects an MCP HTTP response above the size cap', async () => {
+	const fetchImpl: FetchLike = async () =>
+		new Response('', { headers: { 'content-length': String(13 * 1024 * 1024) } });
+	const client = createHttpMcpClient(fetchImpl);
+	await assert.rejects(() => client.listTools(CONFIG), /response is too large/);
+});
+
+test('rejects a streamed MCP HTTP response above the size cap without content-length', async () => {
+	const fetchImpl: FetchLike = async () => {
+		const chunk = new Uint8Array(7 * 1024 * 1024);
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(chunk);
+				controller.enqueue(chunk);
+				controller.close();
+			}
+		});
+		return new Response(body, { headers: { 'Content-Type': 'application/json' } });
+	};
+	const client = createHttpMcpClient(fetchImpl);
+	await assert.rejects(() => client.listTools(CONFIG), /response is too large/);
+});
+
+test('accepts an MCP HTTP response whose declared size equals the cap', async () => {
+	const fetchImpl: FetchLike = async (_input, init) => {
+		const request = JSON.parse(String(init?.body)) as { id?: number; method?: string };
+		const result = request.method === 'initialize' ? { protocolVersion: '2024-11-05' } : { tools: [] };
+		return new Response(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }), {
+			headers: { 'Content-Type': 'application/json', 'content-length': String(12 * 1024 * 1024) }
+		});
+	};
+	const client = createHttpMcpClient(fetchImpl);
+	assert.deepEqual(await client.listTools(CONFIG), []);
+});

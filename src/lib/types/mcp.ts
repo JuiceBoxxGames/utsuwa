@@ -34,6 +34,12 @@ export interface McpServerConfig {
 	enabled: boolean;
 }
 
+/** The user's explicit picture-search tool choice. Null means "automatic". */
+export interface ImageSearchToolSelection {
+	serverId: string;
+	toolName: string;
+}
+
 export interface McpTool {
 	/** ID of the McpServerConfig this tool belongs to */
 	serverId: string;
@@ -49,11 +55,20 @@ export interface McpTool {
 	};
 }
 
+/** An image content block returned by an MCP tool: base64 data without a
+ *  `data:` URI prefix, plus its MIME type. */
+export interface McpToolImage {
+	mimeType: string;
+	data: string;
+}
+
 export interface McpToolResult {
 	toolName: string;
 	/** Stringified result content */
 	content: string;
 	isError: boolean;
+	/** Image content blocks (e.g. from a file-fetch tool), when present. */
+	images?: McpToolImage[];
 }
 
 /** A per-server failure while listing tools — surfaced in the settings UI so

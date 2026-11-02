@@ -3,7 +3,8 @@
  * client (Node fetch + stdio) and the client-side client (Tauri HTTP plugin).
  * MCP is plain JSON-RPC 2.0, so no SDK is needed.
  */
-import type { McpAuth, McpServerError } from '$lib/types/mcp';
+import type { McpAuth, McpServerError, McpToolImage } from '$lib/types/mcp';
+import { isRasterImageMimeType } from '../../utils/image-mime.ts';
 
 export const MCP_PROTOCOL_VERSION = '2024-11-05';
 export const MCP_CLIENT_NAME = 'utsuwa';
@@ -176,20 +177,54 @@ export function parseToolsList(result: unknown): Array<{
 
 /**
  * Flatten an MCP `tools/call` result to plain text. Text parts are joined;
- * anything else (images, resources) falls back to the raw JSON so the model
- * still receives the data.
+ * image parts become a short placeholder so their (potentially huge) base64
+ * never floods the model's context. Anything else (resources, unknown blocks)
+ * falls back to the raw JSON so the model still receives the data.
  */
 export function stringifyToolResult(result: unknown): string {
-	const content = (result as { content?: Array<{ type?: string; text?: string }> } | null)?.content;
+	const content = (result as { content?: Array<{ type?: string; text?: string; mimeType?: string }> } | null)?.content;
 	if (Array.isArray(content)) {
-		const text = content
-			.filter((part) => part?.type === 'text' && typeof part.text === 'string')
-			.map((part) => part.text as string)
-			.join('\n');
+		const parts: string[] = [];
+		for (const part of content) {
+			if (part?.type === 'text' && typeof part.text === 'string') {
+				parts.push(part.text);
+			} else if (part?.type === 'image') {
+				parts.push(`[image: ${part.mimeType || 'unknown'}]`);
+			}
+		}
+		const text = parts.join('\n').trim();
 		if (text) return text;
 	}
 	if (result === undefined || result === null) return '';
 	return JSON.stringify(result);
+}
+
+/**
+ * Pull base64 image content blocks out of an MCP `tools/call` result. This is
+ * the structured counterpart to `stringifyToolResult`: the app can display
+ * (or feed to a vision model) what the text path deliberately drops.
+ */
+// Keep this aligned with the popup's 12-result cap. This bounds inline base64
+// blocks only; normal URL-based search results are not affected.
+export const MAX_TOOL_IMAGES = 12;
+export const MAX_TOOL_IMAGE_BASE64_CHARS = 10 * 1024 * 1024;
+
+export function extractToolResultImages(result: unknown): McpToolImage[] {
+	const content = (result as { content?: unknown } | null)?.content;
+	if (!Array.isArray(content)) return [];
+	const images: McpToolImage[] = [];
+	let totalChars = 0;
+	for (const part of content) {
+		if (images.length >= MAX_TOOL_IMAGES) break;
+		const block = part as { type?: unknown; data?: unknown; mimeType?: unknown };
+		if (block?.type !== 'image') continue;
+		if (typeof block.data !== 'string' || block.data.length === 0) continue;
+		if (typeof block.mimeType !== 'string' || !isRasterImageMimeType(block.mimeType)) continue;
+		if (totalChars + block.data.length > MAX_TOOL_IMAGE_BASE64_CHARS) break;
+		totalChars += block.data.length;
+		images.push({ mimeType: block.mimeType, data: block.data });
+	}
+	return images;
 }
 
 /**
