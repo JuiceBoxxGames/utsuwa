@@ -787,3 +787,40 @@ test('preserves conversational English in prose and speak calls', () => {
 		}
 	}
 });
+
+// ── #319: timer flush + end-of-stream flush ─────────────────────────
+
+test('timer flush over a truncated call does not repeat it on the final flush (#319)', () => {
+	mock.timers.enable({ apis: ['setTimeout'] });
+	try {
+		const { buffer, segments } = createBuffer();
+		buffer.feed('speak({"text":"See you tomorrow');
+		mock.timers.tick(1500);
+		buffer.flush();
+		assert.deepEqual(segments.map((s) => s.text), ['See you tomorrow']);
+	} finally {
+		mock.timers.reset();
+	}
+});
+
+test('timer flush over a truncated call does not repeat it once the call completes (#319)', () => {
+	mock.timers.enable({ apis: ['setTimeout'] });
+	try {
+		const { buffer, segments } = createBuffer();
+		buffer.feed('speak({"text":"See you tomorrow');
+		mock.timers.tick(1500);
+		buffer.feed('.","lang":"en"})');
+		buffer.flush();
+		assert.deepEqual(segments.map((s) => s.text), ['See you tomorrow.']);
+	} finally {
+		mock.timers.reset();
+	}
+});
+
+test('a repeated final flush never re-speaks a truncated call (#319)', () => {
+	const { buffer, segments } = createBuffer();
+	buffer.feed('speak({"text":"See you tomorrow');
+	buffer.flush();
+	buffer.flush();
+	assert.deepEqual(segments.map((s) => s.text), ['See you tomorrow']);
+});

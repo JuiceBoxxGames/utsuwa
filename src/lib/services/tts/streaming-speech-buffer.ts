@@ -137,8 +137,15 @@ export class StreamingSpeechBuffer {
 		this.armFlushTimer();
 	}
 
-	flush(): void {
+	// The timer flushes with final=false and holds incomplete markup for later
+	// chunks. Half-speaking it there got it spoken twice (#319). The
+	// end-of-stream flush speaks what it can and consumes everything.
+	flush(final = true): void {
 		this.tryEmitLanguageCalls();
+		if (!final && this.hasIncompleteMarkup(this.buffer.slice(this.emittedLength))) {
+			this.clearFlushTimer();
+			return;
+		}
 		let remaining = this.buffer.slice(this.emittedLength).trim();
 
 		// Remove any complete actions envelopes left over (e.g. empty ones with
@@ -180,12 +187,7 @@ export class StreamingSpeechBuffer {
 			}
 		}
 
-		// Only mark the whole buffer as processed when no incomplete markup
-		// remains. If raw syntax is left, later chunks may complete it; at
-		// end-of-stream the buffer is discarded anyway.
-		if (!this.hasIncompleteMarkup(this.buffer.slice(this.emittedLength))) {
-			this.emittedLength = this.buffer.length;
-		}
+		this.emittedLength = this.buffer.length;
 
 		this.clearFlushTimer();
 	}
@@ -255,7 +257,7 @@ export class StreamingSpeechBuffer {
 		if (this.flushTimer) return;
 		this.flushTimer = setTimeout(() => {
 			this.flushTimer = null;
-			this.flush();
+			this.flush(false);
 		}, this.FLUSH_TIMEOUT_MS);
 	}
 
