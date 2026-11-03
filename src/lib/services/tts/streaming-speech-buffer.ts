@@ -91,6 +91,9 @@ export class StreamingSpeechBuffer {
 	// not counted and cannot leave the depth wrong. Kept across chunks because
 	// strings can be split by the stream.
 	private jsonStringOpen = false;
+	// A "{" that ended its chunk: counted as JSON until the next chunk shows
+	// whether a quoted key follows or it was prose like ":-{".
+	private braceUnconfirmed = false;
 	private flushTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly FLUSH_TIMEOUT_MS = 1500;
 	private readonly options: StreamingSpeechBufferOptions;
@@ -106,13 +109,25 @@ export class StreamingSpeechBuffer {
 		// the depth wrong and block TTS for the following text.
 		for (let i = 0; i < chunk.length; i++) {
 			const ch = chunk[i];
+			if (this.braceUnconfirmed && !/\s/.test(ch)) {
+				this.braceUnconfirmed = false;
+				if (ch !== '"' && ch !== "'") this.jsonDepth--;
+			}
 			if (this.jsonStringOpen) {
 				if (ch === '\\') i++;
 				else if (ch === '"') this.jsonStringOpen = false;
 			} else if (ch === '"') {
 				this.jsonStringOpen = true;
 			} else if (ch === '{') {
-				this.jsonDepth++;
+				// Only an opening brace followed by a quoted key starts a JSON
+				// block; nested braces inside one always count.
+				const next = /\S/.exec(chunk.slice(i + 1))?.[0];
+				if (this.jsonDepth > 0 || next === '"' || next === "'") {
+					this.jsonDepth++;
+				} else if (next === undefined) {
+					this.jsonDepth++;
+					this.braceUnconfirmed = true;
+				}
 			} else if (ch === '}') {
 				// Never go negative on a stray '}' (m1): an unmatched closing
 				// brace must not flip the depth into a blocking state.
@@ -168,9 +183,9 @@ export class StreamingSpeechBuffer {
 		// syntax is lowercase, while a capitalized word (German "Pause") is
 		// legitimate prose and must survive.
 		speakable = speakable.replace(/(?:^|[\s(>"'¿¡])(?:speak|pause|gesture)\s*$/, '');
-		// An unclosed "{" means an incomplete JSON block (e.g. a state block
-		// the stream ended inside) — never speakable prose.
-		if (speakable && !this.hasIncompleteMarkup(speakable) && !/\{[^{}]*$/.test(speakable)) {
+		// An unclosed "{" opening a key means an incomplete JSON block (e.g. a
+		// state block the stream ended inside), never speakable prose.
+		if (speakable && !this.hasIncompleteMarkup(speakable) && !/\{\s*(?:["'][^{}]*)?$/.test(speakable)) {
 			const { cleaned } = stripForSpeech(speakable);
 			// A fragment without any letter or digit (e.g. a bare "{" left
 			// over from a stripped fence label) is never speakable.
@@ -207,11 +222,12 @@ export class StreamingSpeechBuffer {
 		//   speak({"lang":"es","text":"Hallo
 		//   speak({"text":"Hallo","lang":"es"  (text closed, more keys follow)
 		const incompleteCallRe = /(?:speak|pause|gesture)\s*\(\s*\{[^{}]*"text"\s*:\s*"([^"]*)/;
+		// Prose before the call has not been spoken yet, so keep it.
 		const m = incompleteCallRe.exec(text);
-		if (m && m[1]) return m[1];
+		if (m && m[1]) return text.slice(0, m.index) + ' ' + m[1];
 		// Fallback: strip an incomplete call opener that has no text value yet.
-		const noText = /(?:speak|pause|gesture)\s*\(\s*\{[^{}]*$/;
-		if (noText.test(text)) return '';
+		const noText = /(?:speak|pause|gesture)\s*\(\s*\{[^{}]*$/.exec(text);
+		if (noText) return text.slice(0, noText.index);
 		// A bare call name at end-of-stream is an aborted call opener (the
 		// paren never arrived), not legitimate prose — drop it but keep any
 		// prose before it.
@@ -223,6 +239,7 @@ export class StreamingSpeechBuffer {
 		this.emittedLength = 0;
 		this.jsonDepth = 0;
 		this.jsonStringOpen = false;
+		this.braceUnconfirmed = false;
 		this.clearFlushTimer();
 	}
 
@@ -338,7 +355,9 @@ export class StreamingSpeechBuffer {
 		}
 
 		// Emit up to the first sentence boundary so TTS can start immediately.
-		const sentenceEnd = /([.!?…。！？])\s*/;
+		// A "." needs whitespace after it so "3.5", "0.21.2" and "utsuwa.ai"
+		// stay whole; a "." ending the buffer waits for the next chunk or flush.
+		const sentenceEnd = /[.!?…]*[!?…]\s*|\.+\s+|[。！？]\s*/;
 		const m = sentenceEnd.exec(text);
 		if (!m) return;
 

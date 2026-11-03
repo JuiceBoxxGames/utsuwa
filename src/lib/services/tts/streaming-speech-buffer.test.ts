@@ -15,14 +15,14 @@ function createBuffer() {
 
 test('emits a complete sentence immediately', () => {
 	const { buffer, segments } = createBuffer();
-	buffer.feed('Hello world.');
+	buffer.feed('Hello world. ');
 	assert.equal(segments.length, 1);
 	assert.equal(segments[0].text, 'Hello world.');
 });
 
 test('emits multiple sentences from one chunk', () => {
 	const { buffer, segments } = createBuffer();
-	buffer.feed('First sentence. Second sentence.');
+	buffer.feed('First sentence. Second sentence. ');
 	assert.equal(segments.length, 2);
 	assert.equal(segments[0].text, 'First sentence.');
 	assert.equal(segments[1].text, 'Second sentence.');
@@ -32,7 +32,7 @@ test('buffers partial sentences until a terminator arrives', () => {
 	const { buffer, segments } = createBuffer();
 	buffer.feed('Hello ');
 	assert.equal(segments.length, 0);
-	buffer.feed('world.');
+	buffer.feed('world. ');
 	assert.equal(segments.length, 1);
 	assert.equal(segments[0].text, 'Hello world.');
 });
@@ -48,7 +48,7 @@ test('flushes remaining text without a terminator', () => {
 
 test('splits at paragraph breaks', () => {
 	const { buffer, segments } = createBuffer();
-	buffer.feed('Paragraph one.\n\nParagraph two.');
+	buffer.feed('Paragraph one.\n\nParagraph two. ');
 	assert.equal(segments.length, 2);
 	assert.equal(segments[0].text, 'Paragraph one.');
 	assert.equal(segments[1].text, 'Paragraph two.');
@@ -59,7 +59,7 @@ test('does not emit while inside an open JSON block', () => {
 	buffer.feed('Hello. {"mood_change":');
 	assert.equal(segments.length, 1);
 	assert.equal(segments[0].text, 'Hello.');
-	buffer.feed('{"emotion":"happy"}} Goodbye.');
+	buffer.feed('{"emotion":"happy"}} Goodbye. ');
 	assert.equal(segments.length, 2);
 	assert.equal(segments[1].text, 'Goodbye.');
 });
@@ -71,7 +71,7 @@ test('ignores braces inside JSON string values when tracking depth', () => {
 	buffer.feed('Hi. {"mood_change":{"text":"{hel');
 	assert.equal(segments.length, 1);
 	assert.equal(segments[0].text, 'Hi.');
-	buffer.feed('lo}"}} Goodbye.');
+	buffer.feed('lo}"}} Goodbye. ');
 	assert.equal(segments.length, 2);
 	assert.equal(segments[1].text, 'Goodbye.');
 });
@@ -79,7 +79,7 @@ test('ignores braces inside JSON string values when tracking depth', () => {
 test('keeps string state across chunk boundaries', () => {
 	const { buffer, segments } = createBuffer();
 	buffer.feed('Hi. {"mood_change":{"note":"a {');
-	buffer.feed('b} c"}} Bye.');
+	buffer.feed('b} c"}} Bye. ');
 	assert.equal(segments.length, 2);
 	assert.equal(segments[1].text, 'Bye.');
 });
@@ -528,7 +528,7 @@ test('never speaks state fragments that reach the plaintext path with a sentence
 	// A fragment ending with a period would be emitted via the plaintext path;
 	// it must still be filtered.
 	const { buffer, segments } = createLanguageBuffer('de');
-	buffer.feed('"mood_change": {"emotion": "happy"}. Weiterer Text.');
+	buffer.feed('"mood_change": {"emotion": "happy"}. Weiterer Text. ');
 	assert.deepEqual(segments, [{ text: 'Weiterer Text.', language: 'de' }]);
 });
 
@@ -823,4 +823,108 @@ test('a repeated final flush never re-speaks a truncated call (#319)', () => {
 	buffer.flush();
 	buffer.flush();
 	assert.deepEqual(segments.map((s) => s.text), ['See you tomorrow']);
+});
+
+// --- prose that only looks like markup ---
+
+function spokenTexts(feeds: string[], defaultLanguage = 'en'): string[] {
+	const segments: { text: string; language?: string }[] = [];
+	const buffer = new StreamingSpeechBuffer({ defaultLanguage, onSegment: (seg) => segments.push(seg) });
+	for (const feed of feeds) buffer.feed(feed);
+	buffer.flush();
+	return segments.map((seg) => seg.text);
+}
+
+test('a lone < in prose does not silence the rest of the reply', () => {
+	assert.deepEqual(spokenTexts(['Sure. ', 'If x < 5 we stop. ', 'Otherwise we go on. ', 'Does that help?']), [
+		'Sure.',
+		'If x < 5 we stop.',
+		'Otherwise we go on.',
+		'Does that help?'
+	]);
+});
+
+test('a comparison with a word after < is still spoken', () => {
+	assert.deepEqual(spokenTexts(['Sure. ', 'If a < b we swap them. ', 'Done.']), [
+		'Sure.',
+		'If a < b we swap them.',
+		'Done.'
+	]);
+});
+
+test('angle-bracket sections streamed byte by byte never speak their brackets', () => {
+	const text = '< Hier ist die Konjugation. > < > < Aquí tienes la conjugación. >';
+	assert.deepEqual(spokenTexts([...text], 'de'), ['Hier ist die Konjugation.', 'Aquí tienes la conjugación.']);
+});
+
+test('a lone < is spoken as soon as its sentence ends', () => {
+	const segments: { text: string; language?: string }[] = [];
+	const buffer = new StreamingSpeechBuffer({ defaultLanguage: 'en', onSegment: (seg) => segments.push(seg) });
+	buffer.feed('If x < 5 then stop. Okay');
+	assert.deepEqual(segments.map((s) => s.text), ['If x < 5 then stop.']);
+	buffer.reset();
+});
+
+test('a partial tag name is still held until it completes', () => {
+	const segments: { text: string; language?: string }[] = [];
+	const buffer = new StreamingSpeechBuffer({ defaultLanguage: 'de', onSegment: (seg) => segments.push(seg) });
+	buffer.feed('Klar. <spe');
+	assert.ok(!segments.some((s) => s.text.includes('spe')), JSON.stringify(segments));
+	buffer.feed('ak text="Hola" lang="es"/>');
+	assert.deepEqual(segments, [
+		{ text: 'Klar.', language: 'de' },
+		{ text: 'Hola', language: 'es' }
+	]);
+});
+
+test('an unmatched { emoticon does not silence the rest of the reply', () => {
+	assert.deepEqual(spokenTexts(['Aww :-{ that is sad. ', 'But tomorrow is better. ', 'Promise!']), [
+		'Aww :-{ that is sad.',
+		'But tomorrow is better.',
+		'Promise!'
+	]);
+});
+
+test('an open JSON block split across chunks is still held', () => {
+	const segments: { text: string; language?: string }[] = [];
+	const buffer = new StreamingSpeechBuffer({ defaultLanguage: 'en', onSegment: (seg) => segments.push(seg) });
+	buffer.feed('Hi there. {');
+	buffer.feed('"mood_change": "happy. yes"');
+	assert.deepEqual(segments.map((s) => s.text), ['Hi there.']);
+	buffer.feed('} Bye now.');
+	buffer.flush();
+	assert.deepEqual(segments.map((s) => s.text), ['Hi there.', 'Bye now.']);
+});
+
+// --- sentence boundaries inside tokens ---
+
+test('does not split decimals, versions, domains or abbreviations', () => {
+	assert.deepEqual(spokenTexts(['The price is 3.5 dollars today.']), ['The price is 3.5 dollars today.']);
+	assert.deepEqual(spokenTexts(['The price is 3', '.5 dollars today.']), ['The price is 3.5 dollars today.']);
+	assert.deepEqual(spokenTexts(['Update to version 0.21.2 now.']), ['Update to version 0.21.2 now.']);
+	assert.deepEqual(spokenTexts(['Visit utsuwa.ai for details.']), ['Visit utsuwa.ai for details.']);
+	assert.deepEqual(spokenTexts(['Fruit, e.g. apples, is good.']), ['Fruit, e.g.', 'apples, is good.']);
+	assert.deepEqual(spokenTexts(['Well... maybe later.']), ['Well...', 'maybe later.']);
+});
+
+test('a terminator at the end of a chunk waits for the next chunk', () => {
+	const segments: { text: string; language?: string }[] = [];
+	const buffer = new StreamingSpeechBuffer({ defaultLanguage: 'en', onSegment: (seg) => segments.push(seg) });
+	buffer.feed('Version 0.');
+	assert.equal(segments.length, 0);
+	buffer.feed('21 is out. Next');
+	assert.deepEqual(segments.map((s) => s.text), ['Version 0.21 is out.']);
+	buffer.reset();
+});
+
+// --- prose before a truncated call ---
+
+test('keeps prose before a speak call truncated at end of stream', () => {
+	assert.deepEqual(spokenTexts(['Hello there, nice to', ' see you. speak({"text":"Wie geht']), [
+		'Hello there, nice to see you.',
+		'Wie geht'
+	]);
+	assert.deepEqual(spokenTexts(['Hello there, nice to', ' see you. speak({"lang":"de",']), [
+		'Hello there, nice to see you.'
+	]);
 });

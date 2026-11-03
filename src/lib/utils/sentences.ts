@@ -46,7 +46,8 @@ export function stripSpeechArtifacts(text: string): { cleaned: string; removed: 
 	cleaned = cleaned.replace(/[→←↑↓⇒⇐⇑⇓]/g, ' ');
 
 	// Ensure a space after sentence/clause punctuation when followed by a letter.
-	cleaned = cleaned.replace(/([.,;:!?])([a-zA-ZäöüÄÖÜß])/g, '$1 $2');
+	// After "." only before a capital, so "utsuwa.ai" and "e.g." stay whole.
+	cleaned = cleaned.replace(/([,;:!?])([a-zA-ZäöüÄÖÜß])/g, '$1 $2').replace(/\.([A-ZÄÖÜ])/g, '. $1');
 
 	// Collapse whitespace runs (fence removal leaves newline gaps) but keep
 	// leading/trailing whitespace for streaming.
