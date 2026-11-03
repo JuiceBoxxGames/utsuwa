@@ -50,6 +50,9 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 	const { userMessage, companionResponse, llm, systemEvent = false, debug = false } = input;
 
 	const state = characterStore.state;
+	// applyUpdates stamps lastInteraction with now, so absence-based events need
+	// the gap as it was when this message arrived.
+	const previousInteraction = state.lastInteraction;
 	// System events (e.g. fired reminders) must not trigger sentiment heuristics,
 	// baseline stat updates, streak/interaction counting or fact extraction from
 	// the trigger text.
@@ -188,7 +191,8 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 			}
 
 			if (!triggeredEvent) {
-				const triggeredEvents = checkAllEvents(allEvents, characterStore.state, completedEvents, userMessage);
+				const eventState = { ...characterStore.state, lastInteraction: previousInteraction };
+				const triggeredEvents = checkAllEvents(allEvents, eventState, completedEvents, userMessage);
 				if (triggeredEvents.length > 0) {
 					triggeredEvent = triggeredEvents[0];
 				}
