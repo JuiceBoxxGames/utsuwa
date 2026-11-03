@@ -23,9 +23,14 @@
 	$effect(() => {
 		if (page.isDatingSimMode) getCompletedEvents().then(records => { page.completedEventRecords = records; });
 	});
-	$effect(() => {
-		if (characterStore.isReady) { page.formName = personaStore.name; page.formSystemPrompt = personaStore.systemPrompt; page.formCustomSystemPrompt = personaStore.activeCard.customSystemPrompt ?? ''; }
-	});
+	// Every turn replaces characterStore.state, so sync each field only when its
+	// saved value changes. Otherwise a half-typed edit gets wiped before blur saves it.
+	const savedName = $derived(personaStore.name);
+	const savedSystemPrompt = $derived(personaStore.systemPrompt);
+	const savedCustomSystemPrompt = $derived(personaStore.activeCard.customSystemPrompt ?? '');
+	$effect(() => { if (characterStore.isReady) page.formName = savedName; });
+	$effect(() => { if (characterStore.isReady) page.formSystemPrompt = savedSystemPrompt; });
+	$effect(() => { if (characterStore.isReady) page.formCustomSystemPrompt = savedCustomSystemPrompt; });
 	let customPromptField = $state<HTMLTextAreaElement>();
 	function startFromDefault() {
 		page.formCustomSystemPrompt = page.defaultRules;

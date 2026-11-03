@@ -146,6 +146,7 @@ function createVrmGalleryStore() {
 	}
 
 	async function initFromStorage() {
+		const previousUrls = models.map((m) => m.url);
 		try {
 			// Load saved models list
 			const savedModels = await vrmStorage?.getItem<VrmModel[]>('model-list');
@@ -196,6 +197,12 @@ function createVrmGalleryStore() {
 			} else {
 				activeModelId = DEFAULT_MODELS[0].id;
 				modelUrl = DEFAULT_MODELS[0].url;
+			}
+
+			// A re-init (syncActiveModel) rebuilt every blob URL; free the old ones
+			// now that modelUrl points at the new list
+			for (const url of previousUrls) {
+				if (url.startsWith('blob:') && !models.some((m) => m.url === url)) URL.revokeObjectURL(url);
 			}
 		} catch (e) {
 			console.error('Failed to load VRM storage:', e);
