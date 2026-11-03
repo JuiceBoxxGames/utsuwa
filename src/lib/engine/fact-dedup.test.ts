@@ -5,6 +5,8 @@ import {
 	cosineSimilarity,
 	normalizeFactContent,
 	findDuplicateFact,
+	duplicateFactUpdate,
+	HEURISTIC_FACT_SOURCE,
 	FACT_DUPLICATE_SIMILARITY
 } from './fact-dedup.ts';
 
@@ -111,4 +113,57 @@ test('acceptance: 50 same-topic writes leave no near-duplicate pair in the table
 			);
 		}
 	}
+});
+
+test('duplicateFactUpdate: a semantic match takes the newer wording', () => {
+	const now = new Date('2026-11-03T12:00:00Z');
+	const existing = {
+		content: 'User is 25 years old',
+		importance: 70,
+		confidence: 0.8,
+		source: 'conversation',
+		referenceCount: 2,
+		embedding: [1, 0]
+	};
+	const patch = duplicateFactUpdate(
+		existing,
+		{ content: 'User is 26 years old', importance: 50, confidence: 1, source: 'manual' },
+		[0.99, 0.1],
+		'model-x',
+		now
+	);
+	assert.deepEqual(patch, {
+		referenceCount: 3,
+		importance: 70,
+		lastAccessed: now,
+		content: 'User is 26 years old',
+		confidence: 1,
+		source: 'manual',
+		embedding: [0.99, 0.1],
+		embeddingModel: 'model-x'
+	});
+});
+
+test('duplicateFactUpdate: an exact match only bumps the reference', () => {
+	const now = new Date('2026-11-03T12:00:00Z');
+	const patch = duplicateFactUpdate(
+		{ content: 'User loves coffee', importance: 40, confidence: 1, source: 'manual', referenceCount: 0 },
+		{ content: '  user LOVES coffee ', importance: 60 },
+		[1, 0],
+		'model-x',
+		now
+	);
+	assert.deepEqual(patch, { referenceCount: 1, importance: 60, lastAccessed: now });
+});
+
+test('duplicateFactUpdate: a heuristic fragment never replaces existing wording', () => {
+	const now = new Date('2026-11-03T12:00:00Z');
+	const patch = duplicateFactUpdate(
+		{ content: 'User is a nurse who works night shifts', importance: 50, referenceCount: 0 },
+		{ content: 'User: a nurse who works night shifts', source: HEURISTIC_FACT_SOURCE },
+		[1, 0],
+		'model-x',
+		now
+	);
+	assert.deepEqual(patch, { referenceCount: 1, importance: 50, lastAccessed: now });
 });

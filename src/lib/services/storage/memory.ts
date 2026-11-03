@@ -1,7 +1,7 @@
 import { db, type DBFact, type DBSessionSummary, type DBConversationTurn } from '$lib/db';
 import type { Fact, SessionSummary, ConversationTurn, MemorySearchOptions, NewFact } from '$lib/types/memory';
 import { embedText, isEmbeddingReady } from '$lib/services/embeddings';
-import { findDuplicateFact } from '$lib/engine/fact-dedup';
+import { duplicateFactUpdate, findDuplicateFact } from '$lib/engine/fact-dedup';
 import { EMBEDDING_MODEL_ID, hasCurrentEmbedding, needsReembedding } from '$lib/engine/embedding-version';
 import { chatHintStore } from '$lib/stores/chat-hint.svelte';
 
@@ -72,7 +72,7 @@ export async function saveFact(fact: NewFact): Promise<number> {
 	// retrieval. Exact normalized matches are caught always; with embeddings
 	// available, near-paraphrases of the same memory are merged too. On a match,
 	// bump the existing fact's reference count and importance instead of adding
-	// a near-duplicate row. Stale-model embeddings are hidden from the semantic
+	// a near-duplicate row; a near-paraphrase also replaces the old wording. Stale-model embeddings are hidden from the semantic
 	// comparison (different space, meaningless cosine); those facts can still
 	// match by content.
 	const candidates = (await db.facts.where('category').equals(fact.category).toArray()).map(
@@ -81,11 +81,10 @@ export async function saveFact(fact: NewFact): Promise<number> {
 	const existing = findDuplicateFact({ content: fact.content, embedding }, candidates);
 	if (existing?.id !== undefined) {
 		await hintOnQuota(
-			db.facts.update(existing.id, {
-				referenceCount: existing.referenceCount + 1,
-				importance: Math.min(100, Math.max(existing.importance, fact.importance ?? 50)),
-				lastAccessed: now
-			})
+			db.facts.update(
+				existing.id,
+				duplicateFactUpdate(existing, fact, embedding, EMBEDDING_MODEL_ID, now)
+			)
 		);
 		return existing.id;
 	}
