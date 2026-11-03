@@ -74,6 +74,7 @@ interface MergeableFact {
 	content: string;
 	importance: number;
 	referenceCount: number;
+	source?: string;
 }
 
 interface IncomingFact {
@@ -113,7 +114,7 @@ export function duplicateFactUpdate(
 		...bump,
 		content: incoming.content,
 		confidence: incoming.confidence ?? 0.8,
-		source: incoming.source,
+		source: incoming.source ?? existing.source,
 		embedding,
 		embeddingModel: embedding ? embeddingModel : undefined
 	};

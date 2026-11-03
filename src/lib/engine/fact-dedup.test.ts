@@ -167,3 +167,14 @@ test('duplicateFactUpdate: a heuristic fragment never replaces existing wording'
 	);
 	assert.deepEqual(patch, { referenceCount: 1, importance: 50, lastAccessed: now });
 });
+
+test('duplicateFactUpdate: a replacement without a source keeps the old one', () => {
+	const patch = duplicateFactUpdate(
+		{ content: 'User lives in Tokyo', importance: 50, referenceCount: 0, source: 'manual' },
+		{ content: 'User lives in Osaka' },
+		[1, 0],
+		'model-x',
+		new Date()
+	);
+	assert.equal('source' in patch && patch.source, 'manual');
+});

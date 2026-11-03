@@ -72,7 +72,8 @@ export async function saveFact(fact: NewFact): Promise<number> {
 	// retrieval. Exact normalized matches are caught always; with embeddings
 	// available, near-paraphrases of the same memory are merged too. On a match,
 	// bump the existing fact's reference count and importance instead of adding
-	// a near-duplicate row; a near-paraphrase also replaces the old wording. Stale-model embeddings are hidden from the semantic
+	// a near-duplicate row; a near-paraphrase also replaces the old wording.
+	// Stale-model embeddings are hidden from the semantic
 	// comparison (different space, meaningless cosine); those facts can still
 	// match by content.
 	const candidates = (await db.facts.where('category').equals(fact.category).toArray()).map(
