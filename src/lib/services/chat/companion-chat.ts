@@ -186,6 +186,9 @@ export async function sendCompanionMessage(
 	let streamingTTS = false;
 	// The finished reply, so a Stop during post-processing can still tidy the bubble.
 	let finishedReply: string | undefined;
+	// The last "retrying" toast, cleared when the turn settles so it can't
+	// linger next to the reply or the final error.
+	let retryHint: string | null = null;
 
 	// Only touch relationship-time state once the character has loaded, or an
 	// early message would mutate the default state that load then discards.
@@ -278,7 +281,8 @@ export async function sendCompanionMessage(
 		const onRetry = (attempt: number, delayMs: number) => {
 			bumpStall();
 			const wait = delayMs >= 1000 ? ` in ${Math.round(delayMs / 1000)}s` : '';
-			chatHintStore.showHint(`The model is busy, retrying${wait} (${attempt}/${RETRY_DELAYS_MS.length})`);
+			retryHint = `The model is busy, retrying${wait} (${attempt}/${RETRY_DELAYS_MS.length})`;
+			chatHintStore.showHint(retryHint);
 		};
 
 		const onDelta = (roundFull: string) => {
@@ -461,6 +465,7 @@ export async function sendCompanionMessage(
 		hooks.setTyping(false);
 		vrmStore.setThinking(false);
 	} finally {
+		if (retryHint && chatHintStore.hint === retryHint) chatHintStore.clearHint();
 		guard.dispose();
 		chatStore.setLoading(false);
 	}

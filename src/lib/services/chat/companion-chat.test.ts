@@ -70,7 +70,11 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			cancelStreaming: () => { cancels++; buffer?.reset(); },
 			speak: (text: string) => { said.push(text); }
 		},
-		chatHintStore: { showHint: (hint: string) => { hints.push(hint); } },
+		chatHintStore: {
+			hint: null as string | null,
+			showHint(hint: string) { hints.push(hint); this.hint = hint; },
+			clearHint() { this.hint = null; }
+		},
 		chatDraftStore: {
 			draft: '',
 			pending: [] as unknown[],
@@ -912,6 +916,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		const resetTurn = () => {
 			messages.length = 0; spoken = []; turns.length = 0; thinking.length = 0;
 			hints.length = 0; said.length = 0; cancels = 0; chatStore.error = null;
+			fixtures.chatHintStore.hint = null;
 			fixtures.chatDraftStore.draft = ''; fixtures.chatDraftStore.pending.length = 0;
 		};
 
@@ -1015,6 +1020,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				assert.equal(latest, 'Sorry, I was busy.');
 				assert.equal(hints.length, 1);
 				assert.match(hints[0], /retrying/i);
+				assert.equal(fixtures.chatHintStore.hint, null, 'the retry toast clears once the reply lands');
 			});
 			await t.test(`${transport}: a rejected key fails once and the message bounces back to the composer`, { timeout: 5000 }, async (t) => {
 				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();

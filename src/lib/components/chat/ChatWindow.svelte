@@ -246,6 +246,8 @@
 		font-size: 0.875rem;
 		line-height: 1.6;
 		overflow-wrap: anywhere;
+		/* keep the reply's line breaks (lists, short paragraphs) */
+		white-space: pre-line;
 		user-select: text;
 		-webkit-user-select: text;
 	}
