@@ -31,7 +31,7 @@
 	} from '$lib/services/photo-capture';
 	import { drawSceneBackground } from '$lib/services/scene-backgrounds';
 	import { PHOTO_FILTERS } from '$lib/stores/photomode.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	// Floor tint per theme; the backdrop itself follows the page canvas token
 	const FLOOR_COLORS = { light: '#000000', dark: '#ffffff' };
@@ -69,7 +69,7 @@
 
 	const { camera, renderer, scene, size } = useThrelte();
 	const { isPresenting } = useXR();
-	let controls: OrbitControls | null = null;
+	let controls = $state.raw<OrbitControls | null>(null);
 	let modelRoot = $state<Group | undefined>();
 
 	// Dark mode detection
@@ -386,12 +386,15 @@
 		if (locked) return;
 
 		if (camera.current && renderer) {
-			controls = new OrbitControls(camera.current, renderer.domElement);
-			controls.screenSpacePanning = true;
-			applyCamera();
+			const orbit = new OrbitControls(camera.current, renderer.domElement);
+			orbit.screenSpacePanning = true;
+			controls = orbit;
+			// applyCamera reads controls; don't let this effect subscribe to its own write
+			untrack(applyCamera);
 
 			return () => {
-				controls?.dispose();
+				orbit.dispose();
+				controls = null;
 			};
 		}
 	});

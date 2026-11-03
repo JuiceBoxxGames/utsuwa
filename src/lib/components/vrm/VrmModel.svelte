@@ -377,11 +377,15 @@
 						if (thumbnailDataUrl) vrmGalleryStore.setModelPreview(loadModelId, thumbnailDataUrl);
 					} catch (e) {
 						console.error('Failed to extract thumbnail:', e);
-						setTimeout(() => generateThumbnail(loadModelId), 500);
+						setTimeout(() => {
+							if (!cancelled) generateThumbnail(loadModelId);
+						}, 500);
 					}
 				} else {
 					// No embedded thumbnail - generate one from the 3D render
-					setTimeout(() => generateThumbnail(loadModelId), 500);
+					setTimeout(() => {
+						if (!cancelled) generateThumbnail(loadModelId);
+					}, 500);
 				}
 			},
 			() => {},
