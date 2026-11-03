@@ -32,8 +32,45 @@ export function parseRetryAfter(value: string | null | undefined, now = Date.now
 	return Number.isNaN(at) ? undefined : Math.max(0, at - now);
 }
 
+const TRANSIENT_ERROR_TYPES = new Set(['overloaded_error', 'api_error', 'rate_limit_error', 'server_error']);
+
+/** An error a provider sent inside a 200 stream: Anthropic's error event, or an
+ *  OpenAI-style chunk with a top-level error (OpenRouter). Null for normal chunks. */
+export function streamPayloadError(payload: unknown): ProviderError | null {
+	const chunk = payload as { type?: unknown; error?: unknown } | null;
+	if (!chunk || typeof chunk !== 'object' || (chunk.type !== 'error' && !chunk.error)) return null;
+	const error = (typeof chunk.error === 'object' && chunk.error ? chunk.error : {}) as {
+		type?: unknown;
+		code?: unknown;
+		message?: unknown;
+	};
+	const message =
+		typeof error.message === 'string' && error.message
+			? error.message
+			: typeof chunk.error === 'string'
+				? chunk.error
+				: 'The provider returned an error';
+	const status = Number(error.code);
+	const transient =
+		TRANSIENT_ERROR_TYPES.has(String(error.type ?? error.code)) ||
+		(Number.isInteger(status) && isTransientStatus(status));
+	return new ProviderError(message, transient);
+}
+
+/** xsai throws `Error from server: <json>` when a stream chunk carries an error. */
+export function xsaiStreamError(err: unknown): ProviderError | null {
+	const match = err instanceof Error ? /^Error from server: (.*)$/s.exec(err.message) : null;
+	if (!match) return null;
+	try {
+		return streamPayloadError(JSON.parse(match[1]));
+	} catch {
+		return null;
+	}
+}
+
 /** Classify an error thrown by xsai or fetch on the server. */
 export function providerFailure(err: unknown): { transient: boolean; retryAfterMs?: number } {
+	if (err instanceof ProviderError) return { transient: err.transient, retryAfterMs: err.retryAfterMs };
 	const response = (err as { response?: Response } | null)?.response;
 	if (typeof response?.status === 'number') {
 		return {

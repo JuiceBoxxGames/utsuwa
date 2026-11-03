@@ -7,7 +7,9 @@ import {
 	parseRetryAfter,
 	providerFailure,
 	retryDelay,
-	withRetry
+	streamPayloadError,
+	withRetry,
+	xsaiStreamError
 } from './retry.ts';
 
 test('only rate limits, timeouts and server errors are transient', () => {
@@ -50,6 +52,25 @@ test('providerFailure reads status and Retry-After off an xsai error response', 
 	// fetch itself failing is a network blip; anything else is not ours to retry
 	assert.deepEqual(providerFailure(new TypeError('fetch failed')), { transient: true });
 	assert.deepEqual(providerFailure(new Error('Provider answered with a redirect')), { transient: false });
+});
+
+test('errors sent inside a stream are recognized and classified', () => {
+	assert.equal(streamPayloadError({ choices: [{ delta: { content: 'hi' } }] }), null);
+	assert.equal(streamPayloadError({ type: 'content_block_delta', delta: { text: 'hi' } }), null);
+	const overloaded = streamPayloadError({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } });
+	assert.equal(overloaded?.message, 'Overloaded');
+	assert.equal(overloaded?.transient, true);
+	assert.equal(streamPayloadError({ type: 'error', error: { type: 'invalid_request_error', message: 'Bad' } })?.transient, false);
+	assert.equal(streamPayloadError({ error: { code: 502, message: 'Provider returned error' } })?.transient, true);
+	assert.equal(streamPayloadError({ error: { code: 'server_error', message: 'Disconnected' } })?.transient, true);
+	assert.equal(streamPayloadError({ error: { code: 400, message: 'Too long' } })?.transient, false);
+	assert.equal(streamPayloadError({ error: 'Plain text' })?.message, 'Plain text');
+	// xsai wraps the raw chunk in its error message
+	const wrapped = xsaiStreamError(new Error('Error from server: {"error":{"code":429,"message":"Slow down"}}'));
+	assert.equal(wrapped?.message, 'Slow down');
+	assert.equal(wrapped?.transient, true);
+	assert.equal(xsaiStreamError(new Error('Remote sent 401 response')), null);
+	assert.deepEqual(providerFailure(wrapped), { transient: true, retryAfterMs: undefined });
 });
 
 test('withRetry retries transient failures, then gives up with the last error', async () => {

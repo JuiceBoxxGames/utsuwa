@@ -23,6 +23,7 @@ import { RETRY_DELAYS_MS } from '$lib/services/llm/retry';
 import { missingLLMMessage, resolveActiveLLM, resolveVisionLLM, visionModelEnabled } from '$lib/services/llm/active-llm';
 
 import { processCompanionTurn } from '$lib/services/chat/companion-turn';
+import { parseResponse } from '$lib/ai/response-parser';
 import { retrieveRelevantContext } from '$lib/engine/memory';
 import { buildSystemPrompt, buildMcpSecurityInstructions, truncateChatHistory, type PromptContext } from '$lib/ai/prompt-builder';
 import { keepImage, type PreparedImage } from '$lib/services/storage/keepsakes';
@@ -142,9 +143,17 @@ export async function sendCompanionMessage(
 	options: SendCompanionMessageOptions = {}
 ): Promise<void> {
 	const { systemEvent = false, stallTimeoutMs = 90_000, turnTimeoutMs = 600_000 } = options;
-	if ((!content.trim() && images.length === 0) || chatStore.isLoading) return;
+	if (!content.trim() && images.length === 0) return;
+
+	// A voice transcript can land while a reply (or a reminder turn) is still
+	// running; keep it in the composer instead of dropping it.
+	if (chatStore.isLoading) {
+		if (!systemEvent) returnToComposer(content, images);
+		return;
+	}
 
 	if (!modulesStore.isModuleEnabled('consciousness')) {
+		if (!systemEvent) returnToComposer(content, images);
 		chatStore.setError('Chat is disabled. Enable it in Settings > LLM Model.');
 		return;
 	}
@@ -175,6 +184,8 @@ export async function sendCompanionMessage(
 	// Tracks whether an OmniVoice streaming TTS session was started for this
 	// turn. Declared here so the error path can cancel it.
 	let streamingTTS = false;
+	// The finished reply, so a Stop during post-processing can still tidy the bubble.
+	let finishedReply: string | undefined;
 
 	// Only touch relationship-time state once the character has loaded, or an
 	// early message would mutate the default state that load then discards.
@@ -295,6 +306,7 @@ export async function sendCompanionMessage(
 		);
 
 		const maxRounds = useMcpLoop ? MCP_MAX_ROUNDS : 1;
+		let sawToolCall = false;
 
 		for (let round = 0; round < maxRounds; round++) {
 			stream.startRound();
@@ -319,6 +331,7 @@ export async function sendCompanionMessage(
 			const onToolCall = (name: string, args: Record<string, unknown>, id?: string) => {
 				if (signal.aborted) return;
 				bumpStall();
+				sawToolCall = true;
 				roundCalls.push({ id: id ?? `call_${round}_${roundCalls.length}`, name, args });
 				// An MCP tool that happens to be named like a speech tool must not
 				// be treated as one.
@@ -363,7 +376,7 @@ export async function sendCompanionMessage(
 			// allSettled: one unexpected failure must not abort the whole turn —
 			// the model gets an error result and can still answer.
 			const settled = await untilAborted(Promise.allSettled(
-				run.map((call) => runToolCall(call, mcpTools, mcpToolNames, confirmToolNames))
+				run.map((call) => runToolCall(call, mcpTools, mcpToolNames, confirmToolNames, signal))
 			));
 			messages.push(...buildToolResultMessages(collectToolResults(settled, run, skipped)));
 		}
@@ -371,6 +384,11 @@ export async function sendCompanionMessage(
 		// Native dialogue is kept in the saved response here, not replayed
 		// through onDelta, which would synthesize the native calls a second time.
 		const fullContent = stream.content;
+		// Nothing came back (or only thinking): an in-stream failure some provider
+		// didn't label. Don't save or speak a stand-in reply.
+		if (!sawToolCall && !stripThinkingBlocks(fullContent).trim()) {
+			throw new Error('The model sent an empty reply. Try again.');
+		}
 
 		hooks.setTyping(false);
 		vrmStore.setThinking(false);
@@ -392,6 +410,7 @@ export async function sendCompanionMessage(
 			displayTtsProvider === 'omnivoice'
 				? cleanSpeechMarkers(fullContent, { keepStateFences: true })
 				: fullContent;
+		finishedReply = cleanedCompanionResponse;
 
 		const turn = await untilAborted(processCompanionTurn({
 			userMessage: content,
@@ -430,6 +449,10 @@ export async function sendCompanionMessage(
 	} catch (err) {
 		if (streamingTTS) ttsStore.cancelStreaming();
 		if (signal.aborted) {
+			if (finishedReply !== undefined) {
+				const { cleanedText } = extractReminderTags(finishedReply);
+				chatStore.updateLastMessage(parseResponse(cleanedText, characterStore.state.name).dialogue);
+			}
 			chatHintStore.showHint(signal.reason instanceof Error ? signal.reason.message : 'Stopped');
 		} else {
 			chatStore.setError(err instanceof Error ? err.message : 'Unknown error');
@@ -515,7 +538,8 @@ async function runToolCall(
 	call: McpCollectedToolCall,
 	mcpTools: McpTool[],
 	mcpToolNames: Set<string>,
-	confirmToolNames: Set<string>
+	confirmToolNames: Set<string>,
+	signal: AbortSignal
 ): Promise<ToolResultEntry> {
 	if (!mcpToolNames.has(call.name)) {
 		// Speech tools (speak/pause/gesture) are acknowledged; a
@@ -542,7 +566,7 @@ async function runToolCall(
 	}
 	if (
 		server.askBeforeRun !== false &&
-		!(await mcpStore.confirmToolCall({ serverName: server.name, toolName: call.name, args: call.args }))
+		!(await mcpStore.confirmToolCall({ serverName: server.name, toolName: call.name, args: call.args }, signal))
 	) {
 		return {
 			call,
@@ -592,6 +616,11 @@ function bounceBack(sent: Message, images: PreparedImage[]) {
 	if (!unanswered || chatDraftStore.draft.trim() || chatDraftStore.pending.length) return;
 	chatStore.removeMessage(sent.id);
 	chatDraftStore.draft = sent.content;
+	for (const image of images) chatDraftStore.addPending(image, URL.createObjectURL(image.blob));
+}
+
+function returnToComposer(content: string, images: PreparedImage[]) {
+	chatDraftStore.draft = [chatDraftStore.draft.trim(), content.trim()].filter(Boolean).join(' ');
 	for (const image of images) chatDraftStore.addPending(image, URL.createObjectURL(image.blob));
 }
 
