@@ -471,18 +471,23 @@ export class VoiceOrchestrator {
 	}
 
 	private async runPipeline(callbacks?: OrchestratorCallbacks): Promise<void> {
+		// Pin this runner to its own session. After interrupt() + beginSession()
+		// the fields point at the next session, which a stale runner must not
+		// pull from or resolve.
+		const channel = this.channel;
+		const abort = this.pipelineAbort;
 		this.isPlaying = true;
 		const provider = this.sessionOptions ? getTTSProvider(this.sessionOptions) : null;
 		const clientSideSpeed = provider?.capabilities?.clientSideSpeed ?? false;
 
 		try {
 			while (true) {
-				if (this.pipelineAbort?.signal.aborted) break;
+				if (abort?.signal.aborted) break;
 
-				const item = await (this.channel?.next() ?? Promise.resolve(null));
+				const item = await (channel?.next() ?? Promise.resolve(null));
 				if (item === null) break; // channel closed (endSession called)
 
-				if (this.pipelineAbort?.signal.aborted) break;
+				if (abort?.signal.aborted) break;
 
 				// Streaming path: synthesis and playback happen together
 				if (item.streamPlay) {
@@ -495,7 +500,7 @@ export class VoiceOrchestrator {
 				try {
 					buffer = await item.bufferPromise!;
 				} catch (err) {
-					if ((err as Error).name === 'AbortError') break;
+					if ((err as Error).name === 'AbortError' || abort?.signal.aborted) break;
 					console.error(
 						'[VoiceOrchestrator] Synthesis failed for segment:',
 						item.segment.text,
@@ -507,7 +512,7 @@ export class VoiceOrchestrator {
 					continue;
 				}
 
-				if (!buffer || this.pipelineAbort?.signal.aborted) continue;
+				if (!buffer || abort?.signal.aborted) continue;
 
 				// Near-empty audio (OmniVoice returns a few samples for very short
 				// inputs) would play as a click; skip it silently.
@@ -521,18 +526,21 @@ export class VoiceOrchestrator {
 				await this.playBuffer(buffer, item.segment, item.index, callbacks, playbackRate);
 			}
 		} finally {
-			this.isPlaying = false;
-			this.currentSource = null;
-			this.currentAnalyser = null;
 			callbacks?.onEmotionChange?.(null);
 			callbacks?.onComplete?.();
-			const firstError = this.pipelineErrors[0];
-			if (firstError !== undefined && !this.pipelineAbort?.signal.aborted) {
-				this.rejectPipeline(
-					firstError instanceof Error ? firstError : new Error(String(firstError))
-				);
-			} else {
-				this.resolvePipeline();
+			// interrupt() already settled this session; a newer one is not ours.
+			if (this.pipelineAbort === abort) {
+				this.isPlaying = false;
+				this.currentSource = null;
+				this.currentAnalyser = null;
+				const firstError = this.pipelineErrors[0];
+				if (firstError !== undefined && !abort?.signal.aborted) {
+					this.rejectPipeline(
+						firstError instanceof Error ? firstError : new Error(String(firstError))
+					);
+				} else {
+					this.resolvePipeline();
+				}
 			}
 		}
 	}

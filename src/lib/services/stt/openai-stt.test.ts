@@ -7,6 +7,7 @@ import {
 	resolveSttTimeoutMs,
 	sttTimeoutMessage,
 	DEFAULT_STT_TIMEOUT_MS,
+	openAiSttService,
 	type OpenAiSttConfig
 } from './openai-stt.ts';
 
@@ -100,4 +101,89 @@ test('encodeWav concatenates chunks and clamps samples to the 16-bit range', asy
 	const view = new DataView(await blob.arrayBuffer());
 	const samples = [0, 1, 2, 3, 4].map((i) => view.getInt16(44 + i * 2, true));
 	assert.deepEqual(samples, [32767, -32768, 32767, -32768, 0]);
+});
+
+// --- start races: getUserMedia resolves after the user already let go ---
+
+function mockSlowMic() {
+	const live = new Set<number>();
+	let opened = 0;
+	const g = globalThis as Record<string, unknown>;
+	Object.defineProperty(globalThis, 'navigator', {
+		configurable: true,
+		value: {
+			mediaDevices: {
+				getUserMedia: () =>
+					new Promise((resolve) =>
+						setTimeout(() => {
+							const id = ++opened;
+							live.add(id);
+							resolve({ getTracks: () => [{ stop: () => live.delete(id), onended: null }] });
+						}, 10)
+					)
+			}
+		}
+	});
+	g.AudioContext = class {
+		createMediaStreamSource() {
+			return { connect() {} };
+		}
+		createAnalyser() {
+			return { connect() {}, frequencyBinCount: 8 };
+		}
+		close() {}
+	};
+	g.requestAnimationFrame = () => 0;
+	g.cancelAnimationFrame = () => {};
+	g.MediaRecorder = class {
+		static isTypeSupported(type: string) {
+			return type === 'audio/webm';
+		}
+		state = 'inactive';
+		mimeType = 'audio/webm';
+		onstop: (() => void) | null = null;
+		ondataavailable: unknown = null;
+		start() {
+			this.state = 'recording';
+		}
+		stop() {
+			this.state = 'inactive';
+			setTimeout(() => this.onstop?.(), 0);
+		}
+	};
+	return { live, opened: () => opened };
+}
+
+const callbacks = { onResult() {}, onEnd() {}, onError() {} };
+const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
+
+test('a stop during mic startup stops recording once the mic opens', async () => {
+	const mic = mockSlowMic();
+	openAiSttService.configure({ baseUrl: 'http://x/v1', model: 'm', label: 'x' });
+	const started = openAiSttService.startListening(callbacks);
+	openAiSttService.stopListening();
+	await started;
+	await tick();
+	assert.equal(openAiSttService.getIsListening(), false);
+	assert.deepEqual([...mic.live], []);
+	openAiSttService.abort();
+});
+
+test('a second start during mic startup opens only one stream', async () => {
+	const mic = mockSlowMic();
+	openAiSttService.configure({ baseUrl: 'http://x/v1', model: 'm', label: 'x' });
+	await Promise.all([openAiSttService.startListening(callbacks), openAiSttService.startListening(callbacks)]);
+	assert.equal(mic.opened(), 1);
+	openAiSttService.abort();
+	assert.deepEqual([...mic.live], []);
+});
+
+test('an abort during mic startup releases the mic once it opens', async () => {
+	const mic = mockSlowMic();
+	openAiSttService.configure({ baseUrl: 'http://x/v1', model: 'm', label: 'x' });
+	const started = openAiSttService.startListening(callbacks);
+	openAiSttService.abort();
+	assert.equal(await started, false);
+	assert.equal(openAiSttService.getIsListening(), false);
+	assert.deepEqual([...mic.live], []);
 });

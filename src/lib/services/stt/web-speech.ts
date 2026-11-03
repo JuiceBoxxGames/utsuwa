@@ -83,7 +83,7 @@ class WebSpeechService {
 
 		this.recognition.continuous = true;
 		this.recognition.interimResults = true;
-		this.recognition.lang = 'en-US';
+		this.recognition.lang = navigator.language || 'en-US';
 		this.recognition.maxAlternatives = 1;
 
 		this.recognition.onstart = () => {

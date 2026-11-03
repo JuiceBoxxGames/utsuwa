@@ -108,3 +108,9 @@ test('strips fenced JSON blocks even when they are not state updates', () => {
 	const { cleaned } = stripForSpeech(text);
 	assert.equal(cleaned, 'Here is the config: done.');
 });
+
+test('keeps domains and abbreviations whole but still spaces run-on sentences', () => {
+	assert.equal(stripForSpeech('Visit utsuwa.ai or example.com now').cleaned, 'Visit utsuwa.ai or example.com now');
+	assert.equal(stripForSpeech('Fruit, e.g. apples').cleaned, 'Fruit, e.g. apples');
+	assert.equal(stripForSpeech('Hello.How are you?Fine,thanks').cleaned, 'Hello. How are you? Fine, thanks');
+});

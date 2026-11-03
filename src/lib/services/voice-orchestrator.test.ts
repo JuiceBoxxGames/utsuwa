@@ -206,6 +206,60 @@ test('interrupt stops playback and onComplete fires', async () => {
 	assert.equal(orchestrator.getIsPlaying(), false);
 });
 
+test('a session started after interrupt is never played by the old runner', async () => {
+	globalThis.fetch = () => mockFetchResponse();
+	const orchestrator = new VoiceOrchestrator();
+	const seenBy: string[] = [];
+
+	await orchestrator.beginSession(baseOptions, { onSegmentStart: (s) => seenBy.push(`A:${s.text}`) });
+	orchestrator.pushSegment({ text: 'Old reply.' });
+	orchestrator.interrupt();
+	await orchestrator.beginSession(baseOptions, { onSegmentStart: (s) => seenBy.push(`B:${s.text}`) });
+	for (const text of ['New one.', 'New two.', 'New three.', 'New four.']) {
+		orchestrator.pushSegment({ text });
+		await new Promise((resolve) => setTimeout(resolve, 5));
+	}
+	await orchestrator.endSession();
+
+	assert.deepEqual(
+		seenBy.filter((entry) => entry.includes('New')),
+		['B:New one.', 'B:New two.', 'B:New three.', 'B:New four.']
+	);
+});
+
+test('the old runner does not resolve the next session early', async () => {
+	globalThis.fetch = () => mockFetchResponse();
+	const orchestrator = new VoiceOrchestrator();
+	let started = false;
+
+	await orchestrator.beginSession(baseOptions);
+	orchestrator.interrupt();
+	await orchestrator.beginSession(baseOptions, { onSegmentStart: () => (started = true) });
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	orchestrator.pushSegment({ text: 'Hello there.' });
+	await orchestrator.endSession();
+
+	assert.equal(started, true, 'endSession resolved before the segment played');
+});
+
+test('interrupt during endSession settles it and stops playback', async () => {
+	globalThis.fetch = () => mockFetchResponse();
+	const orchestrator = new VoiceOrchestrator();
+	const started: string[] = [];
+
+	await orchestrator.beginSession(baseOptions, { onSegmentStart: (s) => started.push(s.text) });
+	orchestrator.pushSegment({ text: 'First.' });
+	orchestrator.pushSegment({ text: 'Second.' });
+	orchestrator.pushSegment({ text: 'Third.' });
+	const done = orchestrator.endSession();
+	orchestrator.interrupt();
+	await done;
+	await new Promise((resolve) => setTimeout(resolve, 20));
+
+	assert.ok(started.length < 3, `kept playing after interrupt: ${JSON.stringify(started)}`);
+	assert.equal(orchestrator.getIsPlaying(), false);
+});
+
 // --- alt-voice language selection ------------------------------------------
 // The companion pipeline must not invent a session language. When it is unset
 // the orchestrator infers the primary language from the first segment; pinning

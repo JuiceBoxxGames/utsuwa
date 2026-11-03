@@ -649,20 +649,32 @@ export interface TagOpener {
 	tag: string;
 }
 
+const TAG_NAMES = ['speak', 'gesture', 'pause'];
+
 /**
  * Find the last `<`-opener that could be the start of an unfinished tag:
- * a `<` followed by a letter, a space, or the end of the text. `<3` (digit)
- * and standalone comparisons like `a < b` mid-text are excluded when a letter
- * follows, but a trailing `< ` is held back until more of the tag arrives.
+ * a `<` followed by a speak/gesture/pause name, a prefix of one still
+ * streaming ("<spe"), or nothing yet (a trailing `<` or `< `). Spaced
+ * `< Text >` section markers count too. `<3`, `x < 5`, `a < b` and `<space>`
+ * are prose, not tags.
  */
 export function findLastTagOpener(text: string): TagOpener | null {
 	for (let i = text.length - 1; i >= 0; i--) {
 		if (text[i] !== '<') continue;
 		const next = text[i + 1];
-		if (next === undefined || next === ' ' || /[a-z]/i.test(next)) {
-			const letters = (text.slice(i + 1).match(/[a-zA-Z]*/) ?? [''])[0];
-			return { index: i, tag: '<' + letters };
-		}
+		if (next !== undefined && next !== ' ' && !/[a-z]/i.test(next)) continue;
+		const rest = text.slice(i + 1).trimStart();
+		const name = (rest.match(/^[a-zA-Z]*/) ?? [''])[0].toLowerCase();
+		const couldBeTag =
+			name === rest
+				? TAG_NAMES.some((tag) => tag.startsWith(name))
+				: TAG_NAMES.some((tag) => name.startsWith(tag));
+		// "< Text >" section markers open a section instead of comparing two things
+		const opensSection =
+			/^\s+\p{L}/u.test(text.slice(i + 1)) && /(?:^|[>.!?…。！？])$/.test(text.slice(0, i).trimEnd());
+		if (!couldBeTag && !opensSection) continue;
+		const letters = (text.slice(i + 1).match(/[a-zA-Z]*/) ?? [''])[0];
+		return { index: i, tag: '<' + letters };
 	}
 	return null;
 }
