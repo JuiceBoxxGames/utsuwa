@@ -16,9 +16,11 @@ import type { SpeechSettings } from '$lib/services/modules/settings';
  */
 export function selectDefaultModel(
 	models: ModelInfo[],
-	currentModel: string | undefined
+	currentModel: string | undefined,
+	// Custom endpoints accept names their list doesn't show (llama3.2 for llama3.2:latest)
+	keepUnlisted = false
 ): string | undefined {
-	if (!models.length) return currentModel;
+	if (!models.length || (keepUnlisted && currentModel)) return currentModel;
 	const modelExists = currentModel && models.some((m) => m.id === currentModel);
 	return modelExists ? currentModel : models[0].id;
 }

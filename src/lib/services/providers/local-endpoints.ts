@@ -17,6 +17,18 @@ export function ensureOpenAIPath(url: string): string {
 	return cleanUrl.endsWith('/v1') ? cleanUrl : `${cleanUrl}/v1`;
 }
 
+// Custom OpenAI-compatible endpoints often carry their own version path
+// (/api/paas/v4, /v1beta/openai, /inference), so only a bare host gets /v1.
+export function ensureCustomOpenAIPath(url: string): string {
+	const cleanUrl = trimTrailingSlashes(url);
+	try {
+		if (new URL(cleanUrl).pathname !== '/') return cleanUrl;
+	} catch {
+		return cleanUrl;
+	}
+	return `${cleanUrl}/v1`;
+}
+
 // A default local Ollama reached through the OpenAI-compatible provider: its
 // model list lives at /api/tags instead of /v1/models. Shared so the web and
 // desktop discovery paths can't drift.

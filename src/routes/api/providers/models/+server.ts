@@ -2,7 +2,7 @@ import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 import type { LLMProvider } from '$lib/types';
 import {
-	ensureOpenAIPath,
+	ensureCustomOpenAIPath,
 	getModelsBaseUrl,
 	isLocalLLMProvider,
 	looksLikeOllama
@@ -238,9 +238,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			case 'openai-compatible': {
 				// OpenAI-compatible endpoints may or may not require an API key.
 				if (looksLikeOllama(cleanBaseUrl)) {
-					models = await fetchOllamaModels(get);
+					// Its documented OpenAI base ends in /v1; the native API sits beside it
+					models = await fetchOllamaModels(at(getModelsBaseUrl('ollama', cleanBaseUrl)));
 				} else {
-					models = await fetchOpenAIModels(at(ensureOpenAIPath(cleanBaseUrl)), apiKey);
+					models = await fetchOpenAIModels(at(ensureCustomOpenAIPath(cleanBaseUrl)), apiKey);
 				}
 				break;
 			}

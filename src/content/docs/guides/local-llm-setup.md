@@ -156,7 +156,7 @@ Ollama and LM Studio are always called straight from your browser or the desktop
 
 ### Other OpenAI-compatible servers
 
-For servers like vLLM or llama.cpp's server, pick **OpenAI-Compatible** as the provider and enter its base URL. Utsuwa adds `/v1` if it is missing. The desktop app calls it directly. The web app sends this provider through its own server, which refuses private addresses (`localhost`, `192.168.x.x`, and similar) unless the operator sets `ALLOW_LOCAL_PROVIDER_HOSTS=true`; without it you see "Provider URL host is not allowed". That only matters if you self-host Utsuwa; on the hosted site, use a public URL or the desktop app.
+For servers like vLLM or llama.cpp's server, pick **OpenAI-Compatible** as the provider and enter its base URL. If you enter just the host (like `http://192.168.1.5:8000`), Utsuwa adds `/v1`; a URL that already has a path is used as is. The desktop app calls it directly. The web app sends this provider through its own server, which refuses private addresses (`localhost`, `192.168.x.x`, and similar) unless the operator sets `ALLOW_LOCAL_PROVIDER_HOSTS=true`; without it you see "Provider URL host is not allowed". That only matters if you self-host Utsuwa; on the hosted site, use a public URL or the desktop app.
 
 ## Troubleshooting
 

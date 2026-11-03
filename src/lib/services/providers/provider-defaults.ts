@@ -39,7 +39,7 @@ export const DEFAULT_MODELS_BASE_URLS: Record<string, string> = {
 // (desktop) and the server route (web). Google ids are matched after the
 // 'models/' prefix is stripped. Providers without an entry keep everything.
 export const CHAT_MODEL_FILTERS: Record<string, RegExp> = {
-	openai: /^(gpt-|o1-|o3-|chatgpt-4o-)/,
+	openai: /^(?!.*(image|tts|transcribe|realtime|audio|embedding|search))(gpt-|o\d|chatgpt-)/,
 	anthropic: /^claude-/,
 	// DeepSeek's list holds only chat models, and its ids change every
 	// generation (deepseek-chat became deepseek-flash), so keep them all.
