@@ -147,7 +147,7 @@ test('duplicateFactUpdate: a semantic match takes the newer wording', () => {
 test('duplicateFactUpdate: an exact match only bumps the reference', () => {
 	const now = new Date('2026-11-03T12:00:00Z');
 	const patch = duplicateFactUpdate(
-		{ content: 'User loves coffee', importance: 40, confidence: 1, source: 'manual', referenceCount: 0 },
+		{ content: 'User loves coffee', importance: 40, referenceCount: 0 },
 		{ content: '  user LOVES coffee ', importance: 60 },
 		[1, 0],
 		'model-x',
