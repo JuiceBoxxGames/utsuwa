@@ -8,7 +8,8 @@ import {
 	turnKey,
 	eventKey,
 	importSessions,
-	remapSessionIds
+	remapSessionIds,
+	mergeEventMarkers
 } from './import-dedup.ts';
 
 // --- key functions ---
@@ -121,4 +122,22 @@ test('remapSessionIds points turns at the new sessions and drops unknown ids', (
 test('remapSessionIds leaves older saves without session ids alone', () => {
 	const turns = [{ sessionId: 3 }];
 	assert.equal(remapSessionIds(turns, new Map()), turns);
+});
+
+// Merge import keeps the existing character but still brings in the file's
+// completedEvents records, so its markers have to come along or one-time
+// events end up blocked while the stage gates can't see them.
+test('mergeEventMarkers adds the file markers the existing character lacks', () => {
+	assert.deepEqual(
+		mergeEventMarkers(['first_conversation'], ['first_conversation', 'first_deep_conversation']),
+		['first_conversation', 'first_deep_conversation']
+	);
+});
+
+test('mergeEventMarkers returns null when there is nothing new', () => {
+	assert.equal(mergeEventMarkers(['a', 'b'], ['b']), null);
+	assert.equal(mergeEventMarkers(['a'], undefined), null);
+	assert.deepEqual(mergeEventMarkers(undefined, ['a']), ['a']);
+	assert.deepEqual(mergeEventMarkers(['a'], ['b', 'b', 7, null]), ['a', 'b']);
+	assert.equal(mergeEventMarkers(['a'], 'b'), null);
 });
