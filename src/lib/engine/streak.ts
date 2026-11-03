@@ -22,10 +22,14 @@ export function computeStreakUpdate(streak: StreakSnapshot, now: Date): StreakSn
 		return { ...streak };
 	}
 
-	// A recorded date ahead of today means the clock was set backwards. Treat it
-	// as already visited rather than punishing the user with a reset.
+	// A recorded date a day or two ahead is timezone travel or a clock set back
+	// slightly: treat it as already visited rather than resetting. Further out it
+	// came from a clock that was wrong once, so re-anchor on today or the streak
+	// stays frozen until that date comes around.
 	if (streak.streakLastDate && streak.streakLastDate > today) {
-		return { ...streak };
+		const latestPlausible = localDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2));
+		if (streak.streakLastDate <= latestPlausible) return { ...streak };
+		return { ...streak, streakLastDate: today };
 	}
 
 	// Calendar arithmetic, not now - 24h: DST days aren't 24 hours long.
