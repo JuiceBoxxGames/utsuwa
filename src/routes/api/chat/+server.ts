@@ -5,7 +5,7 @@ import type { LLMProvider } from '$lib/types';
 import { ensureCustomOpenAIPath, getChatBaseUrl } from '$lib/services/providers/local-endpoints';
 import { assertSafeProviderTarget, createGuardedFetch } from '$lib/services/providers/url-guard.server';
 import { sanitizeProviderError } from '$lib/services/providers/provider-errors';
-import { providerFailure } from '$lib/services/llm/retry';
+import { providerFailure, xsaiStreamError } from '$lib/services/llm/retry';
 import { DEFAULT_CHAT_BASE_URLS } from '$lib/services/providers/provider-defaults';
 
 // Providers that don't require API keys
@@ -194,10 +194,12 @@ export const POST: RequestHandler = async ({ request }) => {
 					controller.close();
 				} catch (error) {
 					console.error('Stream error:', error);
-					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+					// An error chunk from the provider gets its own message and retry class
+					const failure = xsaiStreamError(error) ?? error;
+					const errorMessage = failure instanceof Error ? failure.message : 'Unknown error';
 					controller.enqueue(
 						encoder.encode(
-							`e:${JSON.stringify({ error: sanitizeProviderError(errorMessage, providerBaseURL), ...providerFailure(error) })}\n`
+							`e:${JSON.stringify({ error: sanitizeProviderError(errorMessage, providerBaseURL), ...providerFailure(failure) })}\n`
 						)
 					);
 					controller.close();

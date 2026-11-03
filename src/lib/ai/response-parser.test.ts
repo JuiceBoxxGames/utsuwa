@@ -277,6 +277,19 @@ test('markdown bold keeps its words while *actions* are still dropped', () => {
 	assert.equal(parseResponse('*smiles* That is **great** news!').dialogue, 'That is great news!');
 });
 
+test('markdown bullets and multiplication survive action stripping', () => {
+	assert.equal(
+		parseResponse("Here's what I'd pack:\n* Sunscreen\n* A good book\n* Snacks").dialogue,
+		"Here's what I'd pack:\n* Sunscreen\n* A good book\n* Snacks"
+	);
+	assert.equal(parseResponse('Easy! 6 * 7 = 42, and 3 * 5 = 15.').dialogue, 'Easy! 6 * 7 = 42, and 3 * 5 = 15.');
+	assert.equal(
+		parseResponse('Sure!\n\n*   **Tokyo**: busy\n*   **Kyoto**: temples').dialogue,
+		'Sure!\n\n*   Tokyo: busy\n*   Kyoto: temples'
+	);
+	assert.equal(parseResponse('*waves* Hi! *tilts head*').dialogue, 'Hi!');
+});
+
 // --- action ---
 
 test('action ids are trimmed and lowercased', () => {

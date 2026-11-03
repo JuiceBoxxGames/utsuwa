@@ -18,7 +18,7 @@ import {
 } from '$lib/services/providers/provider-errors';
 import { type MessageContent, toOpenAIContent, toAnthropicContent } from '$lib/services/chat/content';
 import { emitToolCalls, type ToolCallBuffer } from '$lib/services/chat/tool-call-buffers';
-import { ProviderError, isTransientStatus, parseRetryAfter, withRetry } from './retry';
+import { ProviderError, isTransientStatus, parseRetryAfter, streamPayloadError, withRetry } from './retry';
 
 /** The model a request goes to. */
 export interface LLMTarget {
@@ -336,14 +336,18 @@ function processStreamLine(
 
 	try {
 		const json = JSON.parse(trimmed.slice(6));
+		const failure = streamPayloadError(json);
+		if (failure) throw failure;
 
 		// OpenAI-compatible format
 		if (json.choices?.[0]?.delta?.content) {
 			onChunk(json.choices[0].delta.content);
 		}
-		// DeepSeek-style thinking; the empty opening delta still counts
-		if (typeof json.choices?.[0]?.delta?.reasoning_content === 'string') {
-			onReasoning(json.choices[0].delta.reasoning_content);
+		// DeepSeek streams reasoning_content, Ollama and OpenRouter reasoning.
+		// The empty opening delta still counts.
+		const reasoning = json.choices?.[0]?.delta?.reasoning_content ?? json.choices?.[0]?.delta?.reasoning;
+		if (typeof reasoning === 'string') {
+			onReasoning(reasoning);
 		}
 		// OpenAI-compatible tool calls
 		if (json.choices?.[0]?.delta?.tool_calls && onToolCall && toolCallBuffers) {
@@ -364,7 +368,8 @@ function processStreamLine(
 		else if (json.type === 'content_block_delta' && json.delta?.text) {
 			onChunk(json.delta.text);
 		}
-	} catch {
+	} catch (err) {
+		if (err instanceof ProviderError) throw err;
 		// Skip malformed JSON lines
 	}
 }

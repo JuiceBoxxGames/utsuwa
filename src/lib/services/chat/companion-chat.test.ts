@@ -23,6 +23,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 	const thinking: boolean[] = [];
 	let speechEnabled = true;
 	let visionEnabled = false;
+	let chatEnabled = true;
 	const visionSettings: { activeProvider: string; activeModel?: string } = { activeProvider: 'openai-compatible', activeModel: 'vision-model' };
 	let speechStarted = false;
 	const hints: string[] = [];
@@ -50,7 +51,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		personaStore: { activeCard: { id: 'test', name: 'Utsuwa', systemPrompt: 'Friendly', extensions: {} } },
 		settingsStore: { getProviderConfig: () => ({ apiKey: 'test-key', baseUrl: 'https://provider.invalid/v1/' }) },
 		modulesStore: {
-			isModuleEnabled: (id: string) => id !== 'vision' || visionEnabled,
+			isModuleEnabled: (id: string) => (id === 'vision' ? visionEnabled : id !== 'consciousness' || chatEnabled),
 			getModuleState: () => ({ enabled: speechEnabled }),
 			getModuleSettings: (id: string) =>
 				id === 'speech' ? speech : id === 'vision' ? visionSettings : { activeProvider: llmProvider, activeModel: 'test-model', contextSize }
@@ -1209,6 +1210,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				for (const [reasoning, expected] of [
 					[delta({ role: 'assistant', content: null, reasoning_content: '' }) + delta({ reasoning_content: 'Check the ' }) + delta({ reasoning_content: 'sensor.' }), 'Check the sensor.'],
 					[delta({ role: 'assistant', content: null, reasoning_content: '' }), ''],
+					[delta({ role: 'assistant', content: '', reasoning: 'Ask the ' }) + delta({ content: '', reasoning: 'sensor.' }), 'Ask the sensor.'],
 					['', undefined]
 				] as const) {
 					resetTurn();
@@ -1233,9 +1235,10 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				}
 				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
 			});
-			await t.test(`${transport}: a model that is still thinking does not stall out`, { timeout: 5000 }, async (t) => {
+			// DeepSeek streams reasoning_content; Ollama and OpenRouter stream reasoning
+			for (const field of ['reasoning_content', 'reasoning']) await t.test(`${transport}: a model that is still thinking (${field}) does not stall out`, { timeout: 5000 }, async (t) => {
 				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
-				const think = `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: 'hmm ' } }] })}\n\n`;
+				const think = `data: ${JSON.stringify({ choices: [{ delta: { [field]: 'hmm ' } }] })}\n\n`;
 				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
 					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
 					const encoder = new TextEncoder();
@@ -1255,6 +1258,190 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				assert.equal(latest, 'Done thinking.');
 			});
 		}
+		// A provider can fail inside a 200 stream: Anthropic sends an error event,
+		// OpenRouter a chunk with a top-level error and finish_reason "error".
+		const openRouterError = (code: number, message: string) =>
+			`data: ${JSON.stringify({ id: 'x', error: { code, message }, choices: [{ index: 0, delta: { content: '' }, finish_reason: 'error' }] })}\n\ndata: [DONE]\n\n`;
+		const anthropicError = (type: string, message: string) =>
+			'event: message_start\ndata: {"type":"message_start","message":{}}\n\n' +
+			`event: error\ndata: ${JSON.stringify({ type: 'error', error: { type, message } })}\n\n`;
+		const cancelOnRetry = (t: { mock: { method: (o: object, m: string, f: (hint: string) => void) => unknown } }) =>
+			t.mock.method(fixtures.chatHintStore, 'showHint', (hint: string) => {
+				hints.push(hint);
+				// The retry was scheduled; stop instead of waiting out the backoff
+				if (/retrying/i.test(hint)) cancelActiveTurn();
+			});
+		for (const transport of ['direct', 'hosted']) {
+			await t.test(`${transport}: an error inside the stream is retried when it is temporary`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+				let upstream = 0;
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					upstream++;
+					return new Response(openRouterError(502, 'Provider returned error'), { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+				t.mock.method(console, 'error', () => {});
+				cancelOnRetry(t);
+				await sendCompanionMessage('Hello', [], hooks);
+				assert.equal(upstream, 1);
+				assert.match(hints[0] ?? '', /retrying/i);
+				assert.equal(turns.length, 0, 'no fallback reply is processed');
+			});
+			await t.test(`${transport}: a final error inside the stream bounces the message back`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = true; resetTurn();
+				const provider = speech.activeProvider;
+				speech.activeProvider = 'elevenlabs';
+				let upstream = 0;
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					upstream++;
+					return new Response(openRouterError(400, 'Context length exceeded'), { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+				t.mock.method(console, 'error', () => {});
+				try {
+					await sendCompanionMessage('Hello', [], hooks);
+				} finally {
+					speech.activeProvider = provider;
+				}
+				assert.equal(upstream, 1);
+				assert.equal(chatStore.error, 'Context length exceeded');
+				assert.equal(turns.length, 0);
+				assert.deepEqual(said, []);
+				assert.equal(fixtures.chatDraftStore.draft, 'Hello');
+			});
+			await t.test(`${transport}: an empty reply is an error, but a speech-tool-only reply is not`, { timeout: 5000 }, async (t) => {
+				direct = transport === 'direct'; llmProvider = 'openai-compatible'; speechEnabled = true; resetTurn();
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					return new Response('data: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+				await sendCompanionMessage('Hello', [], hooks);
+				assert.ok(chatStore.error);
+				assert.equal(turns.length, 0);
+				assert.equal(spoken.length, 0);
+				assert.equal(fixtures.chatDraftStore.draft, 'Hello');
+
+				resetTurn();
+				const args = JSON.stringify({ text: 'Hi there.', language: 'en' });
+				const toolOnly = `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call_0', type: 'function', function: { name: 'speak_segment', arguments: args } }] } }] })}\n\ndata: [DONE]\n\n`;
+				t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+					if (url === '/api/chat') return POST({ request: new Request('http://localhost/api/chat', init) });
+					return new Response(toolOnly, { headers: { 'Content-Type': 'text/event-stream' } });
+				});
+				await sendCompanionMessage('Hello', [], hooks);
+				assert.equal(chatStore.error, null);
+				assert.equal(latest, 'Hi there.');
+				assert.deepEqual(spoken.map((s) => s.text), ['Hi there.']);
+			});
+		}
+		await t.test('direct: an Anthropic overloaded error event is retried', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'anthropic'; speechEnabled = false; resetTurn();
+			let upstream = 0;
+			t.mock.method(globalThis, 'fetch', async () => {
+				upstream++;
+				return new Response(anthropicError('overloaded_error', 'Overloaded'), { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			cancelOnRetry(t);
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.equal(upstream, 1);
+			assert.match(hints[0] ?? '', /retrying/i);
+			assert.equal(turns.length, 0);
+		});
+		await t.test('direct: an Anthropic invalid request error event fails once', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'anthropic'; speechEnabled = false; resetTurn();
+			let upstream = 0;
+			t.mock.method(globalThis, 'fetch', async () => {
+				upstream++;
+				return new Response(anthropicError('invalid_request_error', 'Prompt is too long'), { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.equal(upstream, 1);
+			assert.equal(chatStore.error, 'Prompt is too long');
+			assert.equal(fixtures.chatDraftStore.draft, 'Hello');
+		});
+		await t.test('Stop during post-processing still leaves the cleaned reply on screen', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			t.mock.method(globalThis, 'fetch', async () => new Response(sse('<think>plan</think>Hello there!' + state) + 'data: [DONE]\n\n'));
+			// Without the OmniVoice display cleaner the live bubble holds the raw stream
+			const provider = speech.activeProvider;
+			speech.activeProvider = 'elevenlabs';
+			const original = fixtures.processCompanionTurn;
+			let processing!: () => void;
+			const started = new Promise<void>((resolve) => (processing = resolve));
+			fixtures.processCompanionTurn = () => { processing(); return new Promise(() => {}); };
+			try {
+				const turn = sendCompanionMessage('Hello', [], hooks);
+				await started;
+				cancelActiveTurn();
+				await turn;
+			} finally {
+				fixtures.processCompanionTurn = original;
+				speech.activeProvider = provider;
+			}
+			assert.deepEqual(hints, ['Stopped']);
+			assert.equal(messages.at(-1)?.content, 'Hello there!');
+		});
+		await t.test('Stop declines a tool confirmation the user never answered', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as unknown as {
+				hasActiveTools: boolean; tools: unknown[]; servers: unknown[];
+				confirmToolCall: (request: unknown, signal?: AbortSignal) => Promise<boolean>;
+			};
+			mcp.hasActiveTools = true;
+			mcp.tools = [{ serverId: 'ha', serverName: 'Home Assistant', name: 'turn_on', description: 'Switch on', inputSchema: { type: 'object' } }];
+			mcp.servers = [{ id: 'ha', name: 'Home Assistant', transport: 'http', url: 'http://ha.local/api/mcp', enabled: true }];
+			const call = `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'turn_on', arguments: '{}' } }] } }] })}\n\ndata: [DONE]\n\n`;
+			t.mock.method(globalThis, 'fetch', async () => new Response(call, { headers: { 'Content-Type': 'text/event-stream' } }));
+			const confirm = mcp.confirmToolCall;
+			let asked!: (signal?: AbortSignal) => void;
+			const askedFor = new Promise<AbortSignal | undefined>((resolve) => (asked = resolve));
+			mcp.confirmToolCall = (_request, signal) => { asked(signal); return new Promise(() => {}); };
+			try {
+				const turn = sendCompanionMessage('Turn on the lamp', [], hooks);
+				const signal = await askedFor;
+				assert.equal(signal?.aborted, false);
+				cancelActiveTurn();
+				await turn;
+				assert.equal(signal?.aborted, true, 'the dialog is tied to the turn that asked');
+			} finally {
+				mcp.confirmToolCall = confirm;
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
+			}
+		});
+		await t.test('a voice transcript that arrives mid-reply lands in the composer', async (t) => {
+			resetTurn();
+			let calls = 0;
+			t.mock.method(globalThis, 'fetch', async () => { calls++; return new Response(''); });
+			chatStore.isLoading = true;
+			try {
+				await sendCompanionMessage('turn the lights off', [], hooks);
+				assert.equal(fixtures.chatDraftStore.draft, 'turn the lights off');
+				fixtures.chatDraftStore.draft = 'and';
+				await sendCompanionMessage('the fan', [], hooks);
+				assert.equal(fixtures.chatDraftStore.draft, 'and the fan');
+				// A reminder firing mid-reply stays silent
+				await sendCompanionMessage('REMINDER TRIGGERED: "stretch"', [], hooks, { systemEvent: true });
+				assert.equal(fixtures.chatDraftStore.draft, 'and the fan');
+			} finally {
+				chatStore.isLoading = false;
+			}
+			assert.equal(calls, 0);
+			assert.equal(messages.length, 0);
+		});
+		await t.test('a send with chat disabled keeps the text and photos in the composer', async () => {
+			resetTurn();
+			chatEnabled = false;
+			const image = { id: 'img-d', mimeType: 'image/png', base64: 'eA==', blob: new Blob(['x'], { type: 'image/png' }) };
+			try {
+				await sendCompanionMessage('Look at this', [image], hooks);
+			} finally {
+				chatEnabled = true;
+			}
+			assert.match(chatStore.error ?? '', /Chat is disabled/);
+			assert.equal(fixtures.chatDraftStore.draft, 'Look at this');
+			assert.equal(fixtures.chatDraftStore.pending.length, 1);
+			assert.equal(messages.length, 0);
+		});
 	} finally {
 		buffer?.reset();
 		await server.close();

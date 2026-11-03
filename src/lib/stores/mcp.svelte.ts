@@ -236,9 +236,20 @@ export const mcpStore = {
 		return confirmations[0] ?? null;
 	},
 
-	confirmToolCall(request: McpToolConfirmation): Promise<boolean> {
+	/** A stopped turn takes its unanswered prompt with it, declined. */
+	confirmToolCall(request: McpToolConfirmation, signal?: AbortSignal): Promise<boolean> {
+		if (signal?.aborted) return Promise.resolve(false);
 		return new Promise((resolve) => {
-			confirmations = [...confirmations, { ...request, resolve }];
+			const entry = { ...request, resolve };
+			confirmations = [...confirmations, entry];
+			signal?.addEventListener(
+				'abort',
+				() => {
+					confirmations = confirmations.filter((c) => c !== entry);
+					resolve(false);
+				},
+				{ once: true }
+			);
 		});
 	},
 
