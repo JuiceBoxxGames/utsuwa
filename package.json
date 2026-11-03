@@ -65,7 +65,7 @@
 		"@tauri-apps/plugin-http": "~2.8.0",
 		"@tauri-apps/plugin-opener": "~2.7.0",
 		"@tauri-apps/plugin-process": "~2.4.0",
-		"@tauri-apps/plugin-updater": "~2.13.1",
+		"@tauri-apps/plugin-updater": "~2.14.1",
 		"@threlte/core": "^8.6.1",
 		"@threlte/xr": "^1.6.1",
 		"@xsai/stream-text": "^0.4.2",
@@ -75,5 +75,10 @@
 		"force-graph": "^1.51.0",
 		"localforage": "^1.10.0",
 		"three": "^0.186.1"
+	},
+	"pnpm": {
+		"overrides": {
+			"miniflare>undici": "7.30.1"
+		}
 	}
 }
