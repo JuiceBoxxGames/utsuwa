@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.21.3] - 2026-11-03
 
-A bug-hunting release: a full audit of chat, voice, memory, providers and the UI, with every fix covered by a test and checked in the running app.
+A bug-hunting release: we audited chat, voice, memory, providers and the UI and fixed what turned up.
 
 ### Fixed
 - **Voice:** streaming speech (OmniVoice) repeated the last sentence or two of a reply when the model paused while writing it ([#320](https://github.com/JuiceBoxxGames/utsuwa/pull/320), closes [#319](https://github.com/JuiceBoxxGames/utsuwa/issues/319)).
@@ -34,7 +34,7 @@ A bug-hunting release: a full audit of chat, voice, memory, providers and the UI
 
 ### Changed
 - **OpenAI-Compatible base URLs:** Utsuwa now adds `/v1` only when you enter just the host (like `http://192.168.1.5:8000`). An address that already has a path is used as is. If you entered a partial path that relied on the old behavior, such as `https://api.groq.com/openai`, add the `/v1` yourself ([#321](https://github.com/JuiceBoxxGames/utsuwa/pull/321)).
-- **Security updates:** the desktop updater moves to 2.14.1, which clears a critical advisory in its zip library, along with rustls, time and other dependency fixes. 14 of 32 open advisories are cleared; the rest have no compatible fix yet and don't reach shipped builds ([#325](https://github.com/JuiceBoxxGames/utsuwa/pull/325)).
+- **Security updates:** the desktop updater moves to 2.14.1, which clears a critical advisory in its zip library, along with rustls, time and other dependency fixes. 14 of 32 open advisories are cleared. The rest have no compatible fix yet; the pull request lists each one and why the risk is low ([#325](https://github.com/JuiceBoxxGames/utsuwa/pull/325)).
 
 ## [0.21.2] - 2026-11-01
 
