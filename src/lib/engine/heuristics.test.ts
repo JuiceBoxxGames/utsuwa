@@ -95,9 +95,13 @@ test('strong sentiment sets a mood change', () => {
 	assert.equal(flat.moodChange, undefined);
 });
 
-test('extracted facts surface as a new memory', () => {
-	const updates = calculateBaselineUpdates("I'm Alex, nice to meet you", makeState());
-	assert.ok(updates.newMemory?.includes("I'm Alex"));
+// The two-word regex grabs ("User said: I'm not") used to survive a model
+// reply with new_memory: null and get saved. Heuristic facts come from
+// extractPotentialFacts in the turn pipeline instead.
+test('baseline updates never carry a new memory', () => {
+	for (const msg of ["I'm Alex, nice to meet you", "I'm not a fan of <b>horror</b> movies", 'I love you']) {
+		assert.equal(calculateBaselineUpdates(msg, makeState()).newMemory, undefined);
+	}
 });
 
 // --- non-Latin input (I18N) ---
