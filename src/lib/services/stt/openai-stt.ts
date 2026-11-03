@@ -104,6 +104,10 @@ class OpenAiSttService {
 	private abortController: AbortController | null = null;
 	private listening = false;
 	private transcribing = false;
+	// Set while getUserMedia is pending; a stop or abort in that window runs
+	// once the mic is open instead of being lost.
+	private starting: Promise<boolean> | null = null;
+	private pendingStop: 'stop' | 'abort' | null = null;
 
 	configure(config: OpenAiSttConfig) {
 		this.config = config;
@@ -127,6 +131,23 @@ class OpenAiSttService {
 
 	async startListening(callbacks: SpeechRecognitionCallbacks): Promise<boolean> {
 		if (this.listening) return true;
+		if (this.starting) return this.starting;
+		this.pendingStop = null;
+		this.starting = this.begin(callbacks);
+		let ok = false;
+		try {
+			ok = await this.starting;
+		} finally {
+			this.starting = null;
+		}
+		const pending = this.pendingStop;
+		this.pendingStop = null;
+		if (ok && pending === 'abort') this.abort();
+		else if (ok && pending === 'stop') this.stopListening();
+		return ok && pending !== 'abort';
+	}
+
+	private async begin(callbacks: SpeechRecognitionCallbacks): Promise<boolean> {
 		if (!this.config) {
 			callbacks.onError('Speech-to-text is not configured. Set it up in Settings > STT.');
 			return false;
@@ -201,12 +222,17 @@ class OpenAiSttService {
 	}
 
 	stopListening(): void {
+		if (this.starting) {
+			this.pendingStop ??= 'stop';
+			return;
+		}
 		if (!this.listening) return;
 		if (this.processor) this.handleRecordingStop();
 		else this.mediaRecorder?.stop();
 	}
 
 	abort(): void {
+		if (this.starting) this.pendingStop = 'abort';
 		this.abortController?.abort();
 		this.abortController = null;
 		this.callbacks = null;

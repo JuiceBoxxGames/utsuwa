@@ -61,6 +61,9 @@ function createSttStore() {
 			// Point the recorder at the active provider (local server or Groq)
 			configureOpenAiStt(activeOpenAiStt);
 
+			// Set before the mic permission await so a second click is ignored
+			// and a quick push-to-talk release reaches the service as a stop.
+			isListening = true;
 			const started = await openAiSttService.startListening({
 				onResult: (text, isFinal) => {
 					if (isFinal) {
@@ -95,9 +98,7 @@ function createSttStore() {
 				}
 			});
 
-			if (started) {
-				isListening = true;
-			}
+			if (!started) isListening = false;
 		} else {
 			const started = webSpeechService.startListening({
 				onResult: (text, isFinal) => {
