@@ -5,6 +5,11 @@ import { canGenerateMoment, generateMoment } from '$lib/services/events/moment-g
 import type { StateUpdates } from '$lib/types/character';
 import type { EventDefinition, Scene } from '$lib/types/events';
 
+// Events the user closed without finishing. Nothing records a dismissal, so
+// they'd match again on the very next message; the turn pipeline skips them
+// until the page reloads.
+export const dismissedEventIds = new Set<string>();
+
 /** The open event scene, shared by the app and the overlay. */
 export function createEventSession() {
 	let activeEvent = $state<EventDefinition | null>(null);
@@ -56,6 +61,7 @@ export function createEventSession() {
 	}
 
 	function close() {
+		if (activeEvent) dismissedEventIds.add(activeEvent.id);
 		activeEvent = null;
 	}
 

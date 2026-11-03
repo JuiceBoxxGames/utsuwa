@@ -69,3 +69,53 @@ export function findDuplicateFact<T extends { content: string; embedding?: numbe
 
 	return best;
 }
+
+interface MergeableFact {
+	content: string;
+	importance: number;
+	referenceCount: number;
+	source?: string;
+}
+
+interface IncomingFact {
+	content: string;
+	importance?: number;
+	confidence?: number;
+	source?: string;
+}
+
+// The patch to apply to an existing fact when a new one duplicates it. An exact
+// match just counts as another mention. A semantic match is usually the same
+// fact restated or updated ("is 25" -> "is 26", a hand-typed correction), so
+// the newer wording replaces the old text along with its vector. Heuristic
+// regex fragments only count as a mention: they're cruder than what they match
+// and land right after the model's own memory for the same turn.
+export const HEURISTIC_FACT_SOURCE = 'heuristic';
+
+export function duplicateFactUpdate(
+	existing: MergeableFact,
+	incoming: IncomingFact,
+	embedding: number[] | undefined,
+	embeddingModel: string,
+	now: Date
+) {
+	const bump = {
+		referenceCount: existing.referenceCount + 1,
+		importance: Math.min(100, Math.max(existing.importance, incoming.importance ?? 50)),
+		lastAccessed: now
+	};
+	if (
+		incoming.source === HEURISTIC_FACT_SOURCE ||
+		normalizeFactContent(existing.content) === normalizeFactContent(incoming.content)
+	) {
+		return bump;
+	}
+	return {
+		...bump,
+		content: incoming.content,
+		confidence: incoming.confidence ?? 0.8,
+		source: incoming.source ?? existing.source,
+		embedding,
+		embeddingModel: embedding ? embeddingModel : undefined
+	};
+}

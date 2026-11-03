@@ -65,7 +65,19 @@ test('a DST transition day still counts as consecutive', () => {
 });
 
 test('a clock set backwards (future streakLastDate) reads as already visited, not a reset', () => {
-	const streak = { currentStreak: 7, longestStreak: 9, streakLastDate: '2026-06-20' };
+	// Within the two-day window, e.g. flying west across the date line.
+	const streak = { currentStreak: 7, longestStreak: 9, streakLastDate: '2026-06-17' };
 	const result = computeStreakUpdate(streak, new Date(2026, 5, 15));
 	assert.deepEqual(result, streak);
+});
+
+test('a streakLastDate far in the future re-anchors to today instead of freezing', () => {
+	// One visit with the clock a year ahead used to pin the streak until that date.
+	let s = computeStreakUpdate(
+		{ currentStreak: 5, longestStreak: 5, streakLastDate: '2027-11-03' },
+		new Date(2026, 10, 3, 12)
+	);
+	assert.deepEqual(s, { currentStreak: 5, longestStreak: 5, streakLastDate: '2026-11-03' });
+	s = computeStreakUpdate(s, new Date(2026, 10, 4, 12));
+	assert.equal(s.currentStreak, 6);
 });

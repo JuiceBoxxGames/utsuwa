@@ -277,11 +277,6 @@ export function calculateBaselineUpdates(content: string, state: CharacterState)
 		};
 	}
 
-	// Extract facts as potential memories
-	if (analysis.extractedFacts.length > 0) {
-		updates.newMemory = analysis.extractedFacts[0]; // Just take first for now
-	}
-
 	return updates;
 }
 

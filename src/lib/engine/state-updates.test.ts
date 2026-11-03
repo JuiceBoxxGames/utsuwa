@@ -108,6 +108,23 @@ test('a 3-day absence decays affection once and marks lastDecayAt', () => {
 	assert.ok(result.next.lastDecayAt instanceof Date);
 });
 
+test('companion mode skips affection and trust decay but keeps energy and mood', () => {
+	const now = 1_000_000_000_000;
+	const state = makeState({
+		appMode: 'companion',
+		energy: 40,
+		affection: 640,
+		trust: 90,
+		lastInteraction: new Date(now - 9 * 24 * HOUR),
+		lastDecayAt: null
+	});
+	const result = resolveTimeDecayOnLoad(state, now);
+	assert.equal(result.next.affection, undefined);
+	assert.equal(result.next.trust, undefined);
+	assert.ok(result.next.energy !== undefined);
+	assert.ok(result.next.mood);
+});
+
 test('regression: reloading after decay does NOT re-deduct affection', () => {
 	const now = 1_000_000_000_000;
 	const lastInteraction = new Date(now - 72 * HOUR);

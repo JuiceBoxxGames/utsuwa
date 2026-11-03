@@ -157,12 +157,16 @@ export function resolveTimeDecayOnLoad(state: CharacterState, now: number): Time
 		next.energy = clamp(state.energy + timeUpdates.energyDelta, 0, 100);
 	}
 
+	// Companion mode freezes relationship stats (applyUpdates ignores those
+	// deltas there), so decay must not quietly drain them either.
+	const relationshipDecay = state.appMode !== 'companion';
+
 	if (!alreadyDecayed) {
-		if (timeUpdates.affectionDelta !== undefined) {
+		if (relationshipDecay && timeUpdates.affectionDelta !== undefined) {
 			next.affection = clamp(state.affection + timeUpdates.affectionDelta, 0, 1000);
 			decayApplied = true;
 		}
-		if (timeUpdates.trustDelta !== undefined) {
+		if (relationshipDecay && timeUpdates.trustDelta !== undefined) {
 			next.trust = clamp(state.trust + timeUpdates.trustDelta, 0, 100);
 			decayApplied = true;
 		}

@@ -1,4 +1,4 @@
-import { db } from '$lib/db';
+import { db, type DBCharacterState } from '$lib/db';
 import { saveToDownloads } from '$lib/utils/save-to-downloads';
 import { characterStore, STORAGE_CLEARING, STORAGE_CLEARED } from '$lib/stores/character.svelte';
 import localforage from 'localforage';
@@ -8,7 +8,8 @@ import {
 	turnKey,
 	eventKey,
 	importSessions,
-	remapSessionIds
+	remapSessionIds,
+	mergeEventMarkers
 } from './import-dedup';
 import { listClearTargets, STORAGE_INVENTORY } from './storage-inventory';
 import { clampCharacterStats } from '$lib/engine/state-updates';
@@ -151,6 +152,13 @@ export async function importSave(
 		await importCollection(db.conversationTurns, remapSessionIds(turns, result.idMap), turnKey);
 	}
 
+	async function mergeMarkersInto(existing: DBCharacterState, incoming: unknown) {
+		const merged = mergeEventMarkers(existing.completedEvents, incoming);
+		if (merged && existing.id !== undefined) {
+			await db.characterStates.update(existing.id, { completedEvents: merged });
+		}
+	}
+
 	// Wrap the whole import in one transaction so a mid-import failure rolls back
 	// instead of leaving cleared tables with partially-written data.
 	await db.transaction(
@@ -177,12 +185,14 @@ export async function importSave(
 					await db.characterStates.add(character);
 					imported++;
 				} else {
-					// Merge mode - skip character if one exists
+					// Merge mode - keep the existing character, but take the file's event
+					// markers since its completedEvents records are imported below
 					const existing = await db.characterStates.toCollection().first();
 					if (!existing) {
 						await db.characterStates.add(character);
 						imported++;
 					} else {
+						await mergeMarkersInto(existing, character.completedEvents);
 						skipped++;
 					}
 				}
@@ -247,6 +257,7 @@ export async function importSave(
 				await db.characterStates.add(clampCharacterStats(mergedState as CharacterState));
 				imported++;
 			} else {
+				await mergeMarkersInto(existing, firstCharState?.completedEvents);
 				skipped++;
 			}
 		}

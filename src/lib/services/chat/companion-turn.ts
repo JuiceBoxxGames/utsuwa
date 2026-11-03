@@ -6,9 +6,11 @@ import { calculateBaselineUpdates, analyzeMessage } from '$lib/engine/heuristics
 import { mergeUpdates, checkAndApplyStageTransition } from '$lib/engine/state-updates';
 import { memoryApi, determineFactCategory, calculateFactImportance } from '$lib/engine/memory';
 import { recordTurn, ensureSession } from '$lib/engine/memory-session';
+import { HEURISTIC_FACT_SOURCE } from '$lib/engine/fact-dedup';
 import { checkAllEvents, checkEvent } from '$lib/engine/event-matching';
 import { eventsApi } from '$lib/engine/events';
 import { allEvents, relationshipStrainEvent } from '$lib/data/events';
+import { dismissedEventIds } from '$lib/services/session/event-session.svelte';
 import { completeJson, type LLMTarget } from '$lib/services/llm/transport';
 import { extractReminderTags } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
@@ -49,6 +51,9 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 	const { userMessage, companionResponse, llm, systemEvent = false, debug = false } = input;
 
 	const state = characterStore.state;
+	// applyUpdates stamps lastInteraction with now, so absence-based events need
+	// the gap as it was when this message arrived.
+	const previousInteraction = state.lastInteraction;
 	// System events (e.g. fired reminders) must not trigger sentiment heuristics,
 	// baseline stat updates, streak/interaction counting or fact extraction from
 	// the trigger text.
@@ -161,7 +166,8 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 				await memoryApi.createFact({
 					content: factContent,
 					category: determineFactCategory(factContent),
-					importance: calculateFactImportance(factContent, userAnalysis.sentiment)
+					importance: calculateFactImportance(factContent, userAnalysis.sentiment),
+					source: HEURISTIC_FACT_SOURCE
 				});
 			} catch (e) {
 				console.debug('Failed to save fact:', e);
@@ -186,7 +192,9 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 			}
 
 			if (!triggeredEvent) {
-				const triggeredEvents = checkAllEvents(allEvents, characterStore.state, completedEvents, userMessage);
+				const eventState = { ...characterStore.state, lastInteraction: previousInteraction };
+				const candidates = allEvents.filter((e) => !dismissedEventIds.has(e.id));
+				const triggeredEvents = checkAllEvents(candidates, eventState, completedEvents, userMessage);
 				if (triggeredEvents.length > 0) {
 					triggeredEvent = triggeredEvents[0];
 				}

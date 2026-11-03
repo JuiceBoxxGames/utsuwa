@@ -119,6 +119,17 @@ async function readIndex(): Promise<KeepsakeRecord[]> {
 	return (await keepsakeStorage?.getItem<KeepsakeRecord[]>(INDEX_KEY)) ?? [];
 }
 
+// Index edits are read-modify-write, so run them one at a time. Otherwise a
+// message with several images saves them in parallel and the last write drops
+// the others' records, leaving their blobs orphaned.
+// ponytail: per-window only; two windows keeping at the same instant can still race.
+let indexQueue: Promise<unknown> = Promise.resolve();
+function editIndex<T>(edit: () => Promise<T>): Promise<T> {
+	const run = indexQueue.then(edit);
+	indexQueue = run.catch(() => {});
+	return run;
+}
+
 // A tiny center-cropped square thumbnail (data URL) stored inline in the record,
 // so the photoboard renders the whole wall from one index read at any scale.
 async function makeThumbnail(blob: Blob, size = 220): Promise<string | undefined> {
@@ -165,8 +176,9 @@ async function writeKeepsake(
 	meta?: { mimeType?: string; note?: string; kind?: 'shown' | 'photo' }
 ): Promise<void> {
 	await keepsakeStorage?.setItem(`keepsake-blob-${id}`, blob);
-	const list = await readIndex();
-	if (!list.some((k) => k.id === id)) {
+	await editIndex(async () => {
+		const list = await readIndex();
+		if (list.some((k) => k.id === id)) return;
 		list.push({
 			id,
 			mimeType: meta?.mimeType || blob.type || 'image/jpeg',
@@ -176,7 +188,7 @@ async function writeKeepsake(
 			kind: meta?.kind ?? 'shown'
 		});
 		await keepsakeStorage?.setItem(INDEX_KEY, list);
-	}
+	});
 }
 
 /** All kept photo-memories, newest first. */
@@ -198,6 +210,8 @@ export async function getKeepsakeImageUrl(id: string): Promise<string | null> {
 /** She forgets it: hard-delete the blob and its record. */
 export async function forgetKeepsakeImage(id: string): Promise<void> {
 	await keepsakeStorage?.removeItem(`keepsake-blob-${id}`);
-	const list = await readIndex();
-	await keepsakeStorage?.setItem(INDEX_KEY, list.filter((k) => k.id !== id));
+	await editIndex(async () => {
+		const list = await readIndex();
+		await keepsakeStorage?.setItem(INDEX_KEY, list.filter((k) => k.id !== id));
+	});
 }

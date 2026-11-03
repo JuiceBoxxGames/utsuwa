@@ -79,3 +79,14 @@ export function remapSessionIds<T extends { sessionId?: number }>(
 		r.sessionId === undefined ? r : { ...r, sessionId: idMap.get(r.sessionId) }
 	);
 }
+
+// Union of a kept character's event markers with an imported save's, or null
+// when the import adds nothing. The file side isn't validated, so only strings
+// make it into the user's existing record.
+export function mergeEventMarkers(existing: string[] | undefined, incoming: unknown): string[] | null {
+	const current = existing ?? [];
+	const added = (Array.isArray(incoming) ? incoming : []).filter(
+		(id): id is string => typeof id === 'string' && !current.includes(id)
+	);
+	return added.length > 0 ? [...current, ...new Set(added)] : null;
+}
