@@ -53,6 +53,13 @@ test('selectDefaultModel falls back to first model when current is empty', () =>
 	assert.equal(selectDefaultModel(models, ''), 'a');
 });
 
+test('selectDefaultModel keeps a typed model on custom endpoints even when unlisted', () => {
+	const models = [mockModel('qwen3:8b'), mockModel('llama3.2:latest')];
+	assert.equal(selectDefaultModel(models, 'llama3.2', true), 'llama3.2');
+	assert.equal(selectDefaultModel(models, '', true), 'qwen3:8b');
+	assert.equal(selectDefaultModel(models, 'llama3.2'), 'qwen3:8b');
+});
+
 test('selectDefaultModel preserves current selection when list is empty', () => {
 	assert.equal(selectDefaultModel([], 'my-model'), 'my-model');
 });

@@ -122,7 +122,7 @@ export function createLlmSettingsState(moduleId: 'consciousness' | 'vision' = 'c
 				llmIsLoading = false;
 				llmDynamicModels = models;
 				const currentModel = modelSettings.activeModel;
-				const nextModel = selectDefaultModel(models, currentModel);
+				const nextModel = selectDefaultModel(models, currentModel, provider.custom);
 				if (nextModel !== currentModel) {
 					modulesStore.setModuleSetting(moduleId, 'activeModel', nextModel);
 				}

@@ -123,6 +123,12 @@ test('llm transport and active model', async (t) => {
 					'Bearer k'
 				);
 			});
+			await t.test('openai-compatible keeps a base that already has a version path', () => {
+				assert.equal(
+					providerEndpoint('openai-compatible', 'k', 'https://api.z.ai/api/paas/v4').url,
+					'https://api.z.ai/api/paas/v4/chat/completions'
+				);
+			});
 			await t.test('local providers default and gain /v1', () => {
 				assert.equal(providerEndpoint('ollama').url, 'http://localhost:11434/v1/chat/completions');
 				assert.equal(providerEndpoint('lmstudio', undefined, 'http://box:1234').url, 'http://box:1234/v1/chat/completions');

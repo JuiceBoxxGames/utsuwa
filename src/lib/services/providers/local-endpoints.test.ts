@@ -12,7 +12,7 @@ import {
 	isLocalSTTProvider,
 	getSTTBaseUrl,
 	getLocalSTTConnectionHint,
-	ensureOpenAIPath, looksLikeOllama
+	ensureOpenAIPath, ensureCustomOpenAIPath, looksLikeOllama
 } from './local-endpoints.ts';
 
 test('identifies local STT providers', () => {
@@ -136,6 +136,20 @@ test('ensureOpenAIPath appends /v1 to bare base URLs', () => {
 test('ensureOpenAIPath leaves /v1 URLs unchanged', () => {
 	assert.equal(ensureOpenAIPath('https://api.openai.com/v1'), 'https://api.openai.com/v1');
 	assert.equal(ensureOpenAIPath('https://api.openai.com/v1/'), 'https://api.openai.com/v1');
+});
+
+// Custom endpoints often carry their own version path; only a bare host gets /v1
+test('ensureCustomOpenAIPath keeps a versioned path and fills in a bare host', () => {
+	assert.equal(ensureCustomOpenAIPath('https://api.z.ai/api/paas/v4'), 'https://api.z.ai/api/paas/v4');
+	assert.equal(ensureCustomOpenAIPath('https://ark.cn-beijing.volces.com/api/v3/'), 'https://ark.cn-beijing.volces.com/api/v3');
+	assert.equal(ensureCustomOpenAIPath('https://models.github.ai/inference'), 'https://models.github.ai/inference');
+	assert.equal(
+		ensureCustomOpenAIPath('https://generativelanguage.googleapis.com/v1beta/openai/'),
+		'https://generativelanguage.googleapis.com/v1beta/openai'
+	);
+	assert.equal(ensureCustomOpenAIPath('https://openrouter.ai/api/v1/'), 'https://openrouter.ai/api/v1');
+	assert.equal(ensureCustomOpenAIPath('https://api.together.xyz'), 'https://api.together.xyz/v1');
+	assert.equal(ensureCustomOpenAIPath('http://192.168.1.5:8000/'), 'http://192.168.1.5:8000/v1');
 });
 
 // --- looksLikeOllama ---

@@ -4,7 +4,7 @@
 import type { LLMProvider } from '$lib/types';
 import { isTauri } from '$lib/services/platform';
 import {
-	ensureOpenAIPath,
+	ensureCustomOpenAIPath,
 	getChatBaseUrl,
 	getLocalProviderConnectionHint,
 	isLocalLLMProvider
@@ -115,7 +115,7 @@ export function providerEndpoint(provider: LLMProvider, apiKey?: string, baseURL
 	const base = isLocal
 		? getChatBaseUrl(provider, baseURL)
 		: provider === 'openai-compatible' && baseURL
-			? ensureOpenAIPath(baseURL)
+			? ensureCustomOpenAIPath(baseURL)
 			: baseURL || DEFAULT_CHAT_BASE_URLS[provider];
 	if (!base) {
 		throw new Error(`Unknown provider: ${provider}`);
