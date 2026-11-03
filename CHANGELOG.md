@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.3] - 2026-11-03
+
+A bug-hunting release: a full audit of chat, voice, memory, providers and the UI, with every fix covered by a test and checked in the running app.
+
+### Fixed
+- **Voice:** streaming speech (OmniVoice) repeated the last sentence or two of a reply when the model paused while writing it ([#320](https://github.com/JuiceBoxxGames/utsuwa/pull/320), closes [#319](https://github.com/JuiceBoxxGames/utsuwa/issues/319)).
+- **Voice:** sending a message while she was still talking could play two sentences over each other, and lip sync stopped for the rest of the reply ([#324](https://github.com/JuiceBoxxGames/utsuwa/pull/324)).
+- **Voice:** a lone `<` or `{` in a reply, as in "if x < 5" or ":-{", silenced everything after it. Decimals, version numbers and web addresses like "3.5" or "utsuwa.ai" were spoken as separate pieces ([#324](https://github.com/JuiceBoxxGames/utsuwa/pull/324)).
+- **Voice:** text written just before a reply was cut off mid-sentence went unspoken; Stop didn't stop streaming speech once the text had finished; a quick tap of push-to-talk could leave the microphone recording; and browser voice input always listened for English. It now follows your browser's language ([#324](https://github.com/JuiceBoxxGames/utsuwa/pull/324)).
+- **Chat:** when a provider reported an error in the middle of a reply (Anthropic's "overloaded", OpenRouter error chunks), she answered "Hmm... *thinking*", and that stand-in was saved, spoken and counted toward your stats. Temporary errors are now retried quietly, other errors return your message to the composer, and an empty reply shows an error ([#326](https://github.com/JuiceBoxxGames/utsuwa/pull/326)).
+- **Chat:** thinking models on Ollama and OpenRouter in the desktop app were cut off with "Reply timed out" while they were still thinking ([#326](https://github.com/JuiceBoxxGames/utsuwa/pull/326)).
+- **Chat:** bulleted lists and multiplication vanished from replies, so "6 * 7 = 42" became "6  5". Chat bubbles also lost their line breaks, so lists ran together on one line ([#326](https://github.com/JuiceBoxxGames/utsuwa/pull/326), [#327](https://github.com/JuiceBoxxGames/utsuwa/pull/327)).
+- **Chat:** a voice message or typed message sent while she was still replying, or while chat was turned off, was thrown away. It now goes back into the message box ([#326](https://github.com/JuiceBoxxGames/utsuwa/pull/326)).
+- **Chat:** pressing Stop after the reply arrived left the raw reply text in the bubble, and a "Run tool?" prompt from a stopped turn could still run the tool later. The "retrying" notice now clears as soon as the reply arrives ([#326](https://github.com/JuiceBoxxGames/utsuwa/pull/326), [#327](https://github.com/JuiceBoxxGames/utsuwa/pull/327)).
+- **Memory:** an updated fact ("I'm 26 now", "I moved to Osaka") was treated as a duplicate of the old one and dropped, and a memory added by hand in the memory inspector could disappear. The newer version now replaces the old one ([#322](https://github.com/JuiceBoxxGames/utsuwa/pull/322)).
+- **Memory:** half-sentences like "User said: I'm not" were saved as memories when the model had nothing to remember ([#322](https://github.com/JuiceBoxxGames/utsuwa/pull/322)).
+- **Events:** the "Return After Absence" and "Missed You" moments could never happen, and a moment you closed without choosing reopened after every message ([#322](https://github.com/JuiceBoxxGames/utsuwa/pull/322)).
+- **Relationship:** affection and trust kept fading during time away in Companion Mode, where they can't be earned back, so switching back to Dating Sim could drop your stage ([#322](https://github.com/JuiceBoxxGames/utsuwa/pull/322)).
+- Sending several photos in one message kept only one of them on the photo board ([#322](https://github.com/JuiceBoxxGames/utsuwa/pull/322)).
+- Merging a backup into an existing companion could permanently block one-time story moments ([#322](https://github.com/JuiceBoxxGames/utsuwa/pull/322)).
+- A day streak froze at 1 after one visit with the device clock set far ahead ([#322](https://github.com/JuiceBoxxGames/utsuwa/pull/322)).
+- **Providers:** OpenAI-Compatible endpoints whose address already includes a version path (Z.ai `.../api/paas/v4`, GitHub Models `.../inference`, Gemini `.../v1beta/openai`) got `/v1` added and failed. An Ollama address ending in `/v1` showed no models ([#321](https://github.com/JuiceBoxxGames/utsuwa/pull/321)).
+- **Providers:** the OpenAI model list hid o1, o3 and o4-mini but showed image, speech and transcription models that can't chat. Refreshing a custom provider's list replaced the model name you'd typed, and a model list from an unreachable server loaded forever with an empty error ([#321](https://github.com/JuiceBoxxGames/utsuwa/pull/321)).
+- **Settings:** text you were typing in Settings > Character was wiped when a reply finished in the background ([#323](https://github.com/JuiceBoxxGames/utsuwa/pull/323)).
+- **Photo mode:** the camera limits never switched on, so you could orbit under the floor ([#323](https://github.com/JuiceBoxxGames/utsuwa/pull/323)).
+- Switching avatars quickly could save one avatar's thumbnail under another, and the desktop overlay leaked memory each time a new custom avatar was picked ([#323](https://github.com/JuiceBoxxGames/utsuwa/pull/323)).
+
+### Changed
+- **OpenAI-Compatible base URLs:** Utsuwa now adds `/v1` only when you enter just the host (like `http://192.168.1.5:8000`). An address that already has a path is used as is. If you entered a partial path that relied on the old behavior, such as `https://api.groq.com/openai`, add the `/v1` yourself ([#321](https://github.com/JuiceBoxxGames/utsuwa/pull/321)).
+- **Security updates:** the desktop updater moves to 2.14.1, which clears a critical advisory in its zip library, along with rustls, time and other dependency fixes. 14 of 32 open advisories are cleared; the rest have no compatible fix yet and don't reach shipped builds ([#325](https://github.com/JuiceBoxxGames/utsuwa/pull/325)).
+
 ## [0.21.2] - 2026-11-01
 
 ### Fixed
