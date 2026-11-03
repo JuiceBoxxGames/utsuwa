@@ -362,7 +362,7 @@ function cleanDialogue(text: string, companionName?: string): string {
 	cleaned = cleaned.replace(/\*\*([^*\n]+)\*\*/g, '$1');
 
 	// Remove action asterisks (we want dialogue only)
-	cleaned = cleaned.replace(/\*[^*]+\*/g, '');
+	cleaned = cleaned.replace(/\*(?=\S)[^*\n]+(?<=\S)\*/g, '');
 
 	// Remove stage directions in parentheses
 	cleaned = cleaned.replace(/\([^)]*(?:smiles|laughs|sighs|blushes|looks|nods)[^)]*\)/gi, '');
