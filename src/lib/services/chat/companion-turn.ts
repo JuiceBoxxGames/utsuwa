@@ -10,6 +10,7 @@ import { HEURISTIC_FACT_SOURCE } from '$lib/engine/fact-dedup';
 import { checkAllEvents, checkEvent } from '$lib/engine/event-matching';
 import { eventsApi } from '$lib/engine/events';
 import { allEvents, relationshipStrainEvent } from '$lib/data/events';
+import { dismissedEventIds } from '$lib/services/session/event-session.svelte';
 import { completeJson, type LLMTarget } from '$lib/services/llm/transport';
 import { extractReminderTags } from '$lib/utils/reminders';
 import { reminderStore } from '$lib/stores/reminders.svelte';
@@ -192,7 +193,8 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 
 			if (!triggeredEvent) {
 				const eventState = { ...characterStore.state, lastInteraction: previousInteraction };
-				const triggeredEvents = checkAllEvents(allEvents, eventState, completedEvents, userMessage);
+				const candidates = allEvents.filter((e) => !dismissedEventIds.has(e.id));
+				const triggeredEvents = checkAllEvents(candidates, eventState, completedEvents, userMessage);
 				if (triggeredEvents.length > 0) {
 					triggeredEvent = triggeredEvents[0];
 				}
