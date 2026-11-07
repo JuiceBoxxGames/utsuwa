@@ -1,5 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core';
-import { providerFetch } from '../platform/provider-fetch.ts';
+import { browserOrigin, providerFetch } from '../platform/provider-fetch.ts';
 import {
 	getSharedAudioContext,
 	type ITTSProvider,
@@ -86,10 +86,6 @@ export function sanitizeOmniVoiceInput(
 	}
 	const capped = core.charAt(0).toUpperCase() + core.slice(1);
 	return capped + '.';
-}
-
-function getCurrentSiteOrigin(): string | undefined {
-	return typeof window !== 'undefined' ? window.location.origin : undefined;
 }
 
 /**
@@ -283,8 +279,8 @@ export class OpenAITTS implements ITTSProvider {
 			if (!this.isLocal) throw err;
 			const hint = new Error(
 				this.isOmniVoice
-					? getOmniVoiceConnectionHint(this.baseUrl, getCurrentSiteOrigin())
-					: getLocalTTSConnectionHint(this.baseUrl, getCurrentSiteOrigin())
+					? getOmniVoiceConnectionHint(this.baseUrl, browserOrigin())
+					: getLocalTTSConnectionHint(this.baseUrl, browserOrigin())
 			);
 			const proxy = shouldProxyLocalTts({
 				isLocal: this.isLocal,

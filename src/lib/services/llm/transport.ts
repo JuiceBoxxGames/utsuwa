@@ -3,7 +3,7 @@
 // the /api/chat server route (cloud providers on web, which mostly lack CORS).
 import type { LLMProvider } from '$lib/types';
 import { isTauri } from '$lib/services/platform';
-import { providerFetch } from '../platform/provider-fetch.ts';
+import { browserOrigin, providerFetch } from '../platform/provider-fetch.ts';
 import {
 	ensureCustomOpenAIPath,
 	getChatBaseUrl,
@@ -211,10 +211,6 @@ export async function completeJson(request: JsonRequest): Promise<string | null>
 	}
 }
 
-function getCurrentSiteOrigin(): string | undefined {
-	return typeof window !== 'undefined' ? window.location.origin : undefined;
-}
-
 async function streamDirect(
 	options: ChatRequest,
 	onText: (fullText: string) => void,
@@ -260,7 +256,7 @@ async function streamDirect(
 		if (options.signal?.aborted) throw err;
 		const rawMessage = err instanceof Error ? err.message : 'Failed to connect to provider';
 		// A local server that isn't running won't be up in 2s; say how to fix it
-		if (isLocal) throw new Error(getLocalProviderConnectionHint(provider, providerBaseURL, getCurrentSiteOrigin()));
+		if (isLocal) throw new Error(getLocalProviderConnectionHint(provider, providerBaseURL, browserOrigin()));
 		throw new ProviderError(rawMessage, true);
 	}
 
