@@ -1,0 +1,91 @@
+# Throwaway: runs the provider-fetch probe in a real desktop build per OS. Never merged.
+name: desktop provider-fetch probe
+on:
+  push:
+    branches: [test/phttp-desktop-probe]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31 # v2
+        with:
+          workspaces: './src-tauri -> target'
+      - name: Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev patchelf \
+            xvfb gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav pulseaudio
+      - run: pnpm install --frozen-lockfile
+      - name: Build debug app with the probe window
+        run: pnpm tauri build --debug --no-bundle --ci --config e2e-desktop/probe.conf.json
+
+      - name: Ollama (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          for i in $(seq 1 30); do curl -s localhost:11434/api/version && break; sleep 1; done
+          ollama pull qwen2.5:0.5b
+      - name: Ollama (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip -OutFile ollama.zip
+          Expand-Archive ollama.zip -DestinationPath ollama
+          Start-Process -FilePath ollama\ollama.exe -ArgumentList serve -WindowStyle Hidden
+          for ($i = 0; $i -lt 30; $i++) { try { Invoke-RestMethod http://localhost:11434/api/version; break } catch { Start-Sleep 1 } }
+          ollama\ollama.exe pull qwen2.5:0.5b
+          ollama\ollama.exe --version
+
+      - name: Run probe (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo '{"local_ollama":"qwen2.5"}' > keys.json
+          PROBE_OUT=results.json PROBE_KEYS=keys.json node e2e-desktop/mock.mjs &
+          sleep 1
+          pulseaudio --start --exit-idle-time=-1 || true
+          WEBKIT_DISABLE_DMABUF_RENDERER=1 xvfb-run -a ./src-tauri/target/debug/utsuwa &
+          for i in $(seq 1 240); do [ -f results.json.done ] && break; sleep 2; done
+      - name: Run probe (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          '{"local_ollama":"qwen2.5"}' | Out-File -Encoding ascii keys.json
+          $env:PROBE_OUT = 'results.json'; $env:PROBE_KEYS = 'keys.json'
+          Start-Process -FilePath node -ArgumentList 'e2e-desktop/mock.mjs' -NoNewWindow -RedirectStandardOutput mock.log
+          Start-Sleep 1
+          Start-Process -FilePath src-tauri\target\debug\utsuwa.exe
+          for ($i = 0; $i -lt 240; $i++) { if (Test-Path results.json.done) { break }; Start-Sleep 2 }
+
+      - name: Report
+        if: always()
+        shell: bash
+        run: |
+          [ -f results.json ] || { echo "no results: probe never reported"; exit 1; }
+          node -e '
+            const r = require("./results.json");
+            for (const x of r) console.log(`${x.ok ? "PASS" : "FAIL"}  ${x.name}  ${x.ok ? JSON.stringify(x.detail ?? "") : x.error}`.slice(0, 400));
+            const done = require("fs").existsSync("results.json.done");
+            console.log(done ? "probe finished" : "PROBE DID NOT FINISH");
+            if (!done || r.some((x) => !x.ok)) process.exit(1);
+          '
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: probe-${{ matrix.os }}
+          path: results.json
