@@ -72,6 +72,17 @@ jobs:
           Start-Process -FilePath src-tauri\target\debug\utsuwa.exe
           for ($i = 0; $i -lt 240; $i++) { if (Test-Path results.json.done) { break }; Start-Sleep 2 }
 
+      - name: Raw Ollama tool-call tally (no app involved)
+        if: always()
+        shell: bash
+        run: |
+          tool=0; empty=0; text=0
+          for i in $(seq 1 20); do
+            out=$(curl -s localhost:11434/v1/chat/completions -H 'content-type: application/json' -d '{"model":"qwen2.5:0.5b","stream":true,"max_tokens":200,"messages":[{"role":"system","content":"You are a test harness. Follow instructions exactly."},{"role":"user","content":"Call speak_segment with the text \"pong\". Do not answer in plain text."}],"tools":[{"type":"function","function":{"name":"speak_segment","description":"Say one short line out loud.","parameters":{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}}}]}')
+            if echo "$out" | grep -q '"tool_calls"'; then tool=$((tool+1)); elif echo "$out" | grep -q '"content":"[^"]'; then text=$((text+1)); else empty=$((empty+1)); fi
+          done
+          echo "raw Ollama x20 on this runner: tool_calls=$tool text=$text empty=$empty"
+
       - name: Report
         if: always()
         shell: bash
