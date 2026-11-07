@@ -136,10 +136,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		result.totalUsage?.catch?.(silentCatch);
 		result.usage?.catch?.(silentCatch);
 		// Consume errored ReadableStreams so they don't become unhandled
-		// fullStream is consumed by the SSE reader below – do NOT consume it here.
+		// eventStream is consumed by the SSE reader below – do NOT consume it here.
 		result.reasoningTextStream?.getReader().read().catch(silentCatch);
 
-		const { fullStream } = result;
+		const { eventStream } = result;
 
 		// Create a readable stream for SSE
 		const encoder = new TextEncoder();
@@ -147,7 +147,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			async start(controller) {
 				let reader;
 				try {
-					reader = fullStream.getReader();
+					reader = eventStream.getReader();
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : 'Failed to start stream';
 					controller.enqueue(
@@ -162,16 +162,16 @@ export const POST: RequestHandler = async ({ request }) => {
 						const { done, value } = await reader.read();
 						if (done) break;
 
-						if (value.type === 'text-delta') {
+						if (value.type === 'text.delta') {
 							// Forward text as-is. The client parses the JSON state block out of
 							// the full reply, so nothing may be dropped here.
-							const data = `0:${JSON.stringify(value.text)}\n`;
+							const data = `0:${JSON.stringify(value.delta)}\n`;
 							controller.enqueue(encoder.encode(data));
-						} else if (value.type === 'reasoning-delta') {
+						} else if (value.type === 'reasoning.delta') {
 							// Thinking models need this back in the next tool round,
 							// and it keeps the client's stall timer alive meanwhile.
-							controller.enqueue(encoder.encode(`r:${JSON.stringify(value.text)}\n`));
-						} else if (value.type === 'tool-call') {
+							controller.enqueue(encoder.encode(`r:${JSON.stringify(value.delta)}\n`));
+						} else if (value.type === 'tool-call.done') {
 							// Keep native calls separate from text so the client can
 							// process speech even after the textual state fence. The
 							// client classifies each call: speech tools become
