@@ -68,7 +68,7 @@ export function getLocalSTTConnectionHint(baseUrl?: string, siteOrigin?: string)
 	const sttBaseUrl = getSTTBaseUrl('local-stt', baseUrl);
 	const originHint = siteOrigin
 		? ` If the server blocks this site (${siteOrigin}), enable CORS for that origin.`
-		: ' If the server blocks this site, enable CORS for the app origin.';
+		: '';
 	return `Could not reach a local STT server at ${sttBaseUrl}. Make sure it is running and exposes the OpenAI /v1/audio/transcriptions endpoint (e.g. Speaches, faster-whisper-server, or whisper.cpp).${originHint}`;
 }
 
@@ -89,7 +89,7 @@ export function getLocalTTSConnectionHint(baseUrl?: string, siteOrigin?: string)
 	const ttsBaseUrl = getTTSBaseUrl('local-tts', baseUrl);
 	const originHint = siteOrigin
 		? ` If the server blocks this site (${siteOrigin}), enable CORS for that origin.`
-		: ' If the server blocks this site, enable CORS for the app origin.';
+		: '';
 	return `Could not reach a local TTS server at ${ttsBaseUrl}. Make sure it is running and exposes the OpenAI /v1/audio/speech endpoint (e.g. Kokoro-FastAPI or openedai-speech).${originHint}`;
 }
 
@@ -97,7 +97,7 @@ export function getOmniVoiceConnectionHint(baseUrl?: string, siteOrigin?: string
 	const ttsBaseUrl = getTTSBaseUrl('omnivoice', baseUrl);
 	const originHint = siteOrigin
 		? ` If the server blocks this site (${siteOrigin}), enable CORS for that origin.`
-		: ' If the server blocks this site, enable CORS for the app origin.';
+		: '';
 	return `Could not reach the OmniVoice proxy at ${ttsBaseUrl}audio/speech. Make sure it is running (see tools/omnivoice/README.md).${originHint}`;
 }
 
@@ -135,7 +135,7 @@ export function getLocalProviderConnectionHint(
 	if (providerId === 'ollama') {
 		const originHint = siteOrigin
 			? ` and allow this origin: OLLAMA_ORIGINS="${siteOrigin}" ollama serve`
-			: ` and allow this site's origin via OLLAMA_ORIGINS`;
+			: '';
 		return `Could not reach Ollama at ${chatBaseUrl}. Make sure it's running with "ollama serve"${originHint}.`;
 	}
 

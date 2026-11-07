@@ -69,29 +69,9 @@ Ollama only answers requests from origins on its allowlist. If it isn't allowing
 
 **Desktop app**
 
-| Your OS | Setup needed | What to do |
-|---------|--------------|------------|
-| macOS | None | Ollama already allows the macOS app's `tauri://localhost` origin. Just run `ollama serve`. |
-| Windows | Yes | Allow `http://tauri.localhost` (see below). |
-| Linux | Yes | Allow `http://tauri.localhost` (see below). |
+No setup on any OS. The desktop app calls Ollama from its native core and sends no origin, so Ollama's allowlist never applies. Just run `ollama serve`.
 
-The desktop app on Windows and Linux reports its origin to Ollama as `http://tauri.localhost`, which is not on Ollama's default allowlist, so you have to add it once.
-
-On **Windows**, set it and then fully restart Ollama:
-
-```
-setx OLLAMA_ORIGINS "http://tauri.localhost"
-```
-
-`setx` only applies to programs started afterward, so quit Ollama from the system tray (right-click the tray icon, Quit) and start it again. If you run `ollama serve` in a terminal instead, use `set OLLAMA_ORIGINS=http://tauri.localhost` in that same window before running it.
-
-On **Linux**, start Ollama with the origin in its environment:
-
-```bash
-OLLAMA_ORIGINS=http://tauri.localhost ollama serve
-```
-
-If Ollama runs as a systemd service, run `systemctl edit ollama`, add `Environment="OLLAMA_ORIGINS=http://tauri.localhost"` under `[Service]`, then `sudo systemctl restart ollama`.
+Desktop versions before 0.21.4 sent the origin `http://tauri.localhost` on Windows, which Ollama rejects by default. If you are on an older version, update the app, or start Ollama with `OLLAMA_ORIGINS=http://tauri.localhost`.
 
 **Hosted website (app.utsuwa.ai)**
 
@@ -225,4 +205,4 @@ OLLAMA_ORIGINS=https://your-preview.workers.dev ollama serve
 
 If you use multiple Utsuwa origins, comma-separate them. Use `OLLAMA_ORIGINS=http://localhost:5173` for local development, or `OLLAMA_ORIGINS=*` only if you intentionally want to allow any browser origin on your machine.
 
-The **desktop app** hits the same Ollama allowlist. macOS works with no setup, but the Windows and Linux desktop apps need `OLLAMA_ORIGINS=http://tauri.localhost`. See [Allowing Utsuwa to reach Ollama](#allowing-utsuwa-to-reach-ollama).
+The **desktop app** needs none of this on any OS: its requests carry no origin.

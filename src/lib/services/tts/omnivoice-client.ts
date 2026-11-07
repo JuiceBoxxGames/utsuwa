@@ -2,6 +2,8 @@
 // baseUrl is the normalized TTS base (ends in /v1/). The key is sent as Bearer
 // for proxies running with OMNIVOICE_AUTH_TOKEN; /health stays open.
 
+import { providerFetch } from '../platform/provider-fetch.ts';
+
 export interface OmniVoiceConnection {
 	baseUrl: string;
 	apiKey?: string;
@@ -32,7 +34,7 @@ function auth(conn: OmniVoiceConnection): Record<string, string> {
 }
 
 function postJson(conn: OmniVoiceConnection, path: string, body: object): Promise<Response> {
-	return fetch(conn.baseUrl + path, {
+	return providerFetch(conn.baseUrl + path, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json', ...auth(conn) },
 		body: JSON.stringify(body)
@@ -47,7 +49,7 @@ async function failure(res: Response, fallback: string): Promise<Error> {
 export async function checkHealth(baseUrl: string): Promise<ProxyStatus> {
 	try {
 		const url = baseUrl.replace(/\/v1\/$/, '').replace(/\/+$/, '') + '/health';
-		const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+		const res = await providerFetch(url, { signal: AbortSignal.timeout(3000) });
 		return res.ok ? 'connected' : res.status === 503 ? 'connecting' : 'disconnected';
 	} catch {
 		return 'disconnected';
@@ -56,7 +58,7 @@ export async function checkHealth(baseUrl: string): Promise<ProxyStatus> {
 
 /** null when the proxy answered with an error, so callers can keep what they have. */
 export async function listClones(conn: OmniVoiceConnection): Promise<ClonedVoice[] | null> {
-	const res = await fetch(conn.baseUrl + 'voices', { headers: auth(conn) });
+	const res = await providerFetch(conn.baseUrl + 'voices', { headers: auth(conn) });
 	if (!res.ok) return null;
 	const data = (await res.json()) as { clones?: ClonedVoice[] };
 	return data.clones || [];
@@ -90,7 +92,7 @@ export async function cloneVoice(
 	form.append('voice_id', voiceId);
 	form.append('ref_audio', refAudio);
 	form.append('ref_text', refText);
-	const res = await fetch(conn.baseUrl + 'voices/clone', {
+	const res = await providerFetch(conn.baseUrl + 'voices/clone', {
 		method: 'POST',
 		headers: auth(conn),
 		body: form
@@ -99,7 +101,7 @@ export async function cloneVoice(
 }
 
 export async function deleteClone(conn: OmniVoiceConnection, cloneId: string): Promise<void> {
-	await fetch(conn.baseUrl + 'voices/clone/' + cloneId, { method: 'DELETE', headers: auth(conn) });
+	await providerFetch(conn.baseUrl + 'voices/clone/' + cloneId, { method: 'DELETE', headers: auth(conn) });
 }
 
 export function previewBody(p: PreviewParams): PreviewBody {

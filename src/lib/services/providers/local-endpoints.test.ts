@@ -92,8 +92,8 @@ test('normalizes local TTS base URL to a trailing-slash /v1 path', () => {
 	assert.equal(getTTSBaseUrl('local-tts'), 'http://localhost:8880/v1/');
 });
 
-test('provides local TTS troubleshooting hint with CORS guidance', () => {
-	const hint = getLocalTTSConnectionHint('http://localhost:8880');
+test('provides local TTS troubleshooting hint with CORS guidance on the web', () => {
+	const hint = getLocalTTSConnectionHint('http://localhost:8880', 'https://app.utsuwa.ai');
 	assert.match(hint, /audio\/speech/);
 	assert.match(hint, /CORS/);
 	assert.match(
@@ -119,8 +119,8 @@ test('normalizes OmniVoice base URL to a trailing-slash /v1 path', () => {
 	assert.equal(getTTSBaseUrl('omnivoice'), 'http://localhost:8881/v1/');
 });
 
-test('provides OmniVoice troubleshooting hint with CORS guidance', () => {
-	const hint = getOmniVoiceConnectionHint('http://localhost:8880');
+test('provides OmniVoice troubleshooting hint with CORS guidance on the web', () => {
+	const hint = getOmniVoiceConnectionHint('http://localhost:8880', 'https://app.utsuwa.ai');
 	assert.match(hint, /OmniVoice proxy/);
 	assert.match(hint, /audio\/speech/);
 	assert.match(hint, /CORS/);
@@ -161,4 +161,11 @@ test('looksLikeOllama matches default local Ollama only', () => {
 	assert.equal(looksLikeOllama('http://localhost:1234'), false);
 	assert.equal(looksLikeOllama('https://api.openai.com/v1'), false);
 	assert.equal(looksLikeOllama('not a url'), false);
+});
+
+test('hints skip origin advice when no browser origin is involved (desktop)', () => {
+	assert.doesNotMatch(getLocalProviderConnectionHint('ollama', 'http://localhost:11434'), /OLLAMA_ORIGINS/);
+	assert.doesNotMatch(getLocalTTSConnectionHint('http://localhost:8880/v1'), /CORS/);
+	assert.doesNotMatch(getOmniVoiceConnectionHint('http://localhost:8881/v1'), /CORS/);
+	assert.doesNotMatch(getLocalSTTConnectionHint('http://localhost:8000/v1'), /CORS/);
 });

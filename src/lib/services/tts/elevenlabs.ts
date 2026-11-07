@@ -1,3 +1,4 @@
+import { providerFetch } from '../platform/provider-fetch.ts';
 import {
 	getSharedAudioContext,
 	type ITTSProvider,
@@ -43,7 +44,7 @@ export class ElevenLabsTTS implements ITTSProvider {
 	}
 
 	async fetchAudioBuffer(text: string, options?: StreamOptions): Promise<AudioBuffer> {
-		const response = await fetch(
+		const response = await providerFetch(
 			`${this.baseUrl}text-to-speech/${this.voiceId}/stream`,
 			{
 				method: 'POST',

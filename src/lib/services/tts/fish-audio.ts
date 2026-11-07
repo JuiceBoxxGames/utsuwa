@@ -8,6 +8,7 @@ import {
 } from './index.ts';
 import { FISH_AUDIO_TTS_URL } from '../providers/provider-defaults.ts';
 import { providerErrorMessage } from './provider-utils.ts';
+import { providerFetch } from '../platform/provider-fetch.ts';
 
 // People copy voices off fish.audio as links (fish.audio/m/<id>), so pull the
 // 32-hex id out of whatever was pasted.
@@ -16,12 +17,8 @@ function toVoiceId(voice: string): string {
 }
 
 // Desktop builds have no server routes, but the Tauri HTTP plugin skips CORS.
-async function post(init: RequestInit): Promise<Response> {
-	if (isTauri()) {
-		const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-		return tauriFetch(FISH_AUDIO_TTS_URL, init);
-	}
-	return fetch('/api/tts/fish-audio', init);
+function post(init: RequestInit): Promise<Response> {
+	return isTauri() ? providerFetch(FISH_AUDIO_TTS_URL, init) : fetch('/api/tts/fish-audio', init);
 }
 
 export class FishAudioTTS implements ITTSProvider {
