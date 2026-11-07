@@ -33,7 +33,7 @@ jobs:
           if (-not $setup) { throw "no NSIS installer in artifacts" }
           Write-Host "installing $($setup.FullName)"
           Start-Process $setup.FullName -ArgumentList '/S' -Wait
-          $exe = Get-ChildItem -Recurse "$env:LOCALAPPDATA\Utsuwa", "$env:ProgramFiles\Utsuwa" -Filter utsuwa.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          $exe = Get-ChildItem -Recurse "$env:LOCALAPPDATA\Utsuwa", "$env:LOCALAPPDATA\Programs\Utsuwa", "$env:ProgramFiles\Utsuwa" -Filter utsuwa.exe -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $exe) { throw "installed utsuwa.exe not found" }
           Write-Host "launching $($exe.FullName)"
           $p = Start-Process $exe.FullName -PassThru
