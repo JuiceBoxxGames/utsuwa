@@ -242,12 +242,17 @@
 		});
 		if (c.provider !== 'anthropic') {
 			await check(`${c.id}: native tool call`, async () => {
-				const r = await streamCase({
-					...req, tools: [speakTool],
-					messages: [{ role: 'user', content: 'Call speak_segment with the text "pong". Do not answer in plain text.' }]
-				});
-				assert(r.tools.length > 0, `no tool call; text "${r.text}"`);
-				return r.tools;
+				// Small local models skip the tool now and then (about 1 in 7 on main too), so allow retries
+				let last = '';
+				for (let attempt = 1; attempt <= 3; attempt++) {
+					const r = await streamCase({
+						...req, tools: [speakTool],
+						messages: [{ role: 'user', content: 'Call speak_segment with the text "pong". Do not answer in plain text.' }]
+					});
+					if (r.tools.length > 0) return { attempt, tools: r.tools };
+					last = r.text;
+				}
+				throw new Error(`no tool call in 3 attempts; text "${last}"`);
 			});
 		}
 	}

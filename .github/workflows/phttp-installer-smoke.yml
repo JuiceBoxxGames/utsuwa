@@ -1,0 +1,79 @@
+# Throwaway: installs the dry-run release artifacts and launches them. Never merged.
+name: desktop installer smoke
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: release.yml run id whose artifacts to install
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Download installers
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download ${{ inputs.run_id }} -R ${{ github.repository }} -D artifacts
+          find artifacts -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' \) -exec ls -la {} \;
+
+      - name: Windows install and launch
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem -Recurse artifacts -Filter *-setup.exe | Select-Object -First 1
+          if (-not $setup) { throw "no NSIS installer in artifacts" }
+          Write-Host "installing $($setup.FullName)"
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem -Recurse "$env:LOCALAPPDATA\Utsuwa", "$env:ProgramFiles\Utsuwa" -Filter utsuwa.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { throw "installed utsuwa.exe not found" }
+          Write-Host "launching $($exe.FullName)"
+          $p = Start-Process $exe.FullName -PassThru
+          Start-Sleep 30
+          if ($p.HasExited) { throw "app exited with code $($p.ExitCode)" }
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("$PWD\screen.png")
+          Write-Host "still running after 30 s (pid $($p.Id))"
+
+      - name: Linux install and launch
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb imagemagick
+          deb=$(find artifacts -name '*.deb' | head -1)
+          sudo apt-get install -y "./$deb"
+          xvfb-run -a -s "-screen 0 1280x800x24" bash -c '
+            WEBKIT_DISABLE_DMABUF_RENDERER=1 utsuwa & pid=$!
+            sleep 30
+            import -window root screen.png
+            kill -0 $pid || { echo "deb app exited"; exit 1; }
+            echo "deb build still running after 30 s"
+            kill $pid
+          '
+          img=$(find artifacts -name '*.AppImage' | head -1)
+          chmod +x "$img"
+          xvfb-run -a bash -c "
+            WEBKIT_DISABLE_DMABUF_RENDERER=1 '$img' --appimage-extract-and-run & pid=\$!
+            sleep 30
+            kill -0 \$pid || { echo 'AppImage exited'; exit 1; }
+            echo 'AppImage still running after 30 s'
+            kill \$pid
+          "
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: screen-${{ matrix.os }}
+          path: screen.png
