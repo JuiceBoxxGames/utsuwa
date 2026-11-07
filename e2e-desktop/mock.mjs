@@ -28,6 +28,7 @@ http.createServer(async (req, res) => {
   const raw = await body(req);
   const p = url.pathname;
 
+  if (p === '/v1/_origin') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ origin: req.headers.origin ?? null })); }
   if (p === '/v1/_stats') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(stats)); }
   if (p === '/v1/models' || p === '/api/v0/models') {
     // Raw UTF-8 bytes in a header value: plugin-http before 2.8.3 threw on this

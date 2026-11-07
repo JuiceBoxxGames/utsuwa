@@ -101,6 +101,7 @@
 			}
 			throw new Error('plain fetch succeeded, so the mock does not reproduce the CORS failure');
 		});
+		await check('Origin header the provider receives', async () => (await (await providerFetch(MOCK + '/_origin')).json()));
 		await check('models: custom endpoint with no CORS', async () => {
 			const r = await fetchModelsDirect('openai-compatible', undefined, MOCK);
 			assert(!r.error && r.models.length === 2, r.error || `got ${r.models.length} models`);
@@ -282,7 +283,31 @@
 		}
 	}
 
+	async function toolStats(n: number) {
+		const r = await fetchModelsDirect('ollama');
+		const model = r.models[0]?.id ?? '';
+		const tally = { pass: 0, empty: 0, textOnly: 0, error: 0, samples: [] as string[] };
+		for (let i = 0; i < n; i++) {
+			const out = await run({
+				provider: 'ollama', isLocal: true, model, tools: [speakTool], maxTokens: 200,
+				systemPrompt: 'You are a test harness. Follow instructions exactly.',
+				messages: [{ role: 'user', content: 'Call speak_segment with the text "pong". Do not answer in plain text.' }]
+			});
+			if (out.error) { tally.error++; tally.samples.push(errText(out.error)); }
+			else if (out.tools.length) tally.pass++;
+			else if (out.text.trim()) { tally.textOnly++; tally.samples.push(out.text.slice(0, 60)); }
+			else tally.empty++;
+		}
+		await report({ name: `ollama tool stats x${n} (${model})`, ok: true, detail: tally });
+	}
+
 	onMount(async () => {
+		const n = Number(new URLSearchParams(location.search).get('tools'));
+		if (n) {
+			await toolStats(n);
+			await fetch(LISTEN + '/done', { method: 'POST', mode: 'no-cors' }).catch(() => {});
+			return;
+		}
 		await report({ name: 'env', ok: true, detail: { tauri: isTauri(), origin: location.origin, ua: navigator.userAgent } });
 		const cfg = await fetch(LISTEN + '/config').then((r) => r.json()).catch(() => ({ keys: {} }));
 		await mockSuite();

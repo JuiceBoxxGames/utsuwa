@@ -6,7 +6,12 @@ import { isTauri } from '@tauri-apps/api/core';
 export const providerFetch: typeof fetch = async (input, init) => {
 	if (!isTauri()) return fetch(input, init);
 	const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-	return withAbortErrors(tauriFetch)(input, init);
+	// The plugin stamps the webview origin on every request (http://tauri.localhost
+	// on Windows), and Ollama's default allowlist rejects that one. An empty Origin
+	// makes the plugin drop the header, so we look like any other native client.
+	const headers = new Headers(init?.headers);
+	headers.set('Origin', '');
+	return withAbortErrors(tauriFetch)(input, { ...init, headers });
 };
 
 // The plugin rejects aborts with a plain "Request cancelled" (a bare string once
