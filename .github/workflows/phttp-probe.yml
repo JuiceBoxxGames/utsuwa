@@ -3,7 +3,7 @@ name: desktop provider-fetch probe
 on:
   push:
     branches: [test/phttp-desktop-probe]
-  workflow_dispatch:
+    paths-ignore: ['e2e-desktop/smoke-run-id', '.github/workflows/phttp-installer-smoke.yml']
 permissions:
   contents: read
 jobs:

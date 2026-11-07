@@ -1,11 +1,9 @@
 # Throwaway: installs the dry-run release artifacts and launches them. Never merged.
 name: desktop installer smoke
 on:
-  workflow_dispatch:
-    inputs:
-      run_id:
-        description: release.yml run id whose artifacts to install
-        required: true
+  push:
+    branches: [test/phttp-desktop-probe]
+    paths: ['e2e-desktop/smoke-run-id']
 permissions:
   contents: read
   actions: read
@@ -18,12 +16,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - name: Download installers
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run download ${{ inputs.run_id }} -R ${{ github.repository }} -D artifacts
+          gh run download "$(cat e2e-desktop/smoke-run-id)" -R ${{ github.repository }} -D artifacts
           find artifacts -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' \) -exec ls -la {} \;
 
       - name: Windows install and launch
