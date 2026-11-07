@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.4] - 2026-11-07
+
+Local and custom providers that refused the desktop app now connect.
+
+### Fixed
+- **Desktop:** chat, model lists, ElevenLabs voices and OmniVoice voice management no longer depend on a provider's CORS settings. LM Studio with its CORS toggle off, Together, and other OpenAI-Compatible endpoints that turned the app away now connect, and a wrong API key shows the provider's real error instead of "Failed to fetch" ([#333](https://github.com/JuiceBoxxGames/utsuwa/pull/333), closes [#311](https://github.com/JuiceBoxxGames/utsuwa/issues/311)).
+- **Desktop on Windows:** Ollama works with its default settings. You no longer need to set `OLLAMA_ORIGINS`; if you added it only for Utsuwa, you can remove it ([#333](https://github.com/JuiceBoxxGames/utsuwa/pull/333)).
+
+### Changed
+- **Dependency updates:** Tauri plugin patches (HTTP, file system, opener, global shortcut), `@xsai/stream-text` 0.5, Svelte 5.57.3, mdsvex 0.12.8 and Pagefind 1.5.2 ([#329](https://github.com/JuiceBoxxGames/utsuwa/pull/329), [#295](https://github.com/JuiceBoxxGames/utsuwa/pull/295), [#293](https://github.com/JuiceBoxxGames/utsuwa/pull/293), [#296](https://github.com/JuiceBoxxGames/utsuwa/pull/296), [#294](https://github.com/JuiceBoxxGames/utsuwa/pull/294)).
+
 ## [0.21.3] - 2026-11-03
 
 A bug-hunting release: we audited chat, voice, memory, providers and the UI and fixed what turned up.
