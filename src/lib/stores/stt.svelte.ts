@@ -2,6 +2,7 @@ import { browser } from '$app/environment';
 import { webSpeechService } from '$lib/services/stt/web-speech';
 import { openAiSttService } from '$lib/services/stt/openai-stt';
 import { getSTTBaseUrl, getLocalSTTConnectionHint } from '$lib/services/providers/local-endpoints';
+import { browserOrigin } from '$lib/services/platform/provider-fetch';
 import { getSTTProvider } from '$lib/services/providers/registry';
 import { isTauri } from '$lib/services/platform/platform';
 import { settingsStore } from '$lib/stores/settings.svelte';
@@ -42,7 +43,7 @@ function createSttStore() {
 			apiKey: config.apiKey || undefined,
 			label: isLocal ? 'the local STT server' : (meta?.name ?? 'the STT server'),
 			connectionHint: isLocal
-				? getLocalSTTConnectionHint(baseUrl, browser ? window.location.origin : undefined)
+				? getLocalSTTConnectionHint(baseUrl, browserOrigin())
 				: undefined,
 			timeoutMs: config.timeoutMs
 		});

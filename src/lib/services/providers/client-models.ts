@@ -7,7 +7,7 @@ import {
 	looksLikeOllama
 } from './local-endpoints.ts';
 import { CHAT_MODEL_FILTERS, DEFAULT_MODELS_BASE_URLS } from './provider-defaults.ts';
-import { providerFetch } from '../platform/provider-fetch.ts';
+import { browserOrigin, providerFetch } from '../platform/provider-fetch.ts';
 import { addLMStudioVision, addOllamaVision, reportedVision, type FetchJson } from './vision.ts';
 
 interface ModelInfo {
@@ -27,10 +27,6 @@ function jsonAt(base: string, signal: AbortSignal): FetchJson {
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		return res.json();
 	};
-}
-
-function getCurrentSiteOrigin(): string | undefined {
-	return typeof window !== 'undefined' ? window.location.origin : undefined;
 }
 
 function normalizeModelName(id: string, providerId: string): string {
@@ -213,7 +209,7 @@ export async function fetchModelsDirect(
 	} catch (error) {
 		const message =
 			isLocalLLMProvider(providerId)
-				? getLocalProviderConnectionHint(providerId, cleanBaseUrl, getCurrentSiteOrigin())
+				? getLocalProviderConnectionHint(providerId, cleanBaseUrl, browserOrigin())
 				: error instanceof Error && error.name === 'TimeoutError'
 					? 'Request timed out'
 					: error instanceof Error ? error.message : 'Unknown error';

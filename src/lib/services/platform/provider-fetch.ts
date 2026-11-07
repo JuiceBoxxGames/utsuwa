@@ -6,13 +6,23 @@ import { isTauri } from '@tauri-apps/api/core';
 export const providerFetch: typeof fetch = async (input, init) => {
 	if (!isTauri()) return fetch(input, init);
 	const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-	// The plugin stamps the webview origin on every request (http://tauri.localhost
-	// on Windows), and Ollama's default allowlist rejects that one. An empty Origin
-	// makes the plugin drop the header, so we look like any other native client.
+	return withAbortErrors(tauriFetch)(input, withoutOrigin(init));
+};
+
+// The plugin stamps the webview origin on every request (http://tauri.localhost
+// on Windows), and Ollama's default allowlist rejects it. An empty Origin makes
+// the plugin drop the header (needs its unsafe-headers feature), so the app
+// talks to providers like any other native client.
+export function withoutOrigin(init: RequestInit | undefined): RequestInit {
 	const headers = new Headers(init?.headers);
 	headers.set('Origin', '');
-	return withAbortErrors(tauriFetch)(input, { ...init, headers });
-};
+	return { ...init, headers };
+}
+
+/** The origin a provider sees, for CORS hints. Desktop requests carry none. */
+export function browserOrigin(): string | undefined {
+	return typeof window !== 'undefined' && !isTauri() ? window.location.origin : undefined;
+}
 
 // The plugin rejects aborts with a plain "Request cancelled" (a bare string once
 // the body is streaming). Callers check for AbortError the way the browser's

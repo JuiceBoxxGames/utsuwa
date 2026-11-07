@@ -259,9 +259,9 @@ If you built from source and it will not start, check that Rust is installed wit
 
 ### Local LLM or TTS will not connect on desktop
 
-The desktop app calls local servers directly, so the server only needs to be running and allow the app's origin.
+The desktop app calls local servers from its native core, with no browser origin or CORS involved, so the server only needs to be running.
 
-1. **Ollama**: start it with `ollama serve` and pull a model. If Ollama rejects the app, the error reads "Could not reach Ollama at `<url>`. Make sure it's running with "ollama serve" and allow this origin: `OLLAMA_ORIGINS="<origin>" ollama serve`." Use the origin it shows. Full steps: [Local LLM Setup](/docs/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama).
+1. **Ollama**: start it with `ollama serve` and pull a model. No `OLLAMA_ORIGINS` setup is needed on desktop. If you are on a version before 0.21.4 on Windows, update the app or see [Local LLM Setup](/docs/guides/local-llm-setup#allowing-utsuwa-to-reach-ollama).
 2. **LM Studio**: load a model and click Start Server. The error reads "Could not reach LM Studio at `<url>`. Open it, load a model, and click Start Server."
 3. **Local TTS**: start your TTS server, for example Kokoro-FastAPI on `http://localhost:8880`.
 4. **Ports**: the port in Settings > LLM Model or Settings > TTS must match the port your server uses.

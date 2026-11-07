@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { providerFetch, withAbortErrors } from './provider-fetch.ts';
+import { providerFetch, withAbortErrors, withoutOrigin } from './provider-fetch.ts';
 
 // Mimics @tauri-apps/plugin-http: aborts reject with a plain Error and error
 // the body stream with a bare string instead of an AbortError.
@@ -72,4 +72,17 @@ test('other failures pass through unchanged', async () => {
 	await assert.rejects(f('https://x', { signal: new AbortController().signal }), {
 		message: 'error sending request'
 	});
+});
+
+test('withoutOrigin asks the plugin to drop Origin and keeps every other header', () => {
+	for (const headers of [{ Authorization: 'Bearer k', 'Content-Type': 'application/json' }, new Headers({ Authorization: 'Bearer k', 'Content-Type': 'application/json' })]) {
+		const init = withoutOrigin({ method: 'POST', body: '{}', headers });
+		const out = new Headers(init.headers);
+		assert.equal(out.get('origin'), '');
+		assert.equal(out.get('authorization'), 'Bearer k');
+		assert.equal(out.get('content-type'), 'application/json');
+		assert.equal(init.method, 'POST');
+		assert.equal(init.body, '{}');
+	}
+	assert.equal(new Headers(withoutOrigin(undefined).headers).get('origin'), '');
 });

@@ -39,6 +39,10 @@ The desktop app has no standing read access to your files. It reads only files y
 
 On Linux, WebKitGTK has no microphone prompt of its own, so the desktop app grants microphone access to its own windows without asking. Recording only starts when you press the mic button or the push-to-talk shortcut. Camera and other permissions keep the webview's defaults. On macOS and Windows the system prompt still applies.
 
+### Desktop Network Requests
+
+The desktop app sends provider requests (chat, model lists, speech, transcription) through the Tauri HTTP plugin, which runs in the app's native core, so a provider's CORS policy does not apply. These requests carry no `Origin` header, like any native client. Dropping it needs the plugin's `unsafe-headers` feature, which also lets the app's own scripts set other normally forbidden headers on these requests; the desktop Content-Security-Policy blocks inline and remote scripts, which is what keeps that capability out of reach. The plugin's scope allows any `http`/`https` URL because providers and MCP servers are configured at runtime.
+
 ### Web Security Headers
 
 Server responses carry `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy` that allows the microphone and WebXR on the app's own origin only.

@@ -97,7 +97,7 @@ Enabled animations are listed in the prompt's `<avatar>` layer. When a reply set
 `src/lib/services/chat/companion-chat.ts` runs one send loop for both the main app and the desktop overlay. `src/lib/services/chat/companion-turn.ts` handles everything after the model replies.
 
 **Transports** (`src/lib/services/llm/transport.ts` picks one; `active-llm.ts` resolves the provider, model, key, and base URL):
-- **Direct fetch**: used for Ollama, LM Studio, and every provider in the desktop build. Anthropic uses its `/messages` API. Everything else uses `/chat/completions`.
+- **Direct fetch**: used for Ollama, LM Studio, and every provider in the desktop build. Anthropic uses its `/messages` API. Everything else uses `/chat/completions`. Requests go through `providerFetch` (`services/platform/provider-fetch.ts`): the browser's `fetch` on web, the Tauri HTTP plugin on desktop, where they carry no `Origin` header so provider CORS and Ollama's origin allowlist never apply.
 - **Server route** (`src/routes/api/chat/+server.ts`): used for cloud providers on web. It streams through the xsAI SDK (`@xsai/stream-text`) and sends lines prefixed `0:` (text), `t:` (tool call), and `e:` (error).
 
 **Key files:**

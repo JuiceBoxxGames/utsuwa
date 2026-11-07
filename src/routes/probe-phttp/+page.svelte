@@ -51,13 +51,21 @@
 		const ctrl = new AbortController();
 		const t0 = performance.now();
 		let error: unknown;
+		let chunks = 0;
 		try {
 			text = await streamChat(
-				{ ...req, signal: ctrl.signal, onReasoning: (r) => (reasoning = r) },
+				{
+					...req, signal: ctrl.signal,
+					onReasoning: (r) => {
+						reasoning = r;
+						// thinking models can spend the whole budget reasoning, so Stop counts that too
+						if (abortAfter && ++chunks === abortAfter) ctrl.abort();
+					}
+				},
 				(full) => {
 					stamps.push(Math.round(performance.now() - t0));
 					text = full;
-					if (abortAfter && stamps.length === abortAfter) ctrl.abort();
+					if (abortAfter && ++chunks === abortAfter) ctrl.abort();
 				},
 				(name, args) => tools.push({ name, args })
 			);
@@ -244,7 +252,7 @@
 			await check(`${c.id}: native tool call`, async () => {
 				// Small local models skip the tool now and then (about 1 in 7 on main too), so allow retries
 				let last = '';
-				for (let attempt = 1; attempt <= 3; attempt++) {
+				for (let attempt = 1; attempt <= 5; attempt++) {
 					const r = await streamCase({
 						...req, tools: [speakTool],
 						messages: [{ role: 'user', content: 'Call speak_segment with the text "pong". Do not answer in plain text.' }]
@@ -252,7 +260,7 @@
 					if (r.tools.length > 0) return { attempt, tools: r.tools };
 					last = r.text;
 				}
-				throw new Error(`no tool call in 3 attempts; text "${last}"`);
+				throw new Error(`no tool call in 5 attempts; text "${last}"`);
 			});
 		}
 	}
