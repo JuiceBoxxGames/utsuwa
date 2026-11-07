@@ -7,6 +7,7 @@ import {
 	looksLikeOllama
 } from './local-endpoints.ts';
 import { CHAT_MODEL_FILTERS, DEFAULT_MODELS_BASE_URLS } from './provider-defaults.ts';
+import { providerFetch } from '../platform/provider-fetch.ts';
 import { addLMStudioVision, addOllamaVision, reportedVision, type FetchJson } from './vision.ts';
 
 interface ModelInfo {
@@ -19,7 +20,7 @@ const TIMEOUT_MS = 10_000;
 
 function jsonAt(base: string, signal: AbortSignal): FetchJson {
 	return async (path, body) => {
-		const res = await fetch(
+		const res = await providerFetch(
 			new URL(path, base),
 			body === undefined ? { signal } : { method: 'POST', body: JSON.stringify(body), signal }
 		);
@@ -73,7 +74,7 @@ export async function fetchModelsDirect(
 			case 'deepseek':
 			case 'xai': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { Authorization: `Bearer ${apiKey}` },
 					signal
 				});
@@ -96,7 +97,7 @@ export async function fetchModelsDirect(
 				if (looksLikeOllama(cleanBaseUrl)) {
 					// Its documented OpenAI base ends in /v1; the native API sits beside it
 					const ollamaBase = getModelsBaseUrl('ollama', cleanBaseUrl);
-					const res = await fetch(`${ollamaBase}/api/tags`, { headers, signal });
+					const res = await providerFetch(`${ollamaBase}/api/tags`, { headers, signal });
 					if (!res.ok) throw new Error(`Failed to fetch models: HTTP ${res.status}`);
 					const data = await res.json();
 					models = (data.models || []).map((m: { name: string }) => ({
@@ -106,7 +107,7 @@ export async function fetchModelsDirect(
 					models = await addOllamaVision(models, jsonAt(ollamaBase, signal));
 				} else {
 					const normalizedUrl = ensureCustomOpenAIPath(cleanBaseUrl);
-					const res = await fetch(`${normalizedUrl}/models`, { headers, signal });
+					const res = await providerFetch(`${normalizedUrl}/models`, { headers, signal });
 					if (!res.ok) throw new Error(`Failed to fetch models: HTTP ${res.status}`);
 					const data = await res.json();
 					models = (data.data || []).map((m: { id: string }) => ({
@@ -119,7 +120,7 @@ export async function fetchModelsDirect(
 			}
 			case 'anthropic': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: {
 						'x-api-key': apiKey,
 						'anthropic-version': '2023-06-01',
@@ -136,7 +137,7 @@ export async function fetchModelsDirect(
 				break;
 			}
 			case 'ollama': {
-				const res = await fetch(`${cleanBaseUrl}/api/tags`, { signal });
+				const res = await providerFetch(`${cleanBaseUrl}/api/tags`, { signal });
 				if (!res.ok) throw new Error(`Failed to fetch models: HTTP ${res.status}`);
 				const data = await res.json();
 				models = (data.models || []).map((m: { name: string }) => ({
@@ -147,7 +148,7 @@ export async function fetchModelsDirect(
 				break;
 			}
 			case 'lmstudio': {
-				const res = await fetch(`${cleanBaseUrl}/models`, { signal });
+				const res = await providerFetch(`${cleanBaseUrl}/models`, { signal });
 				if (!res.ok) throw new Error(`Failed to fetch models: HTTP ${res.status}`);
 				const data = await res.json();
 				models = data.data.map((m: { id: string }) => ({ id: m.id, name: m.id }));
@@ -156,7 +157,7 @@ export async function fetchModelsDirect(
 			}
 			case 'google': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { 'x-goog-api-key': apiKey },
 					signal
 				});
@@ -172,7 +173,7 @@ export async function fetchModelsDirect(
 			}
 			case 'elevenlabs': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { 'xi-api-key': apiKey },
 					signal
 				});
@@ -188,7 +189,7 @@ export async function fetchModelsDirect(
 			}
 			case 'openai-tts': {
 				if (!apiKey) throw new Error('API key required');
-				const res = await fetch(`${cleanBaseUrl}/models`, {
+				const res = await providerFetch(`${cleanBaseUrl}/models`, {
 					headers: { Authorization: `Bearer ${apiKey}` },
 					signal
 				});
