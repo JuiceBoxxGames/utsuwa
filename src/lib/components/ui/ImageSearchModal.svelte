@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { imageSearchStore } from '$lib/stores/image-search.svelte'
 	import { closeImages, fetchImageAsDataUrl, openImageResult } from '$lib/services/image-search'
-	import { describeFocusedImage } from '$lib/services/image-search-vision'
 	import { Icon } from '$lib/components/ui'
 	import { isRasterImageDataUrl } from '$lib/utils/image-mime'
 
@@ -17,7 +16,6 @@
 	let thumbUrls = $state<Record<string, string>>({})
 	let thumbStatus = $state<Record<string, 'loading' | 'missing'>>({})
 	const started = new Set<string>()
-	let describedKey = ''
 
 	$effect(() => {
 		for (const result of imageSearchStore.results) {
@@ -41,13 +39,6 @@
 		}
 	})
 
-	$effect(() => {
-		const result = imageSearchStore.results[imageSearchStore.focusedIndex]
-		if (imageSearchStore.status !== 'ready' || !result || describedKey === result.url) return
-		describedKey = result.url
-		void describeFocusedImage()
-	})
-
 	function closePictures() {
 		closeImages()
 		imageSearchStore.closeModal()
@@ -69,7 +60,6 @@
 	// that picture. The open button is separate, so selecting never navigates.
 	function selectImage(index: number) {
 		imageSearchStore.setFocus(index)
-		void describeFocusedImage()
 	}
 
 	// Compute dynamic CSS variables for sidebar offsets

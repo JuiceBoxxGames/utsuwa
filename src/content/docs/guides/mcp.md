@@ -142,7 +142,7 @@ Concrete examples:
 
 **Privacy:** thumbnails are not hotlinked from the source host. Utsuwa loads them through the MCP file-fetch tool and shows a neutral placeholder when no such tool exists. Opening a full picture is an explicit user action. Without a file-fetch tool the popup still lists titles, sources and optional licenses, but it does not automatically request third-party images.
 
-To load a picture's bytes (so a hotlink-protected or CORS-blocked source still displays, and a vision model can look at it), enable a server that exposes **`fetch_file_from_url`**. The reference server is the self-hosted `filefetcher`:
+To load a picture's bytes (so a hotlink-protected or CORS-blocked source still displays), enable a server that exposes **`fetch_file_from_url`**. The reference server is the self-hosted `filefetcher`:
 
 - **Name**: `Filefetcher`
 - **Transport**: `HTTP`
@@ -150,7 +150,7 @@ To load a picture's bytes (so a hotlink-protected or CORS-blocked source still d
 - **Auth**: `none`
 - **Tool**: `fetch_file_from_url` with `{ "url": "<image url>", "max_dimension": 1280 }`
 
-The tool must return the picture as an MCP **image content block** — `{"type":"image","data":"<base64>","mimeType":"image/png"}` — and not as base64 embedded in a text block. `max_dimension` caps the longest edge (the server never upscales), so the request stays small. When a vision model is configured, the selected picture is also described to the companion.
+The tool must return the picture as an MCP **image content block** — `{"type":"image","data":"<base64>","mimeType":"image/png"}` — and not as base64 embedded in a text block. `max_dimension` caps the longest edge (the server never upscales), so the request stays small.
 
 > If a picture server has **Ask before running tools** enabled, the search asks once for confirmation. Automatic thumbnail prefetch is skipped for such a server (the popup keeps placeholders) rather than queueing one dialog per image; opening one picture asks once.
 

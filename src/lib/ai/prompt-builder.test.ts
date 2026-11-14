@@ -759,23 +759,6 @@ test('a missing picture tool is called out in the prompt', () => {
 	assert.ok(prompt.includes('No usable picture search tool is configured right now.'));
 });
 
-test('a vision description is woven into the open-popup context', () => {
-	const withDesc = buildSystemPrompt(
-		makeContext({
-			showImagesEnabled: true,
-			imageModalOpen: true,
-			imageModalDescription: 'A red panda perched on a mossy branch.'
-		})
-	);
-	assert.ok(withDesc.includes('A red panda perched on a mossy branch.'));
-	assert.ok(withDesc.includes('The picture they have selected'));
-
-	const withoutDesc = buildSystemPrompt(
-		makeContext({ showImagesEnabled: true, imageModalOpen: true })
-	);
-	assert.ok(!withoutDesc.includes('The picture they have selected'));
-});
-
 test('companion mode also gets the showing-pictures layer when enabled', () => {
 	const ctx = makeContext({
 		state: makeState({ appMode: 'companion' }),

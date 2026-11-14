@@ -27,9 +27,6 @@ export interface PromptContext {
 	imageModalOpen?: boolean;
 	imageModalQuery?: string;
 	imageModalPage?: number;
-	// What the shown picture actually contains (from a separate vision model),
-	// so she can talk about what is on screen.
-	imageModalDescription?: string;
 	// Configured context window size in tokens. Used to scale memory injection
 	// and truncate history. When unset, historical defaults (6 turns, 5 facts)
 	// are preserved.
@@ -552,12 +549,9 @@ function buildImageSearchLayer(ctx: PromptContext): string | null {
 	);
 
 	if (ctx.imageModalOpen) {
-		const shown = ctx.imageModalDescription
-			? `\nThe picture they have selected (what your own eyes see): ${ctx.imageModalDescription}`
-			: '';
 		const query = ctx.imageModalQuery ? `\nCurrent search: "${ctx.imageModalQuery}" (page ${ctx.imageModalPage ?? 1}).` : '';
 		parts.push(
-			`CURRENTLY OPEN: A picture popup is open.${query}${shown}\n` +
+			`CURRENTLY OPEN: A picture popup is open.${query}\n` +
 				`Their question refers to the selected picture. You can refer to it, ask what they think, show more with "image_page", or close the popup with "close_images": true.`
 		);
 	}

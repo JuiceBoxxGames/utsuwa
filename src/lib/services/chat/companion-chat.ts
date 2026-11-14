@@ -111,9 +111,6 @@ async function buildCompanionPrompt(
 		imageModalOpen: imageSearchStore.isOpen,
 		imageModalQuery: imageSearchStore.isOpen ? imageSearchStore.currentQuery : undefined,
 		imageModalPage: imageSearchStore.isOpen ? imageSearchStore.currentPage : undefined,
-		imageModalDescription: imageSearchStore.isOpen
-			? imageSearchStore.currentDescription ?? undefined
-			: undefined,
 		contextSize,
 		pendingReminders: reminderStore.upcoming.map((r) => ({ triggerAt: r.triggerAt, content: r.content })),
 		sessionStartedAt: workingMemory.sessionStartedAt,
