@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { imageSearchStore } from '$lib/stores/image-search.svelte'
-	import { closeImages, fetchImageAsDataUrl, openImageResult } from '$lib/services/image-search'
+	import {
+		closeImages,
+		fetchImageAsDataUrl,
+		imageFetchCapability,
+		openImageResult,
+		type ImageFetchCapability
+	} from '$lib/services/image-search'
 	import { Icon } from '$lib/components/ui'
 	import { isRasterImageDataUrl } from '$lib/utils/image-mime'
 	import { onMount } from 'svelte'
@@ -113,12 +119,66 @@
 
 	// Thumbnails go through the MCP file-fetch tool, never straight from the
 	// source host. Without that tool the card keeps a neutral placeholder.
+	type ThumbStatus = 'loading' | 'missing' | 'limited'
 	let thumbUrls = $state<Record<string, string>>({})
-	let thumbStatus = $state<Record<string, 'loading' | 'missing'>>({})
+	let thumbStatus = $state<Record<string, ThumbStatus>>({})
 	let thumbAttempt = $state(0)
+	let fetchCap = $state<ImageFetchCapability | null>(null)
 	const started = new Set<string>()
 	let lastResults: unknown = null
-	const anyMissing = $derived(Object.values(thumbStatus).includes('missing'))
+	let loadSeq = 0
+	const anyMissing = $derived(
+		Object.values(thumbStatus).some((status) => status === 'missing' || status === 'limited')
+	)
+
+	async function loadPreviews(results: typeof imageSearchStore.results) {
+		const seq = ++loadSeq
+		const cap = await imageFetchCapability()
+		if (seq !== loadSeq) return
+		fetchCap = cap
+		const pending: string[] = []
+		let firstExternal = true
+		for (let i = 0; i < results.length; i++) {
+			const url = results[i].thumbnail
+			if (!url || started.has(url)) continue
+			started.add(url)
+			if (url.startsWith('data:')) {
+				if (isRasterImageDataUrl(url)) thumbUrls[url] = url
+				else thumbStatus[url] = 'missing'
+				continue
+			}
+			if (cap.asksFirst) {
+				// One confirmation is tolerable; one per picture is not. Load the
+				// first external preview and explain the rest.
+				if (firstExternal) {
+					firstExternal = false
+					pending.push(url)
+				} else {
+					thumbStatus[url] = 'limited'
+				}
+			} else {
+				pending.push(url)
+			}
+		}
+		await Promise.all(
+			pending.map(async (url) => {
+				thumbStatus[url] = 'loading'
+				try {
+					const dataUrl = await fetchImageAsDataUrl(url, { confirm: cap.asksFirst })
+					if (seq !== loadSeq) return
+					if (dataUrl) {
+						thumbUrls[url] = dataUrl
+						delete thumbStatus[url]
+					} else {
+						thumbStatus[url] = 'missing'
+					}
+				} catch {
+					// Declining the confirmation keeps the placeholder.
+					if (seq === loadSeq) thumbStatus[url] = 'missing'
+				}
+			})
+		)
+	}
 
 	$effect(() => {
 		// Re-run when the retry button bumps the counter.
@@ -132,25 +192,7 @@
 			thumbUrls = {}
 			thumbStatus = {}
 		}
-		for (const result of results) {
-			const url = result.thumbnail
-			if (started.has(url)) continue
-			started.add(url)
-			if (url.startsWith('data:')) {
-				if (isRasterImageDataUrl(url)) thumbUrls[url] = url
-				else thumbStatus[url] = 'missing'
-				continue
-			}
-			thumbStatus[url] = 'loading'
-			void fetchImageAsDataUrl(url).then((dataUrl) => {
-				if (dataUrl) {
-					thumbUrls[url] = dataUrl
-					delete thumbStatus[url]
-				} else {
-					thumbStatus[url] = 'missing'
-				}
-			})
-		}
+		void loadPreviews(results)
 	})
 
 	$effect(() => {
@@ -261,10 +303,17 @@
 			<div class="modal-content">
 				{#if anyMissing}
 					<p class="thumb-hint">
-						Some previews are unavailable. Previews load through the
-						<code>fetch_file_from_url</code> MCP tool under Settings > MCP; enable it and
-						turn off "Ask before running tools" for that server, then
-						<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
+						{#if fetchCap?.asksFirst}
+							"Ask before running tools" is on for your file-fetch server, so only the
+							first preview is requested instead of one confirmation per picture. Turn
+							it off under Settings > MCP to load every preview, then
+							<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
+						{:else}
+							Some previews are unavailable. Previews load through the
+							<code>fetch_file_from_url</code> MCP tool under Settings > MCP; enable it and
+							turn off "Ask before running tools" for that server, then
+							<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
+						{/if}
 					</p>
 				{/if}
 				{#if imageSearchStore.status === 'error'}

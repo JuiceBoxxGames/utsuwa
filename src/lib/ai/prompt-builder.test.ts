@@ -759,6 +759,17 @@ test('a missing picture tool is called out in the prompt', () => {
 	assert.ok(prompt.includes('No usable picture search tool is configured right now.'));
 });
 
+test('an ask-gated file fetcher explains why only one preview loaded', () => {
+	const prompt = buildSystemPrompt(
+		makeContext({
+			showImagesEnabled: true,
+			imageModalOpen: true,
+			imagePreviewLimited: true
+		})
+	);
+	assert.ok(prompt.includes('Only the first preview is loaded'));
+});
+
 test('companion mode also gets the showing-pictures layer when enabled', () => {
 	const ctx = makeContext({
 		state: makeState({ appMode: 'companion' }),

@@ -31,6 +31,35 @@ export const IMAGE_FETCH_TOOL = 'fetch_file_from_url';
 /** Largest edge requested from the file-fetch tool. */
 const IMAGE_FETCH_MAX_DIMENSION = 1280;
 
+export interface ImageFetchCapability {
+	available: boolean;
+	/** True when the server asks before running tools, so each fetch confirms. */
+	asksFirst: boolean;
+}
+
+function findImageFetchServer() {
+	const tool = mcpStore.tools.find((entry) => entry.name === IMAGE_FETCH_TOOL);
+	if (!tool) return null;
+	return mcpStore.servers.find((entry) => entry.id === tool.serverId && entry.enabled) ?? null;
+}
+
+/** Sync view for prompt context: is the file-fetch server ask-gated? */
+export function imageFetchAsksFirst(): boolean {
+	const server = findImageFetchServer();
+	return server ? server.askBeforeRun !== false : false;
+}
+
+/** Resolve preview capability after tool discovery. */
+export async function imageFetchCapability(): Promise<ImageFetchCapability> {
+	try {
+		await mcpStore.ensureTools();
+	} catch {
+		// Discovery failure falls through to "unavailable".
+	}
+	const server = findImageFetchServer();
+	return { available: server !== null, asksFirst: server ? server.askBeforeRun !== false : false };
+}
+
 /** True when MCP is available, so the companion can advertise pictures. */
 export function isShowImagesEnabled(): boolean {
 	return mcpStore.serverEnabled && mcpStore.enabledServers.length > 0;
@@ -227,9 +256,7 @@ export async function fetchImage(
 	} catch {
 		// Discovery failure must not break the caller; fall back to the raw URL.
 	}
-	const tool = mcpStore.tools.find((entry) => entry.name === IMAGE_FETCH_TOOL);
-	if (!tool) return null;
-	const server = mcpStore.servers.find((entry) => entry.id === tool.serverId && entry.enabled);
+	const server = findImageFetchServer();
 	if (!server) return null;
 	const args = { url, max_dimension: IMAGE_FETCH_MAX_DIMENSION };
 	if (server.askBeforeRun !== false) {

@@ -32,6 +32,7 @@ import { imageSearchStore } from '$lib/stores/image-search.svelte';
 import {
 	closeImages,
 	hasConfiguredImageSearchTool,
+	imageFetchAsksFirst,
 	isShowImagesEnabled,
 	searchImages
 } from '$lib/services/image-search';
@@ -111,6 +112,7 @@ async function buildCompanionPrompt(
 		imageModalOpen: imageSearchStore.isVisible,
 		imageModalQuery: imageSearchStore.isVisible ? imageSearchStore.currentQuery : undefined,
 		imageModalPage: imageSearchStore.isVisible ? imageSearchStore.currentPage : undefined,
+		imagePreviewLimited: imageSearchStore.isVisible ? imageFetchAsksFirst() : undefined,
 		contextSize,
 		pendingReminders: reminderStore.upcoming.map((r) => ({ triggerAt: r.triggerAt, content: r.content })),
 		sessionStartedAt: workingMemory.sessionStartedAt,
