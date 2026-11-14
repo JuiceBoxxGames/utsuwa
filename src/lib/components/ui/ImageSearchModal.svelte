@@ -302,7 +302,7 @@
 			<!-- Content -->
 			<div class="modal-content">
 				{#if anyMissing}
-					<p class="thumb-hint">
+					<p class="thumb-hint" role="status">
 						{#if fetchCap?.asksFirst}
 							"Ask before running tools" is on for your file-fetch server, so only the
 							first preview is requested instead of one confirmation per picture. Turn
@@ -500,9 +500,11 @@
 	.thumb-hint {
 		margin: 0 0 0.75rem;
 		padding: 0.6rem 0.75rem;
+		border: 1px solid color-mix(in srgb, var(--color-error) 35%, transparent);
+		border-left: 3px solid var(--color-error);
 		border-radius: 10px;
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
+		background: color-mix(in srgb, var(--color-error) 8%, var(--bg-secondary));
+		color: var(--color-error);
 		font-size: 0.75rem;
 		line-height: 1.45;
 	}
