@@ -117,12 +117,22 @@
 	let thumbStatus = $state<Record<string, 'loading' | 'missing'>>({})
 	let thumbAttempt = $state(0)
 	const started = new Set<string>()
+	let lastResults: unknown = null
 	const anyMissing = $derived(Object.values(thumbStatus).includes('missing'))
 
 	$effect(() => {
 		// Re-run when the retry button bumps the counter.
 		if (thumbAttempt < 0) return
-		for (const result of imageSearchStore.results) {
+		// A new search starts with fresh preview state; stale missing entries
+		// must not keep the hint visible for a later, healthy search.
+		const results = imageSearchStore.results
+		if (results !== lastResults) {
+			lastResults = results
+			started.clear()
+			thumbUrls = {}
+			thumbStatus = {}
+		}
+		for (const result of results) {
 			const url = result.thumbnail
 			if (started.has(url)) continue
 			started.add(url)
