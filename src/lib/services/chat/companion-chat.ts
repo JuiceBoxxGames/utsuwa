@@ -32,7 +32,7 @@ import { imageSearchStore } from '$lib/stores/image-search.svelte';
 import {
 	closeImages,
 	hasConfiguredImageSearchTool,
-	imageFetchAsksFirst,
+	imageFetchCapabilitySync,
 	isShowImagesEnabled,
 	searchImages
 } from '$lib/services/image-search';
@@ -43,6 +43,13 @@ import { buildAdvancedParams, buildMessages, describeImagesRequest, type ChatLoo
 import { TurnStream } from '$lib/services/chat/turn-stream';
 import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { buildSpeechTools, shouldUseSpeechTools } from '$lib/services/tts/tool-definitions';
+
+/** Why the open picture popup may show placeholders, for the prompt. */
+function imagePreviewIssue(): 'ask' | 'missing' | undefined {
+	const capability = imageFetchCapabilitySync();
+	if (!capability.available) return 'missing';
+	return capability.asksFirst ? 'ask' : undefined;
+}
 import { env as publicEnv } from '$env/dynamic/public';
 import { isMcpHardeningEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
 import { mcpStore } from '$lib/stores/mcp.svelte';
@@ -112,7 +119,7 @@ async function buildCompanionPrompt(
 		imageModalOpen: imageSearchStore.isVisible,
 		imageModalQuery: imageSearchStore.isVisible ? imageSearchStore.currentQuery : undefined,
 		imageModalPage: imageSearchStore.isVisible ? imageSearchStore.currentPage : undefined,
-		imagePreviewLimited: imageSearchStore.isVisible ? imageFetchAsksFirst() : undefined,
+		imagePreviewIssue: imageSearchStore.isVisible ? imagePreviewIssue() : undefined,
 		contextSize,
 		pendingReminders: reminderStore.upcoming.map((r) => ({ triggerAt: r.triggerAt, content: r.content })),
 		sessionStartedAt: workingMemory.sessionStartedAt,

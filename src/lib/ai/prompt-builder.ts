@@ -25,8 +25,9 @@ export interface PromptContext {
 	// Whether the image popup is currently open, and for which query. Lets her
 	// reference what the user is looking at and close it again.
 	imageModalOpen?: boolean;
-	// The file-fetch server asks before running tools, so only one preview loaded.
-	imagePreviewLimited?: boolean;
+	// Why previews are incomplete in the open popup: the file-fetch server asks
+	// before running tools, or no such tool is configured at all.
+	imagePreviewIssue?: 'ask' | 'missing';
 	imageModalQuery?: string;
 	imageModalPage?: number;
 	// Configured context window size in tokens. Used to scale memory injection
@@ -556,9 +557,13 @@ function buildImageSearchLayer(ctx: PromptContext): string | null {
 			`CURRENTLY OPEN: A picture popup is open.${query}\n` +
 				`Their question refers to the selected picture. You can refer to it, ask what they think, show more with "image_page", or close the popup with "close_images": true.`
 		);
-		if (ctx.imagePreviewLimited) {
+		if (ctx.imagePreviewIssue === 'ask') {
 			parts.push(
 				`Only the first preview is loaded because the file-fetch server asks before running tools. If the user wonders why the other previews are empty, explain this briefly in their language and point them to Settings > MCP.`
+			);
+		} else if (ctx.imagePreviewIssue === 'missing') {
+			parts.push(
+				`The previews are empty because no MCP file-fetch tool is configured. If the user wonders why they are missing, explain this briefly in their language and point them to Settings > MCP, where a server must expose "fetch_file_from_url".`
 			);
 		}
 	}

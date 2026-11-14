@@ -43,10 +43,10 @@ function findImageFetchServer() {
 	return mcpStore.servers.find((entry) => entry.id === tool.serverId && entry.enabled) ?? null;
 }
 
-/** Sync view for prompt context: is the file-fetch server ask-gated? */
-export function imageFetchAsksFirst(): boolean {
+/** Current view for prompt context, from the already loaded tool list. */
+export function imageFetchCapabilitySync(): ImageFetchCapability {
 	const server = findImageFetchServer();
-	return server ? server.askBeforeRun !== false : false;
+	return { available: server !== null, asksFirst: server ? server.askBeforeRun !== false : false };
 }
 
 /** Resolve preview capability after tool discovery. */
@@ -56,8 +56,7 @@ export async function imageFetchCapability(): Promise<ImageFetchCapability> {
 	} catch {
 		// Discovery failure falls through to "unavailable".
 	}
-	const server = findImageFetchServer();
-	return { available: server !== null, asksFirst: server ? server.askBeforeRun !== false : false };
+	return imageFetchCapabilitySync();
 }
 
 /** True when MCP is available, so the companion can advertise pictures. */

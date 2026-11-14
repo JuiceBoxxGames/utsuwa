@@ -764,10 +764,21 @@ test('an ask-gated file fetcher explains why only one preview loaded', () => {
 		makeContext({
 			showImagesEnabled: true,
 			imageModalOpen: true,
-			imagePreviewLimited: true
+			imagePreviewIssue: 'ask'
 		})
 	);
 	assert.ok(prompt.includes('Only the first preview is loaded'));
+});
+
+test('a missing file fetcher explains empty previews', () => {
+	const prompt = buildSystemPrompt(
+		makeContext({
+			showImagesEnabled: true,
+			imageModalOpen: true,
+			imagePreviewIssue: 'missing'
+		})
+	);
+	assert.ok(prompt.includes('no MCP file-fetch tool is configured'));
 });
 
 test('companion mode also gets the showing-pictures layer when enabled', () => {
