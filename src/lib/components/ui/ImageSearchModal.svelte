@@ -4,12 +4,11 @@
 	import { Icon } from '$lib/components/ui'
 	import { isRasterImageDataUrl } from '$lib/utils/image-mime'
 
-	interface Props {
-		leftOffset?: number
-		rightOffset?: number
-	}
-
-	let { leftOffset = 0, rightOffset = 0 }: Props = $props()
+	// The panel never blocks the page: it sits beside the companion instead of
+	// over it, and the loading state is a small status pill rather than a modal.
+	let panelEl: HTMLElement | undefined = $state()
+	let previouslyFocused: HTMLElement | null = null
+	const visible = $derived(imageSearchStore.isOpen && imageSearchStore.status !== 'loading')
 
 	// Thumbnails go through the MCP file-fetch tool, never straight from the
 	// source host. Without that tool the card keeps a neutral placeholder.
@@ -39,17 +38,42 @@
 		}
 	})
 
+	$effect(() => {
+		if (visible) {
+			previouslyFocused = document.activeElement as HTMLElement | null
+			panelEl?.focus()
+		} else {
+			previouslyFocused?.focus()
+			previouslyFocused = null
+		}
+	})
+
 	function closePictures() {
 		closeImages()
 		imageSearchStore.closeModal()
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') closePictures()
-	}
-
-	function handleOverlayClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) closePictures()
+		if (!visible) return
+		if (e.key === 'Escape') {
+			e.preventDefault()
+			closePictures()
+			return
+		}
+		if (e.key !== 'Tab' || !panelEl) return
+		const focusable = [...panelEl.querySelectorAll<HTMLElement>(
+			'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+		)].filter((el) => el.offsetParent !== null)
+		if (!focusable.length) return
+		const first = focusable[0]
+		const last = focusable[focusable.length - 1]
+		if (e.shiftKey && document.activeElement === first) {
+			e.preventDefault()
+			last.focus()
+		} else if (!e.shiftKey && document.activeElement === last) {
+			e.preventDefault()
+			first.focus()
+		}
 	}
 
 	function openImage(url: string) {
@@ -61,33 +85,29 @@
 	function selectImage(index: number) {
 		imageSearchStore.setFocus(index)
 	}
-
-	// Compute dynamic CSS variables for sidebar offsets
-	const leftVar = $derived(leftOffset > 0 ? `${leftOffset}px` : '1rem')
-	const rightVar = $derived(rightOffset > 0 ? `${rightOffset}px` : '1rem')
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
-{#if imageSearchStore.isOpen}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<div
-		class="modal-overlay"
-		onclick={handleOverlayClick}
-		onkeydown={() => {}}
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="image-search-title"
-		tabindex="-1"
-		style="--panel-left: {leftVar}; --panel-right: {rightVar};"
-	>
-		<div class="modal-container">
-			<!-- Drag handle (touch-friendly) -->
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<div class="drag-handle" onclick={() => closePictures()} role="button" tabindex="0" aria-label="Close image panel">
-				<div class="drag-bar"></div>
-			</div>
+{#if imageSearchStore.isOpen && imageSearchStore.status === 'loading'}
+	<div class="search-status" role="status" aria-live="polite">
+		<Icon name="refresh" size={16} />
+		<span>Searching pictures…</span>
+		<button class="status-cancel" onclick={closePictures} aria-label="Cancel picture search">
+			<Icon name="x" size={12} />
+		</button>
+	</div>
+{/if}
 
+{#if visible}
+	<div class="image-panel-anchor">
+		<div
+			class="modal-container"
+			bind:this={panelEl}
+			role="dialog"
+			aria-labelledby="image-search-title"
+			tabindex="-1"
+		>
 			<!-- Header -->
 			<div class="modal-header">
 				<div class="modal-title">
@@ -104,12 +124,7 @@
 
 			<!-- Content -->
 			<div class="modal-content">
-				{#if imageSearchStore.status === 'loading'}
-					<div class="empty-state" role="status" aria-live="polite">
-						<Icon name="refresh" size={32} />
-						<p>Searching…</p>
-					</div>
-				{:else if imageSearchStore.status === 'error'}
+				{#if imageSearchStore.status === 'error'}
 					<div class="empty-state" role="alert">
 						<Icon name="alert" size={32} />
 						<p>{imageSearchStore.error?.message ?? 'Search failed'}</p>
@@ -169,79 +184,138 @@
 {/if}
 
 <style>
-	.modal-overlay {
+	/* Non-blocking status while the search runs: no dialog, no backdrop. */
+	.search-status {
 		position: fixed;
-		/* Start above the bottom chat bar (approx. 130px desktop, 100px mobile) */
-		bottom: 130px;
-		left: var(--panel-left);
-		right: var(--panel-right);
-		top: 0;
-		background: rgba(0, 0, 0, 0.35);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		display: flex;
-		align-items: flex-end;
-		justify-content: center;
+		left: 50%;
+		bottom: 7.5rem;
+		transform: translateX(-50%);
 		z-index: 1000;
-		animation: fadeIn 0.2s ease-out;
-		/* Prevent background scroll on touch devices */
-		overscroll-behavior: contain;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		max-width: calc(100% - 2rem);
+		padding: 0.5rem 0.6rem 0.5rem 0.85rem;
+		border-radius: 999px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+		color: var(--text-secondary);
+		font-size: 0.8rem;
 	}
 
-	@media (max-width: 768px) {
-		.modal-overlay {
-			bottom: 100px;
-			left: 0.5rem;
-			right: 0.5rem;
+	.search-status > :global(svg) {
+		animation: spin 1s linear infinite;
+	}
+
+	.status-cancel {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 22px;
+		height: 22px;
+		border: 0;
+		border-radius: 50%;
+		background: transparent;
+		color: var(--text-tertiary);
+		cursor: pointer;
+	}
+
+	.status-cancel:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
 		}
 	}
 
-	@keyframes fadeIn {
-		from { opacity: 0; }
-		to { opacity: 1; }
+	.image-panel-anchor {
+		position: fixed;
+		top: 1rem;
+		right: 1rem;
+		bottom: 8rem;
+		width: min(420px, 40vw);
+		z-index: 1000;
+		display: flex;
+		align-items: stretch;
+		pointer-events: none;
 	}
 
 	.modal-container {
-		position: relative;
+		pointer-events: auto;
 		width: 100%;
-		max-width: 900px;
-		max-height: calc(100% - 1rem);
+		height: 100%;
 		display: flex;
 		flex-direction: column;
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 250, 0.98) 100%);
 		border: 1px solid rgba(255, 255, 255, 0.6);
-		border-radius: 20px 20px 0 0;
+		border-radius: 16px;
 		box-shadow:
-			0 -8px 40px rgba(0, 0, 0, 0.2),
-			0 -2px 12px rgba(0, 0, 0, 0.1),
+			0 8px 40px rgba(0, 0, 0, 0.2),
+			0 2px 12px rgba(0, 0, 0, 0.1),
 			inset 0 1px 0 rgba(255, 255, 255, 0.9);
 		overflow: hidden;
-		animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	@media (max-width: 640px) {
-		.modal-container {
-			border-radius: 16px 16px 0 0;
-		}
+		animation: panelIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
 	:global(.dark) .modal-container {
 		background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%);
 		border-color: rgba(255, 255, 255, 0.1);
 		box-shadow:
-			0 24px 64px rgba(0, 0, 0, 0.5),
-			0 8px 24px rgba(0, 0, 0, 0.4),
+			0 8px 40px rgba(0, 0, 0, 0.5),
+			0 2px 12px rgba(0, 0, 0, 0.4),
 			inset 0 1px 0 rgba(255, 255, 255, 0.1);
 	}
 
-	@keyframes slideUp {
+	.modal-container:focus {
+		outline: none;
+	}
+
+	@keyframes panelIn {
 		from {
-			transform: translateY(40px);
+			transform: translateX(24px);
+			opacity: 0;
+		}
+		to {
+			transform: translateX(0);
+			opacity: 1;
+		}
+	}
+
+	@keyframes sheetIn {
+		from {
+			transform: translateY(32px);
 			opacity: 0;
 		}
 		to {
 			transform: translateY(0);
 			opacity: 1;
+		}
+	}
+
+	/* Narrow windows and the overlay: a bottom sheet keeps the companion visible. */
+	@media (max-width: 900px) {
+		.search-status {
+			bottom: 6.5rem;
+		}
+
+		.image-panel-anchor {
+			left: 0.5rem;
+			right: 0.5rem;
+			top: auto;
+			bottom: 6.5rem;
+			width: auto;
+			max-height: min(60vh, 560px);
+		}
+
+		.modal-container {
+			height: auto;
+			max-height: 100%;
+			border-radius: 16px 16px 0 0;
+			animation: sheetIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 		}
 	}
 
@@ -359,25 +433,6 @@
 		background: linear-gradient(180deg, #404040 0%, #333333 100%);
 	}
 
-	.drag-handle {
-		display: flex;
-		justify-content: center;
-		padding: 0.5rem 0 0.25rem;
-		cursor: pointer;
-		flex-shrink: 0;
-	}
-
-	.drag-bar {
-		width: 40px;
-		height: 4px;
-		background: rgba(0, 0, 0, 0.2);
-		border-radius: 999px;
-	}
-
-	:global(.dark) .drag-bar {
-		background: rgba(255, 255, 255, 0.2);
-	}
-
 	.modal-content {
 		flex: 1;
 		overflow-y: auto;
@@ -387,20 +442,8 @@
 
 	.image-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
 		gap: 0.75rem;
-	}
-
-	@media (max-width: 768px) {
-		.image-grid {
-			grid-template-columns: repeat(3, 1fr);
-		}
-	}
-
-	@media (max-width: 480px) {
-		.image-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
 	}
 
 	.image-card {

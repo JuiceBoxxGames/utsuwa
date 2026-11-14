@@ -99,6 +99,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		privateEnv: {} as Record<string, string>,
 		imageSearchStore: {
 			isOpen: false,
+			isVisible: false,
 			isLoading: false,
 			error: null as string | null,
 			currentQuery: '',

@@ -71,6 +71,10 @@ export const imageSearchStore = {
 	get isOpen() {
 		return state.isOpen;
 	},
+	/** The panel is only on screen with results or an error, never during loading. */
+	get isVisible() {
+		return state.isOpen && state.status !== 'loading';
+	},
 	get status() {
 		return state.status;
 	},
