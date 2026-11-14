@@ -67,7 +67,13 @@
 		if (!focusable.length) return
 		const first = focusable[0]
 		const last = focusable[focusable.length - 1]
-		if (e.shiftKey && document.activeElement === first) {
+		const active = document.activeElement
+		if (active === panelEl || !panelEl.contains(active)) {
+			e.preventDefault()
+			;(e.shiftKey ? last : first).focus()
+			return
+		}
+		if (e.shiftKey && active === first) {
 			e.preventDefault()
 			last.focus()
 		} else if (!e.shiftKey && document.activeElement === last) {
