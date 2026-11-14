@@ -19,6 +19,7 @@ export const STORAGE_INVENTORY = {
 		overlayLocked: 'utsuwa-overlay-locked',
 		imagePrivacyAck: 'utsuwa-image-privacy-ack',
 		imageSearchTool: 'utsuwa-image-search-tool-v1',
+		imagePanelRect: 'utsuwa-image-panel-rect',
 		legacyPersonaCards: 'utsuwa-persona-cards',
 		legacyPersonaActiveId: 'utsuwa-persona-active-id',
 		// Read before hydration by src/app.html, which can't import this

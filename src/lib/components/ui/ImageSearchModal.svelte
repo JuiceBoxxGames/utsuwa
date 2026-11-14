@@ -3,6 +3,9 @@
 	import { closeImages, fetchImageAsDataUrl, openImageResult } from '$lib/services/image-search'
 	import { Icon } from '$lib/components/ui'
 	import { isRasterImageDataUrl } from '$lib/utils/image-mime'
+	import { onMount } from 'svelte'
+	import { displayStore } from '$lib/stores/display.svelte'
+	import { STORAGE_INVENTORY } from '$lib/db/storage-inventory'
 
 	// The panel never blocks the page: it sits beside the companion instead of
 	// over it, and the loading state is a small status pill rather than a modal.
@@ -10,13 +13,115 @@
 	let previouslyFocused: HTMLElement | null = null
 	const visible = $derived(imageSearchStore.isOpen && imageSearchStore.status !== 'loading')
 
+	// Floating panel geometry. The default position keeps the chat input clear:
+	// with a docked chat window the panel takes the opposite side.
+	const PANEL_KEY = STORAGE_INVENTORY.localStorage.imagePanelRect
+	const MIN_WIDTH = 320
+	const MIN_HEIGHT = 240
+	const EDGE = 8
+	type PanelRect = { x: number; y: number; w: number; h: number }
+
+	let rect = $state<PanelRect | null>(null)
+	let compact = $state(false)
+	let drag = $state<{ px: number; py: number; x: number; y: number } | null>(null)
+	let resize = $state<{ px: number; py: number; w: number; h: number } | null>(null)
+
+	function clampRect(r: PanelRect): PanelRect {
+		const vw = window.innerWidth
+		const vh = window.innerHeight
+		const w = Math.min(Math.max(r.w, MIN_WIDTH), Math.max(MIN_WIDTH, vw - EDGE * 2))
+		const h = Math.min(Math.max(r.h, MIN_HEIGHT), Math.max(MIN_HEIGHT, vh - EDGE * 2))
+		const x = Math.min(Math.max(r.x, EDGE), Math.max(EDGE, vw - w - EDGE))
+		const y = Math.min(Math.max(r.y, EDGE), Math.max(EDGE, vh - h - EDGE))
+		return { x, y, w, h }
+	}
+
+	function defaultRect(): PanelRect {
+		const vw = window.innerWidth
+		const vh = window.innerHeight
+		const w = Math.min(420, Math.max(MIN_WIDTH, vw - EDGE * 2))
+		const h = Math.min(Math.round(vh * 0.6), 560, vh - 160)
+		const docked = displayStore.chatDisplayMode === 'sidebar'
+		const dockLeft = docked && displayStore.sidebarPosition === 'left'
+		const x = dockLeft ? vw - w - EDGE : docked ? EDGE : vw - w - EDGE
+		return clampRect({ x, y: 68, w, h })
+	}
+
+	function saveRect() {
+		if (!rect || compact) return
+		localStorage.setItem(PANEL_KEY, JSON.stringify(rect))
+	}
+
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 900px)')
+		const updateCompact = () => {
+			compact = mq.matches
+		}
+		updateCompact()
+		mq.addEventListener('change', updateCompact)
+		const saved = localStorage.getItem(PANEL_KEY)
+		if (saved) {
+			try {
+				const parsed = JSON.parse(saved) as Partial<PanelRect>
+				if ([parsed.x, parsed.y, parsed.w, parsed.h].every((n) => typeof n === 'number' && Number.isFinite(n))) {
+					rect = clampRect(parsed as PanelRect)
+				}
+			} catch {
+				// Malformed position: fall back to the default.
+			}
+		}
+		if (!rect) rect = defaultRect()
+		const onResize = () => {
+			if (rect) rect = clampRect(rect)
+		}
+		window.addEventListener('resize', onResize)
+		return () => {
+			mq.removeEventListener('change', updateCompact)
+			window.removeEventListener('resize', onResize)
+		}
+	})
+
+	function startDrag(e: PointerEvent) {
+		if (compact || !rect) return
+		if ((e.target as Element).closest('button')) return
+		e.preventDefault()
+		drag = { px: e.clientX, py: e.clientY, x: rect.x, y: rect.y }
+	}
+
+	function startResize(e: PointerEvent) {
+		if (compact || !rect) return
+		e.preventDefault()
+		e.stopPropagation()
+		resize = { px: e.clientX, py: e.clientY, w: rect.w, h: rect.h }
+	}
+
+	function onPointerMove(e: PointerEvent) {
+		if (!rect) return
+		if (drag) {
+			rect = clampRect({ ...rect, x: drag.x + (e.clientX - drag.px), y: drag.y + (e.clientY - drag.py) })
+		} else if (resize) {
+			rect = clampRect({ ...rect, w: resize.w + (e.clientX - resize.px), h: resize.h + (e.clientY - resize.py) })
+		}
+	}
+
+	function endPointer() {
+		if (!drag && !resize) return
+		drag = null
+		resize = null
+		saveRect()
+	}
+
 	// Thumbnails go through the MCP file-fetch tool, never straight from the
 	// source host. Without that tool the card keeps a neutral placeholder.
 	let thumbUrls = $state<Record<string, string>>({})
 	let thumbStatus = $state<Record<string, 'loading' | 'missing'>>({})
+	let thumbAttempt = $state(0)
 	const started = new Set<string>()
+	const anyMissing = $derived(Object.values(thumbStatus).includes('missing'))
 
 	$effect(() => {
+		// Re-run when the retry button bumps the counter.
+		if (thumbAttempt < 0) return
 		for (const result of imageSearchStore.results) {
 			const url = result.thumbnail
 			if (started.has(url)) continue
@@ -91,9 +196,16 @@
 	function selectImage(index: number) {
 		imageSearchStore.setFocus(index)
 	}
+
+	function retryPreviews() {
+		started.clear()
+		thumbUrls = {}
+		thumbStatus = {}
+		thumbAttempt++
+	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onpointermove={onPointerMove} onpointerup={endPointer} />
 
 {#if imageSearchStore.isOpen && imageSearchStore.status === 'loading'}
 	<div class="search-status" role="status" aria-live="polite">
@@ -106,7 +218,13 @@
 {/if}
 
 {#if visible}
-	<div class="image-panel-anchor">
+	<div
+		class="image-panel-anchor"
+		style:left={compact ? undefined : `${rect?.x ?? 0}px`}
+		style:top={compact ? undefined : `${rect?.y ?? 0}px`}
+		style:width={compact ? undefined : `${rect?.w ?? 420}px`}
+		style:height={compact ? undefined : `${rect?.h ?? 480}px`}
+	>
 		<div
 			class="modal-container"
 			bind:this={panelEl}
@@ -115,7 +233,8 @@
 			tabindex="-1"
 		>
 			<!-- Header -->
-			<div class="modal-header">
+			<!-- svelte-ignore a11y_no_static_element_interactions -- dragging is a pointer-only affordance; closing stays keyboard-accessible -->
+			<div class="modal-header" class:dragging={drag !== null} onpointerdown={startDrag}>
 				<div class="modal-title">
 					<Icon name="image" size={18} />
 					<h2 id="image-search-title">Pictures</h2>
@@ -130,6 +249,14 @@
 
 			<!-- Content -->
 			<div class="modal-content">
+				{#if anyMissing}
+					<p class="thumb-hint">
+						Some previews are unavailable. Previews load through the
+						<code>fetch_file_from_url</code> MCP tool under Settings > MCP; enable it and
+						turn off "Ask before running tools" for that server, then
+						<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
+					</p>
+				{/if}
 				{#if imageSearchStore.status === 'error'}
 					<div class="empty-state" role="alert">
 						<Icon name="alert" size={32} />
@@ -155,7 +282,15 @@
 									/>
 									<div class="image-thumb">
 										{#if thumbUrls[result.thumbnail]}
-											<img src={thumbUrls[result.thumbnail]} alt={result.title} loading="lazy" />
+											<img
+												src={thumbUrls[result.thumbnail]}
+												alt={result.title}
+												loading="lazy"
+												onerror={() => {
+													delete thumbUrls[result.thumbnail]
+													thumbStatus[result.thumbnail] = 'missing'
+												}}
+											/>
 										{:else}
 											<div class="thumb-placeholder" aria-label="Thumbnail not loaded">
 												<Icon name={thumbStatus[result.thumbnail] === 'loading' ? 'refresh' : 'image'} size={22} />
@@ -185,6 +320,7 @@
 					</div>
 				{/if}
 			</div>
+			<button type="button" class="resize-grip" tabindex="-1" aria-label="Resize picture panel" onpointerdown={startResize}></button>
 		</div>
 	</div>
 {/if}
@@ -240,10 +376,6 @@
 
 	.image-panel-anchor {
 		position: fixed;
-		top: 1rem;
-		right: 1rem;
-		bottom: 8rem;
-		width: min(420px, 40vw);
 		z-index: 1000;
 		display: flex;
 		align-items: stretch;
@@ -251,6 +383,7 @@
 	}
 
 	.modal-container {
+		position: relative;
 		pointer-events: auto;
 		width: 100%;
 		height: 100%;
@@ -280,6 +413,55 @@
 		outline: none;
 	}
 
+	.resize-grip {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		cursor: nwse-resize;
+		touch-action: none;
+	}
+
+	.resize-grip::after {
+		content: '';
+		position: absolute;
+		right: 4px;
+		bottom: 4px;
+		width: 8px;
+		height: 8px;
+		border-right: 2px solid var(--border-color);
+		border-bottom: 2px solid var(--border-color);
+		border-radius: 1px;
+	}
+
+	.thumb-hint {
+		margin: 0 0 0.75rem;
+		padding: 0.6rem 0.75rem;
+		border-radius: 10px;
+		background: var(--bg-tertiary);
+		color: var(--text-secondary);
+		font-size: 0.75rem;
+		line-height: 1.45;
+	}
+
+	.thumb-hint code {
+		font-size: 0.72rem;
+	}
+
+	.thumb-retry {
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--color-accent, #3b82f6);
+		font: inherit;
+		text-decoration: underline;
+		cursor: pointer;
+	}
+
 	@keyframes panelIn {
 		from {
 			transform: translateX(24px);
@@ -305,16 +487,21 @@
 	/* Narrow windows and the overlay: a bottom sheet keeps the companion visible. */
 	@media (max-width: 900px) {
 		.search-status {
-			bottom: 6.5rem;
+			bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
 		}
 
 		.image-panel-anchor {
-			left: 0.5rem;
-			right: 0.5rem;
+			left: calc(0.5rem + env(safe-area-inset-left, 0px));
+			right: calc(0.5rem + env(safe-area-inset-right, 0px));
 			top: auto;
-			bottom: 6.5rem;
+			bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
 			width: auto;
-			max-height: min(60vh, 560px);
+			height: auto;
+			max-height: min(60dvh, 60vh, 560px);
+		}
+
+		.resize-grip {
+			display: none;
 		}
 
 		.modal-container {
@@ -373,6 +560,13 @@
 		padding: 1rem 1.25rem;
 		border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 		flex-shrink: 0;
+		cursor: grab;
+		touch-action: none;
+		user-select: none;
+	}
+
+	.modal-header.dragging {
+		cursor: grabbing;
 	}
 
 	:global(.dark) .modal-header {
