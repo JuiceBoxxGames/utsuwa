@@ -517,6 +517,7 @@ function buildImageSearchLayer(ctx: PromptContext): string | null {
 		`HOW TO USE:\n` +
 			`  - Set "image_search" to a short, concrete query, e.g. "cute cats" or "beautiful mountain landscape".\n` +
 			`  - Do NOT call a search tool for this — the application searches. Just set "image_search".\n` +
+			`  - Say that you are looking, not that the pictures are already on screen. The app shows them when the search finishes; if it is cancelled or fails, do not claim success.\n` +
 			`  - Use null when you are not showing pictures.\n` +
 			`  - Set "close_images": true when the user asks you to close the pictures.\n` +
 			`  - For "more", keep the same query and set "image_page" to the next page; otherwise use null.`
@@ -525,7 +526,7 @@ function buildImageSearchLayer(ctx: PromptContext): string | null {
 	parts.push(
 		`EXAMPLES:\n` +
 			`  User: "Show me some cats"\n` +
-			`  You: "With pleasure! Here are a few sweet cats."\n` +
+			`  You: "With pleasure! Let me look for a few sweet cats."\n` +
 			`  ... { "image_search": "cute cats", "image_page": null, ... }\n\n` +
 			`  User: "Show me more of those"\n` +
 			`  You: "There is more where that came from."\n` +

@@ -9,6 +9,7 @@ import {
 	isCloseImagesRequest,
 	isImageRequest,
 	isMoreImagesRequest,
+	imageSearchErrorCopy,
 	parseImageResults,
 	pickSearchTool,
 	queryArgKey,
@@ -266,4 +267,24 @@ test('raster MIME helpers reject SVG and non-image payloads', () => {
 	assert.equal(isRasterImageMimeType('image/svg+xml'), false);
 	assert.equal(isRasterImageDataUrl('data:image/png;base64,AAAA'), true);
 	assert.equal(isRasterImageDataUrl('data:image/svg+xml;base64,AAAA'), false);
+});
+
+test('error copy turns search codes into plain language', () => {
+	const noTool = imageSearchErrorCopy('no_tool');
+	assert.equal(noTool.settings, true);
+	assert.match(noTool.message, /No picture search tool/);
+
+	const unavailable = imageSearchErrorCopy('tool_unavailable');
+	assert.equal(unavailable.settings, true);
+
+	const empty = imageSearchErrorCopy('empty_results', 'cats');
+	assert.match(empty.message, /cats/);
+	assert.equal(empty.settings, false);
+
+	const noQuery = imageSearchErrorCopy('empty_query');
+	assert.match(noQuery.message, /no subject/);
+
+	const failed = imageSearchErrorCopy('search_failed');
+	assert.match(failed.message, /failed/i);
+	assert.equal(failed.settings, false);
 });

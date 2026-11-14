@@ -754,6 +754,13 @@ test('an open popup names its query and page and offers the more/close fields', 
 	assert.ok(prompt.includes('"close_images": false'));
 });
 
+test('the picture layer asks her to look before claiming pictures are shown', () => {
+	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true }));
+	assert.ok(prompt.includes('Say that you are looking'));
+	assert.ok(prompt.includes('Let me look for'));
+	assert.ok(!prompt.includes('Here are a few sweet cats'));
+});
+
 test('a missing picture tool is called out in the prompt', () => {
 	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true, imageSearchAvailable: false }));
 	assert.ok(prompt.includes('No usable picture search tool is configured right now.'));

@@ -118,7 +118,14 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		processCompanionTurn: async ({ companionResponse }: { companionResponse: string }) => {
 			const parsed = parseResponse(companionResponse);
 			turns.push(parsed);
-			return { dialogue: parsed.dialogue, newMemory: parsed.stateUpdates?.newMemory, triggeredEvent: null };
+			return {
+				dialogue: parsed.dialogue,
+				newMemory: parsed.stateUpdates?.newMemory,
+				triggeredEvent: null,
+				imageSearch: parsed.imageSearch,
+				imagePage: parsed.imagePage,
+				closeImages: parsed.closeImages
+			};
 		}
 	};
 	const globals = globalThis as unknown as Record<string, unknown>;
@@ -1501,6 +1508,80 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			assert.equal(providerCalls, 2, 'the recovery call runs once');
 			assert.deepEqual(mcpArgs, { query: 'Katzen' });
 			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+		});
+
+		await t.test('an image_page without a query reports an explained error', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const serverConfig = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [serverConfig];
+			mcp.servers = [serverConfig];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'searxng_image_search', description: 'Search pictures', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			let mcpCalls = 0;
+			const reply = 'Sure!\n```json\n{"image_page":2}\n```';
+			t.mock.method(globalThis, 'fetch', async (url: string) => {
+				if (url === '/api/mcp/call') {
+					mcpCalls++;
+					return new Response(JSON.stringify({ isError: false, content: '[]' }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				return new Response(`0:${JSON.stringify(reply)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			const events: Array<{ type: string; code?: string }> = [];
+			const { onImageShowEvent } = await server.ssrLoadModule('/src/lib/services/image-search/events.ts');
+			const stop = onImageShowEvent((event: { type: string; code?: string }) => events.push(event));
+			try {
+				await sendCompanionMessage('Hello, how are you?', [], hooks);
+			} finally {
+				stop();
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+			}
+			assert.equal(mcpCalls, 0, 'no picture tool call');
+			assert.ok(events.some((e) => e.type === 'error' && e.code === 'empty_query'), 'the panel gets an explained error');
+		});
+
+		await t.test('close_images wins over a simultaneous image_search', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const serverConfig = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [serverConfig];
+			mcp.servers = [serverConfig];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'searxng_image_search', description: 'Search pictures', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			let mcpCalls = 0;
+			const reply = '```json\n{"image_search":"cats","close_images":true}\n```';
+			t.mock.method(globalThis, 'fetch', async (url: string) => {
+				if (url === '/api/mcp/call') {
+					mcpCalls++;
+					return new Response(JSON.stringify({ isError: false, content: '[]' }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				return new Response(`0:${JSON.stringify(reply)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			const events: Array<{ type: string }> = [];
+			const { onImageShowEvent } = await server.ssrLoadModule('/src/lib/services/image-search/events.ts');
+			const stop = onImageShowEvent((event: { type: string }) => events.push(event));
+			try {
+				await sendCompanionMessage('close the pictures', [], hooks);
+			} finally {
+				stop();
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+			}
+			assert.equal(mcpCalls, 0, 'a close request must not start a search');
+			assert.ok(events.some((e) => e.type === 'close'), 'the popup receives the close');
 		});
 		await t.test('tool discovery finishes before the prompt is built', { timeout: 5000 }, async (t) => {
 			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();

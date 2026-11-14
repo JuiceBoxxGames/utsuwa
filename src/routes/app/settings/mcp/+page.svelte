@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import { mcpStore } from '$lib/stores/mcp.svelte';
 	import type { McpAuth, McpServerConfig, McpTransport } from '$lib/types/mcp';
-	import { parseEnvLines, parseQuotedArgs } from '$lib/services/mcp/protocol';
-	import { isPictureSearchTool } from '$lib/utils/image-search';
+	import { env as publicEnv } from '$env/dynamic/public';
+	import { parseEnvLines, parseQuotedArgs, parseToolNameList } from '$lib/services/mcp/protocol';
+	import { chooseImageSearchTool, isPictureSearchTool } from '$lib/utils/image-search';
 	import { Button, Icon } from '$lib/components/ui';
 	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
 	import Switch from '$lib/components/ui/Switch.svelte';
@@ -38,6 +39,13 @@
 					tool.serverId === mcpStore.imageSearchTool?.serverId &&
 					tool.name === mcpStore.imageSearchTool?.toolName
 			)
+	);
+	const confirmToolNames = $derived(parseToolNameList(publicEnv.PUBLIC_MCP_CONFIRM_TOOLS));
+	const pictureSearchTool = $derived(
+		chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool).tool
+	);
+	const pictureSearchBlocked = $derived(
+		!!pictureSearchTool && confirmToolNames.includes(pictureSearchTool.name)
 	);
 
 	function setImageTool(value: string) {
@@ -397,7 +405,14 @@
 					Automatic picks a query-taking tool for now; an explicit choice is never replaced silently.
 				</p>
 			</div>
-			{#if selectedImageToolMissing}
+			{#if pictureSearchBlocked}
+				<p class="form-error" role="alert">
+					<strong>{pictureSearchTool?.name}</strong> is listed in
+					<code>PUBLIC_MCP_CONFIRM_TOOLS</code>. The picture search calls this tool directly, and
+					that list blocks direct calls with 403, so every search would fail. Remove the name from
+					the list or pick another tool.
+				</p>
+			{:else if selectedImageToolMissing}
 				<p class="form-error">The selected picture tool is not available. Pick another one or use Automatic.</p>
 			{:else if queryTools.length === 0}
 				<p class="empty-hint">No picture-capable MCP tools found. Refresh the tool list or add an image/stock search server.</p>

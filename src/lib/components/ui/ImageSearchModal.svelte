@@ -9,6 +9,7 @@
 	} from '$lib/services/image-search'
 	import { Icon } from '$lib/components/ui'
 	import { isRasterImageDataUrl } from '$lib/utils/image-mime'
+	import { imageSearchErrorCopy } from '$lib/utils/image-search'
 	import { onMount } from 'svelte'
 	import { displayStore } from '$lib/stores/display.svelte'
 	import { STORAGE_INVENTORY } from '$lib/db/storage-inventory'
@@ -18,6 +19,17 @@
 	let panelEl: HTMLElement | undefined = $state()
 	let previouslyFocused: HTMLElement | null = null
 	const visible = $derived(imageSearchStore.isOpen && imageSearchStore.status !== 'loading')
+	const errorCopy = $derived(
+		imageSearchErrorCopy(
+			imageSearchStore.error?.code ?? 'search_failed',
+			imageSearchStore.currentQuery
+		)
+	)
+
+	$effect(() => {
+		const error = imageSearchStore.error
+		if (error && import.meta.env.DEV) console.debug('[image-search]', error.code, error.message)
+	})
 
 	// Floating panel geometry. The default position keeps the chat input clear:
 	// with a docked chat window the panel takes the opposite side.
@@ -319,7 +331,10 @@
 				{#if imageSearchStore.status === 'error'}
 					<div class="empty-state" role="alert">
 						<Icon name="alert" size={32} />
-						<p>{imageSearchStore.error?.message ?? 'Search failed'}</p>
+						<p>{errorCopy.message}</p>
+						{#if errorCopy.settings}
+							<a class="settings-link" href="/app/settings/mcp">Open Settings > MCP</a>
+						{/if}
 					</div>
 				{:else if imageSearchStore.results.length === 0}
 					<div class="empty-state">
@@ -864,6 +879,12 @@
 	}
 
 	/* Empty state */
+	.settings-link {
+		color: var(--accent);
+		font-size: 0.8rem;
+		text-decoration: underline;
+	}
+
 	.empty-state {
 		display: flex;
 		flex-direction: column;

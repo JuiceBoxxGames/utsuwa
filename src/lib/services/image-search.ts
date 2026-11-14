@@ -95,6 +95,8 @@ function errorMessage(code: ImageSearchErrorCode): string {
 			return 'No pictures found';
 		case 'cancelled':
 			return 'Picture search cancelled';
+		case 'empty_query':
+			return 'The picture request had no search query';
 		default:
 			return 'Search failed';
 	}
@@ -125,12 +127,38 @@ function publishError(
 }
 
 /**
+ * Publish a picture-intent error that has no search request behind it (for
+ * example a state block with an empty query). The loading event gives the
+ * store a matching request id, so the panel opens with the explanation.
+ */
+export function reportImageIntentError(
+	query: string,
+	code: ImageSearchErrorCode,
+	detail?: string
+): void {
+	const requestId = newImageEventId();
+	const clean = query.trim();
+	publishImageShowEvent({
+		id: newImageEventId(),
+		at: Date.now(),
+		type: 'loading',
+		requestId,
+		query: clean,
+		page: 1
+	});
+	publishError(requestId, clean, code, detail);
+}
+
+/**
  * Resolve a query through the configured MCP search tool. Never throws;
  * failure is published as an event so the UI cannot silently do nothing.
  */
 export async function searchImages(query: string, page = 1): Promise<ImageSearchResult[]> {
 	const cleanQuery = query.trim();
-	if (!cleanQuery) return [];
+	if (!cleanQuery) {
+		reportImageIntentError('', 'empty_query');
+		return [];
+	}
 	const safePage = Number.isFinite(page) ? Math.max(1, Math.min(10, Math.floor(page))) : 1;
 	const requestId = newImageEventId();
 

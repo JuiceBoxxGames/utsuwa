@@ -34,6 +34,7 @@ import {
 	hasConfiguredImageSearchTool,
 	imageFetchCapabilitySync,
 	isShowImagesEnabled,
+	reportImageIntentError,
 	searchImages
 } from '$lib/services/image-search';
 import { isCloseImagesRequest, isImageRequest, isMoreImagesRequest } from '$lib/utils/image-search';
@@ -530,7 +531,11 @@ export async function sendCompanionMessage(
 			imagePage = imageSearchStore.currentPage + 1;
 		}
 		if (closeRequested) closeImages();
-		if (!closeRequested && imageSearch && isShowImagesEnabled()) {
+		else if (!imageSearch && isShowImagesEnabled() && (turn.imageSearch !== undefined || imagePage !== undefined)) {
+			// The model asked for pictures or a page but supplied no subject. Show
+			// the error instead of silently doing nothing.
+			reportImageIntentError(turn.imageSearch ?? '', 'empty_query');
+		} else if (imageSearch && isShowImagesEnabled()) {
 			const sameQuery =
 				imageSearchStore.currentQuery.trim().toLowerCase() === imageSearch.trim().toLowerCase();
 			const nextPage =

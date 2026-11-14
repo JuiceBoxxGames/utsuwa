@@ -3,6 +3,7 @@
  * model supplies only a query in its state JSON; the app searches through MCP
  * and builds the structured results here.
  */
+import type { ImageSearchErrorCode } from '$lib/services/image-search/events';
 import { isRasterImageDataUrl, isRasterImageMimeType } from './image-mime.ts';
 export { isRasterImageMimeType } from './image-mime.ts';
 
@@ -356,4 +357,45 @@ export function isImageRequest(text: string): boolean {
 	// "show me / zeig mir ..." covers requests like "Zeig mir süße Hunde"
 	// without treating ordinary "I see..." or "send it" as picture intent.
 	return /\b(?:show|zeig(?:e)?|schick|send|find|such)\s+(?:me|mir)\b/i.test(text);
+}
+
+export interface ImageSearchErrorCopy {
+	message: string;
+	/** True when the fix lives under Settings > MCP. */
+	settings: boolean;
+}
+
+/** Plain-language copy for the popup; the raw detail stays in the console. */
+export function imageSearchErrorCopy(
+	code: ImageSearchErrorCode,
+	query = ''
+): ImageSearchErrorCopy {
+	switch (code) {
+		case 'no_tool':
+			return {
+				message: 'No picture search tool is configured yet. Choose one under Settings > MCP.',
+				settings: true
+			};
+		case 'tool_unavailable':
+			return {
+				message: 'The selected picture search tool is unavailable. Check Settings > MCP.',
+				settings: true
+			};
+		case 'empty_query':
+			return {
+				message: 'That picture request had no subject. Ask for something specific, like "cute cats".',
+				settings: false
+			};
+		case 'empty_results':
+			return {
+				message: query
+					? `No pictures found for "${query}". Try a different subject.`
+					: 'No pictures found. Try a different subject.',
+				settings: false
+			};
+		case 'cancelled':
+			return { message: 'Picture search cancelled.', settings: false };
+		default:
+			return { message: 'The picture search failed. Try again in a moment.', settings: false };
+	}
 }

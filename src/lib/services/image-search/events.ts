@@ -11,7 +11,8 @@ export type ImageSearchErrorCode =
 	| 'tool_unavailable'
 	| 'search_failed'
 	| 'empty_results'
-	| 'cancelled';
+	| 'cancelled'
+	| 'empty_query';
 
 export interface ImageSearchToolInfo {
 	serverId: string;

@@ -271,7 +271,7 @@ async function searchEvents(
 	return events;
 }
 
-test('searchImages publishes nothing for an empty query', async () => {
+test('searchImages explains an empty query instead of doing nothing', async () => {
 	await withSearchCore(
 		{ store: searchStore(), call: async () => { throw new Error('should not run'); } },
 		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
@@ -279,7 +279,8 @@ test('searchImages publishes nothing for an empty query', async () => {
 			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
 			try {
 				assert.deepEqual(await searchImages('   '), []);
-				assert.deepEqual(events, []);
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
+				assert.equal(events[1].code, 'empty_query');
 			} finally {
 				stop();
 				closeImageChannel();
