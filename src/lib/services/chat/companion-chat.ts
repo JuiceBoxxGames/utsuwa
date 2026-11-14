@@ -46,9 +46,14 @@ import { buildSpeechTools, shouldUseSpeechTools } from '$lib/services/tts/tool-d
 
 /** Why the open picture popup may show placeholders, for the prompt. */
 function imagePreviewIssue(): 'ask' | 'missing' | undefined {
-	const capability = imageFetchCapabilitySync();
-	if (!capability.available) return 'missing';
-	return capability.asksFirst ? 'ask' : undefined;
+	try {
+		const capability = imageFetchCapabilitySync();
+		if (!capability.available) return 'missing';
+		return capability.asksFirst ? 'ask' : undefined;
+	} catch {
+		// Prompt building must never fail because of an optional hint.
+		return undefined;
+	}
 }
 import { env as publicEnv } from '$env/dynamic/public';
 import { isMcpHardeningEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
