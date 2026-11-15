@@ -37,7 +37,12 @@ import {
 	reportImageIntentError,
 	searchImages
 } from '$lib/services/image-search';
-import { isCloseImagesRequest, isImageRequest, isMoreImagesRequest } from '$lib/utils/image-search';
+import {
+	isCloseImagesRequest,
+	isImageRequest,
+	isMoreImagesRequest,
+	isPictureSearchTool
+} from '$lib/utils/image-search';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { getWorkingMemory, ensureSession } from '$lib/engine/memory-session';
 import { buildAdvancedParams, buildMessages, describeImagesRequest, type ChatLoopMessage } from '$lib/services/chat/turn-context';
@@ -634,9 +639,15 @@ async function prepareMcpTurn(provider: string) {
 	const enabledServerIds = new Set(
 		mcpStore.servers.filter((s) => s.enabled).map((s) => s.id)
 	);
+	// Picture search is app-driven: the model only sets a query in its state
+	// JSON. Offering the search tool as a callable tool made models call it
+	// themselves, narrate the call, then repeat that narration in the final
+	// round — and it duplicates work the app already does.
 	const mcpTools =
 		mcpConfigured && provider !== 'anthropic' && mcpStore.hasActiveTools
-			? mcpStore.tools.filter((tool) => enabledServerIds.has(tool.serverId))
+			? mcpStore.tools.filter(
+					(tool) => enabledServerIds.has(tool.serverId) && !isPictureSearchTool(tool)
+				)
 			: [];
 	// Hardening is on unless opted out: tool results are untrusted data and
 	// state-changing actions need an explicit user request.

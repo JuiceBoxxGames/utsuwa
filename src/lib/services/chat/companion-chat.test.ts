@@ -1510,6 +1510,34 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
 		});
 
+		await t.test('picture search tools are not offered to the model', { timeout: 5000 }, async (t) => {
+			direct = true; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				hasActiveTools: boolean;
+				tools: unknown[];
+				servers: unknown[];
+			};
+			mcp.hasActiveTools = true;
+			mcp.tools = [
+				{ serverId: 'search', serverName: 'Search', name: 'searxng_image_search', description: 'Search pictures', inputSchema: { type: 'object', properties: { query: {} } } },
+				{ serverId: 'ha', serverName: 'Home Assistant', name: 'get_state', description: 'Read an entity state', inputSchema: { type: 'object' } }
+			];
+			mcp.servers = [
+				{ id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true },
+				{ id: 'ha', name: 'Home Assistant', transport: 'http', url: 'http://ha.local/api/mcp', enabled: true }
+			];
+			let offered: string[] = [];
+			t.mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
+				const body = JSON.parse(String(init.body));
+				offered = (body.tools ?? []).map((tool: { function?: { name?: string }; name?: string }) => tool.function?.name ?? tool.name);
+				return new Response(sse('Hello!'), { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			await sendCompanionMessage('Hello', [], hooks);
+			assert.ok(offered.includes('get_state'), 'non-picture MCP tools stay callable');
+			assert.ok(!offered.includes('searxng_image_search'), 'the app-managed picture tool is not offered');
+			mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = [];
+		});
+
 		await t.test('an image_page without a query reports an explained error', { timeout: 5000 }, async (t) => {
 			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
 			const mcp = fixtures.mcpStore as {
