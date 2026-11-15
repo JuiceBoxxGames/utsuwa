@@ -14,7 +14,9 @@ import {
 	imageOpenLabel,
 	imageQueryFromMessage,
 	imageSearchErrorCopy,
+	isDedicatedPictureTool,
 	isDirectImageUrl,
+	isExplicitImageRequest,
 	parseImageResults,
 	pickSearchTool,
 	queryArgKey,
@@ -444,4 +446,33 @@ test('supportsImagePaging only accepts tools with a declared page argument', () 
 	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, page: {} } } }), true);
 	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {} } } }), false);
 	assert.equal(supportsImagePaging(null), false);
+});
+
+test('explicit image requests stay narrower than the recovery heuristic', () => {
+	assert.equal(isExplicitImageRequest('Show me the code'), false);
+	assert.equal(isExplicitImageRequest('send me the link'), false);
+	assert.equal(isExplicitImageRequest('Zeig mir Bilder von Katzen'), true);
+	assert.equal(isExplicitImageRequest('show me cute cats'), false);
+});
+
+test('only dedicated picture tools are hidden from the model', () => {
+	assert.equal(
+		isDedicatedPictureTool({ name: 'searxng_image_search', inputSchema: { properties: { query: {} } } }),
+		true
+	);
+	assert.equal(
+		isDedicatedPictureTool({ name: 'search_photos', inputSchema: { properties: { query: {} } } }),
+		true
+	);
+	assert.equal(
+		isDedicatedPictureTool({ name: 'searxng_web_search', inputSchema: { properties: { query: {} } } }),
+		false
+	);
+});
+
+test('no_paging copy explains the tool limit without sending users to settings', () => {
+	assert.deepEqual(imageSearchErrorCopy('no_paging'), {
+		message: 'This picture tool cannot load more results. Try a different subject.',
+		settings: false
+	});
 });

@@ -289,6 +289,41 @@ test('searchImages explains an empty query instead of doing nothing', async () =
 	);
 });
 
+test('searchImages refuses to repeat page 1 when the tool cannot page', async () => {
+	const noPageTool = {
+		...pictureTool,
+		name: 'search_photos',
+		description: 'Search stock photos',
+		inputSchema: { type: 'object', properties: { query: {} } }
+	};
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [noPageTool],
+				imageSearchTool: { serverId: 'search', toolName: 'search_photos' }
+			}),
+			call: async () => {
+				calls++;
+				return { content: '[]' };
+			}
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats', 2), []);
+				assert.equal(calls, 0, 'the tool is not asked for the same page again');
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
+				assert.equal(events[1].code, 'no_paging');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
 test('searchImages surfaces a failed tool listing as search_failed', async () => {
 	const events = await searchEvents({
 		store: searchStore({ tools: [], toolsError: 'listing failed' }),

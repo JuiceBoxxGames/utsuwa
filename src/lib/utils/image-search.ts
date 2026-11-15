@@ -315,6 +315,16 @@ export function isPictureSearchTool(tool: SearchToolLike): boolean {
 	return name === 'searxng_web_search' || ('categories' in props && 'response_format' in props);
 }
 
+/**
+ * A picture-only tool (image search, stock photos). General web search tools
+ * such as `searxng_web_search` stay available to the model; only these
+ * dedicated tools are hidden because the app drives them.
+ */
+export function isDedicatedPictureTool(tool: SearchToolLike): boolean {
+	if (!isPictureSearchTool(tool)) return false;
+	return /(image|photo|picture|bild|foto)/i.test(tool.name);
+}
+
 /** Lower is a better image-search candidate; null means "not a candidate". */
 export function searchToolRank(tool: SearchToolLike): number | null {
 	if (!isPictureSearchTool(tool)) return null;
@@ -475,6 +485,15 @@ export function isImageRequest(text: string): boolean {
 	return /\b(?:show|zeig(?:e)?|schick|send|find|such)\s+(?:me|mir)\b/i.test(text);
 }
 
+/**
+ * Narrower than `isImageRequest`: the user names pictures explicitly. Used to
+ * decide whether a missing tool or an empty query deserves a visible error,
+ * so ambiguous "show me the code" stays silent.
+ */
+export function isExplicitImageRequest(text: string): boolean {
+	return /\b(pictures?|images?|photos?|bilder?|fotos?)\b/i.test(text);
+}
+
 export interface ImageSearchErrorCopy {
 	message: string;
 	/** True when the fix lives under Settings > MCP. */
@@ -500,6 +519,11 @@ export function imageSearchErrorCopy(
 		case 'empty_query':
 			return {
 				message: 'That picture request had no subject. Ask for something specific, like "cute cats".',
+				settings: false
+			};
+		case 'no_paging':
+			return {
+				message: 'This picture tool cannot load more results. Try a different subject.',
 				settings: false
 			};
 		case 'empty_results':

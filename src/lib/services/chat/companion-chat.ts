@@ -38,11 +38,13 @@ import {
 	searchImages
 } from '$lib/services/image-search';
 import {
+	chooseImageSearchTool,
 	imageQueryFromMessage,
 	isCloseImagesRequest,
+	isDedicatedPictureTool,
+	isExplicitImageRequest,
 	isImageRequest,
-	isMoreImagesRequest,
-	isPictureSearchTool
+	isMoreImagesRequest
 } from '$lib/utils/image-search';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { getWorkingMemory, ensureSession } from '$lib/engine/memory-session';
@@ -170,9 +172,21 @@ export function cancelActiveTurn() {
 	activeTurn?.abort(new Error('Stopped'));
 }
 
+type ImageIntentRecovery =
+	| { status: 'declined' }
+	| { status: 'failed' }
+	| {
+			status: 'intent';
+			imageSearch?: string;
+			imagePage?: number;
+			closeImages?: boolean;
+	  };
+
 /**
  * Query-only recovery when native speech tools swallowed the state block.
- * It never asks for URLs and never runs a search tool.
+ * It never asks for URLs and never runs a search tool. A valid answer without
+ * picture fields is `declined`; only a failed call is `failed`, so the caller
+ * never overrides the model's explicit "no".
  */
 async function recoverImageIntent(
 	content: string,
@@ -180,7 +194,7 @@ async function recoverImageIntent(
 	signal: AbortSignal,
 	currentQuery?: string,
 	currentPage?: number
-) {
+): Promise<ImageIntentRecovery> {
 	const extracted = await completeJson({
 		...llm,
 		system: buildImageIntentSystemPrompt(),
@@ -189,9 +203,11 @@ Currently open picture popup: ${currentQuery ?? 'none'} (page ${currentPage ?? 1
 		maxTokens: 180,
 		signal
 	});
-	if (!extracted) return null;
+	if (!extracted) return { status: 'failed' };
 	const parsed = parseResponse(extracted);
+	if (!parsed.imageSearch && !parsed.closeImages) return { status: 'declined' };
 	return {
+		status: 'intent',
 		imageSearch: parsed.imageSearch,
 		imagePage: parsed.imagePage,
 		closeImages: parsed.closeImages
@@ -271,7 +287,7 @@ export async function sendCompanionMessage(
 		// Tool discovery must finish before the prompt is built: the image layer
 		// and MCP security text depend on the actual capability/tool snapshot.
 		const { mcpTools, mcpToolNames, confirmToolNames, security } = await untilAborted(
-			prepareMcpTurn(provider)
+			prepareMcpTurn(provider, systemEvent ? '' : content)
 		);
 
 		let systemPrompt = await untilAborted(buildCompanionPrompt(
@@ -505,14 +521,17 @@ export async function sendCompanionMessage(
 		let imageSearch = turn.imageSearch;
 		let imagePage = turn.imagePage;
 		let closeRequested = turn.closeImages || isCloseImagesRequest(content);
+		let recovery: ImageIntentRecovery | null = null;
 		const canRecover =
+			!systemEvent &&
 			!imageSearch &&
 			!closeRequested &&
 			isShowImagesEnabled() &&
+			hasConfiguredImageSearchTool() &&
 			(isImageRequest(content) || isMoreImagesRequest(content));
 		if (canRecover) {
 			try {
-				const recovered = await untilAborted(
+				recovery = await untilAborted(
 					recoverImageIntent(
 						content,
 						llm,
@@ -521,22 +540,33 @@ export async function sendCompanionMessage(
 						imageSearchStore.isOpen ? imageSearchStore.currentPage : undefined
 					)
 				);
-				if (recovered?.closeImages) closeRequested = true;
-				if (recovered?.imageSearch) {
-					imageSearch = recovered.imageSearch;
-					imagePage = recovered.imagePage;
+				if (recovery.status === 'intent') {
+					if (recovery.closeImages) closeRequested = true;
+					if (recovery.imageSearch) {
+						imageSearch = recovery.imageSearch;
+						imagePage = recovery.imagePage;
+					}
 				}
 			} catch (err) {
 				if (signal.aborted) throw err;
+				recovery = { status: 'failed' };
 			}
 		}
 		if (!closeRequested && !imageSearch && isMoreImagesRequest(content) && imageSearchStore.isOpen && imageSearchStore.currentQuery) {
 			imageSearch = imageSearchStore.currentQuery;
 			imagePage = imageSearchStore.currentPage + 1;
 		}
-		if (!closeRequested && !imageSearch && isShowImagesEnabled() && isImageRequest(content) && !isMoreImagesRequest(content)) {
-			// The model and the recovery call both failed to name a subject. The
-			// user's own wording is a better fallback than an error that blames them.
+		if (
+			!closeRequested &&
+			!imageSearch &&
+			!systemEvent &&
+			recovery?.status === 'failed' &&
+			isImageRequest(content) &&
+			!isMoreImagesRequest(content)
+		) {
+			// The recovery call failed and the model named no subject. Only then
+			// may the user's own wording stand in; a successful recovery that
+			// declined picture intent is never overridden.
 			const fallback = imageQueryFromMessage(content);
 			if (fallback) {
 				imageSearch = fallback;
@@ -544,10 +574,26 @@ export async function sendCompanionMessage(
 			}
 		}
 		if (closeRequested) closeImages();
-		else if (!imageSearch && isShowImagesEnabled() && (isImageRequest(content) || isMoreImagesRequest(content))) {
+		else if (
+			!imageSearch &&
+			!systemEvent &&
+			isShowImagesEnabled() &&
+			!hasConfiguredImageSearchTool() &&
+			isExplicitImageRequest(content)
+		) {
+			reportImageIntentError('', 'no_tool');
+		} else if (
+			!imageSearch &&
+			!systemEvent &&
+			isShowImagesEnabled() &&
+			canRecover &&
+			(recovery?.status !== 'declined' || isMoreImagesRequest(content)) &&
+			isExplicitImageRequest(content)
+		) {
 			// The model asked for pictures or a page but supplied no subject. Show
-			// the error instead of silently doing nothing.
-			reportImageIntentError(turn.imageSearch ?? '', 'empty_query');
+			// the error instead of silently doing nothing. A recovery answer that
+			// explicitly declined picture intent stays silent.
+			reportImageIntentError('', 'empty_query');
 		} else if (imageSearch && isShowImagesEnabled()) {
 			const sameQuery =
 				imageSearchStore.currentQuery.trim().toLowerCase() === imageSearch.trim().toLowerCase();
@@ -633,7 +679,7 @@ function startTurnGuard(stallTimeoutMs: number, turnTimeoutMs: number) {
 // never touch MCP see the exact same chat behavior as before.
 // Anthropic requests carry no tool definitions at all, so MCP stays out
 // of that path.
-async function prepareMcpTurn(provider: string) {
+async function prepareMcpTurn(provider: string, content: string) {
 	const mcpConfigured = mcpStore.servers.some((s) => s.enabled);
 	if (mcpConfigured) {
 		try {
@@ -648,13 +694,25 @@ async function prepareMcpTurn(provider: string) {
 		mcpStore.servers.filter((s) => s.enabled).map((s) => s.id)
 	);
 	// Picture search is app-driven: the model only sets a query in its state
-	// JSON. Offering the search tool as a callable tool made models call it
-	// themselves, narrate the call, then repeat that narration in the final
-	// round — and it duplicates work the app already does.
+	// JSON. Dedicated picture tools stay hidden so models do not call them
+	// themselves and narrate the call twice. General web search stays
+	// available, except on a picture turn where the app already searches.
+	const imageTurn = isImageRequest(content) || isMoreImagesRequest(content);
+	const selectedImageTool = chooseImageSearchTool(
+		mcpStore.tools,
+		mcpStore.imageSearchTool
+	).tool;
 	const mcpTools =
 		mcpConfigured && provider !== 'anthropic' && mcpStore.hasActiveTools
 			? mcpStore.tools.filter(
-					(tool) => enabledServerIds.has(tool.serverId) && !isPictureSearchTool(tool)
+					(tool) =>
+						enabledServerIds.has(tool.serverId) &&
+						!isDedicatedPictureTool(tool) &&
+						!(
+							imageTurn &&
+							selectedImageTool?.serverId === tool.serverId &&
+							selectedImageTool.name === tool.name
+						)
 				)
 			: [];
 	// Hardening is on unless opted out: tool results are untrusted data and

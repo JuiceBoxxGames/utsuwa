@@ -17,6 +17,7 @@ import {
 	isDirectImageUrl,
 	parseImageResults,
 	queryArgKey,
+	supportsImagePaging,
 	toDataUrl,
 	type ImageSearchResult
 } from '$lib/utils/image-search';
@@ -96,6 +97,8 @@ function errorMessage(code: ImageSearchErrorCode): string {
 			return 'Picture search cancelled';
 		case 'empty_query':
 			return 'The picture request had no search query';
+		case 'no_paging':
+			return 'The selected picture tool cannot load more results';
 		default:
 			return 'Search failed';
 	}
@@ -195,6 +198,10 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 	}
 
 	const args = buildSearchArgs(tool, cleanQuery, safePage);
+	if (safePage > 1 && !supportsImagePaging(tool)) {
+		publishError(requestId, cleanQuery, 'no_paging');
+		return [];
+	}
 	try {
 		if (server.askBeforeRun !== false) {
 			let confirmed = false;
