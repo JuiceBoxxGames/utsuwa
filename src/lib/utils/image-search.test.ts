@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+	describeImageFetch,
+	describePictureSearch,
 	extractHostname,
 	extractImageUrls,
 	chooseImageSearchTool,
@@ -347,6 +349,75 @@ test('reverse image search tools are not picture-search candidates', () => {
 	};
 	assert.equal(isPictureSearchTool(byImage), false);
 	assert.equal(pickSearchTool([byImage, byText])?.name, 'search_photos');
+});
+
+const pictureTool = (name: string, properties: Record<string, unknown>, serverId = 's1') => ({
+	name,
+	serverId,
+	serverName: 'Search',
+	inputSchema: { type: 'object', properties }
+});
+
+const readyState = { loading: false, mcpEnabled: true, enabledServers: 1, toolsError: false };
+
+test('describePictureSearch reports automatic, selected and loading states', () => {
+	const image = pictureTool('image_search', { query: {} });
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+
+	assert.deepEqual(describePictureSearch([fetch, image], null, readyState), {
+		kind: 'automatic',
+		tool: image
+	});
+	assert.deepEqual(
+		describePictureSearch([image], { serverId: 's1', toolName: 'image_search' }, readyState),
+		{ kind: 'selected', tool: image }
+	);
+	assert.deepEqual(describePictureSearch([], null, { ...readyState, loading: true }), {
+		kind: 'checking'
+	});
+});
+
+test('describePictureSearch flags an unavailable or unsuitable explicit choice', () => {
+	const reverse = pictureTool('search_photos_by_image', {
+		image_url: {},
+		english_search_sentence: {}
+	});
+	const selection = { serverId: 's1', toolName: 'search_photos_by_image' };
+	assert.deepEqual(describePictureSearch([reverse], selection, readyState), {
+		kind: 'selection_unsupported',
+		selection
+	});
+	assert.deepEqual(
+		describePictureSearch([], { serverId: 's1', toolName: 'gone' }, readyState),
+		{ kind: 'selection_missing', selection: { serverId: 's1', toolName: 'gone' } }
+	);
+});
+
+test('describePictureSearch separates missing server, disabled MCP and load errors', () => {
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+	assert.equal(
+		describePictureSearch([], null, { ...readyState, enabledServers: 0 }).kind,
+		'no_server'
+	);
+	assert.equal(
+		describePictureSearch([], null, { ...readyState, mcpEnabled: false }).kind,
+		'mcp_disabled'
+	);
+	assert.equal(
+		describePictureSearch([], null, { ...readyState, toolsError: true }).kind,
+		'load_failed'
+	);
+	assert.equal(describePictureSearch([fetch], null, readyState).kind, 'no_tool');
+});
+
+test('describeImageFetch reports the file-fetch tool or its absence', () => {
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+	assert.deepEqual(describeImageFetch([fetch], readyState), { kind: 'ready', tool: fetch });
+	assert.equal(describeImageFetch([], readyState).kind, 'missing');
+	assert.equal(
+		describeImageFetch([], { ...readyState, loading: true }).kind,
+		'checking'
+	);
 });
 
 test('imageQueryFromMessage keeps the subject and drops the request scaffolding', () => {

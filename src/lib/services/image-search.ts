@@ -13,6 +13,7 @@ import { isRasterImageDataUrl } from '$lib/utils/image-mime';
 import { assertSafeFetchUrl } from '$lib/services/providers/url-guard';
 import {
 	chooseImageSearchTool,
+	IMAGE_FETCH_TOOL,
 	parseImageResults,
 	queryArgKey,
 	toDataUrl,
@@ -24,9 +25,6 @@ import {
 	type ImageSearchErrorCode,
 	type ImageSearchToolInfo
 } from './image-search/events';
-
-/** MCP tool name used to fetch a single image (the filefetcher server). */
-export const IMAGE_FETCH_TOOL = 'fetch_file_from_url';
 
 /** Largest edge requested from the file-fetch tool. */
 const IMAGE_FETCH_MAX_DIMENSION = 1280;

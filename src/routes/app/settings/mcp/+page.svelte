@@ -4,7 +4,11 @@
 	import type { McpAuth, McpServerConfig, McpTransport } from '$lib/types/mcp';
 	import { env as publicEnv } from '$env/dynamic/public';
 	import { parseEnvLines, parseQuotedArgs, parseToolNameList } from '$lib/services/mcp/protocol';
-	import { chooseImageSearchTool, isPictureSearchTool } from '$lib/utils/image-search';
+	import {
+		describeImageFetch,
+		describePictureSearch,
+		isPictureSearchTool
+	} from '$lib/utils/image-search';
 	import { Button, Icon } from '$lib/components/ui';
 	import SettingsSection from '$lib/components/settings/SettingsSection.svelte';
 	import Switch from '$lib/components/ui/Switch.svelte';
@@ -32,21 +36,74 @@
 			? `${mcpStore.imageSearchTool.serverId}::${mcpStore.imageSearchTool.toolName}`
 			: ''
 	);
-	const selectedImageToolMissing = $derived(
-		!!mcpStore.imageSearchTool &&
-			!mcpStore.tools.some(
-				(tool) =>
-					tool.serverId === mcpStore.imageSearchTool?.serverId &&
-					tool.name === mcpStore.imageSearchTool?.toolName
-			)
+	const toolsState = $derived({
+		loading: mcpStore.isLoadingTools || mcpStore.capability === 'unknown',
+		mcpEnabled: mcpStore.capability !== 'none',
+		enabledServers: mcpStore.enabledServers.length,
+		toolsError: !!mcpStore.toolsError
+	});
+	const pictureSetup = $derived(
+		describePictureSearch(mcpStore.tools, mcpStore.imageSearchTool, toolsState)
 	);
+	const fetchSetup = $derived(describeImageFetch(mcpStore.tools, toolsState));
 	const confirmToolNames = $derived(parseToolNameList(publicEnv.PUBLIC_MCP_CONFIRM_TOOLS));
 	const pictureSearchTool = $derived(
-		chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool).tool
+		pictureSetup.kind === 'selected' || pictureSetup.kind === 'automatic' ? pictureSetup.tool : null
 	);
 	const pictureSearchBlocked = $derived(
 		!!pictureSearchTool && confirmToolNames.includes(pictureSearchTool.name)
 	);
+	const searchNeedsAttention = $derived(
+		pictureSetup.kind === 'selection_unsupported' ||
+			pictureSetup.kind === 'selection_missing' ||
+			pictureSetup.kind === 'no_tool' ||
+			pictureSetup.kind === 'load_failed'
+	);
+	const searchStatus = $derived.by(() => {
+		switch (pictureSetup.kind) {
+			case 'checking':
+				return 'Checking tools…';
+			case 'mcp_disabled':
+				return 'MCP is disabled';
+			case 'no_server':
+				return 'No enabled MCP server';
+			case 'load_failed':
+				return 'Tool list failed to load';
+			case 'selected':
+				return `Selected: ${pictureSetup.tool.serverName} / ${pictureSetup.tool.name}`;
+			case 'automatic':
+				return `Automatic: ${pictureSetup.tool.serverName} / ${pictureSetup.tool.name}`;
+			case 'selection_unsupported':
+				return 'Selected tool cannot search pictures';
+			case 'selection_missing':
+				return 'Selected tool is not available';
+			case 'no_tool':
+				return 'No picture-capable tool found';
+		}
+	});
+	const fetchStatus = $derived.by(() => {
+		switch (fetchSetup.kind) {
+			case 'checking':
+				return 'Checking tools…';
+			case 'mcp_disabled':
+				return 'MCP is disabled';
+			case 'no_server':
+				return 'No enabled MCP server';
+			case 'load_failed':
+				return 'Tool list failed to load';
+			case 'ready':
+				return `Ready: ${fetchSetup.tool.serverName}`;
+			case 'missing':
+				return 'Not configured';
+		}
+	});
+	const staleSelectionLabel = $derived.by(() => {
+		const selection = mcpStore.imageSearchTool;
+		if (!selection) return '';
+		const serverName =
+			mcpStore.servers.find((server) => server.id === selection.serverId)?.name ?? selection.serverId;
+		return `${serverName} / ${selection.toolName}`;
+	});
 
 	function setImageTool(value: string) {
 		if (!value) {
@@ -386,7 +443,7 @@
 
 		<SettingsSection title="Picture search">
 			<div class="form-row">
-				<label class="form-label" for="image-search-tool">Tool für Bildersuche</label>
+				<label class="form-label" for="image-search-tool">Picture search tool</label>
 				<select
 					id="image-search-tool"
 					class="settings-field"
@@ -394,6 +451,9 @@
 					onchange={(event) => setImageTool((event.currentTarget as HTMLSelectElement).value)}
 				>
 					<option value="">Automatic (best match)</option>
+					{#if mcpStore.imageSearchTool && pictureSetup.kind !== 'selected' && pictureSetup.kind !== 'automatic' && pictureSetup.kind !== 'checking'}
+						<option value={imageToolValue} disabled>{staleSelectionLabel} (unavailable)</option>
+					{/if}
 					{#each queryTools as tool (tool.serverId + '::' + tool.name)}
 						<option value={`${tool.serverId}::${tool.name}`}>
 							{tool.serverName} / {tool.name}
@@ -402,9 +462,28 @@
 				</select>
 				<p class="form-hint">
 					The app searches with this MCP tool when the companion wants to show pictures.
-					Automatic picks a query-taking tool for now; an explicit choice is never replaced silently.
+					Automatic picks the best picture-capable tool; an explicit choice is never replaced
+					silently.
 				</p>
 			</div>
+
+			<div class="doctor" aria-live="polite">
+				<div class="doctor-row">
+					<span class="doctor-label">Search tool</span>
+					<span class="doctor-value" class:doctor-warn={searchNeedsAttention}>{searchStatus}</span>
+				</div>
+				<div class="doctor-row">
+					<span class="doctor-label">Image loader</span>
+					<span class="doctor-value" class:doctor-warn={fetchSetup.kind === 'missing'}>
+						{fetchStatus}
+					</span>
+				</div>
+			</div>
+			<p class="form-hint">
+				The image loader is optional. It must expose <code>fetch_file_from_url</code> and helps when a
+				source blocks hotlinking.
+			</p>
+
 			{#if pictureSearchBlocked}
 				<p class="form-error" role="alert">
 					<strong>{pictureSearchTool?.name}</strong> is listed in
@@ -412,10 +491,21 @@
 					that list blocks direct calls with 403, so every search would fail. Remove the name from
 					the list or pick another tool.
 				</p>
-			{:else if selectedImageToolMissing}
-				<p class="form-error">The selected picture tool is not available. Pick another one or use Automatic.</p>
-			{:else if queryTools.length === 0}
-				<p class="empty-hint">No picture-capable MCP tools found. Refresh the tool list or add an image/stock search server.</p>
+			{:else if pictureSetup.kind === 'selection_unsupported'}
+				<p class="form-error" role="alert">
+					The selected tool cannot search pictures (for example a reverse-image tool). Pick another
+					tool or use Automatic.
+				</p>
+			{:else if pictureSetup.kind === 'selection_missing'}
+				<p class="form-error" role="alert">
+					The selected picture tool is not available. It may be disabled or its server may be
+					offline. Pick another tool or use Automatic.
+				</p>
+			{:else if pictureSetup.kind === 'no_tool'}
+				<p class="empty-hint">
+					No picture-capable MCP tools found. Refresh the tool list or add an image/stock search
+					server.
+				</p>
 			{/if}
 		</SettingsSection>
 
@@ -527,6 +617,29 @@
 	}
 
 	.form-hint { font-size: 13px; font-weight: 400; line-height: 1.45; color: var(--text-secondary); }
+
+	.doctor {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		margin-top: 0.6rem;
+		padding: 0.55rem 0.7rem;
+		border: 1px solid var(--border-light);
+		border-radius: var(--radius-md);
+		background: var(--bg-secondary);
+	}
+
+	.doctor-row {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		font-size: 0.8rem;
+		line-height: 1.35;
+	}
+
+	.doctor-label { color: var(--text-secondary); }
+	.doctor-value { color: var(--text-primary); text-align: right; }
+	.doctor-warn { color: var(--color-warning); }
 
 	.transport-toggle { display: flex; flex-wrap: wrap; gap: 16px; }
 

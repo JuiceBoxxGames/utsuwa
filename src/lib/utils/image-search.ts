@@ -336,6 +336,75 @@ export function chooseImageSearchTool<T extends SearchToolLike & { serverId: str
 	return tool ? { tool, error: null } : { tool: null, error: 'no_tool' };
 }
 
+/** MCP tool name used to fetch a single image (the filefetcher server). */
+export const IMAGE_FETCH_TOOL = 'fetch_file_from_url';
+
+/** Snapshot of MCP tool discovery, used by the settings doctor. */
+export interface PictureSearchState {
+	loading: boolean;
+	mcpEnabled: boolean;
+	enabledServers: number;
+	toolsError: boolean;
+}
+
+export type PictureSearchSetup<T extends SearchToolLike & { serverId: string }> =
+	| { kind: 'checking' }
+	| { kind: 'mcp_disabled' }
+	| { kind: 'no_server' }
+	| { kind: 'load_failed' }
+	| { kind: 'selected'; tool: T }
+	| { kind: 'automatic'; tool: T }
+	| { kind: 'selection_unsupported'; selection: ImageSearchToolSelection }
+	| { kind: 'selection_missing'; selection: ImageSearchToolSelection }
+	| { kind: 'no_tool' };
+
+/**
+ * Explain what the app will do for picture search, including states the
+ * dropdown alone cannot show (loading, unavailable selection, no candidates).
+ * Loading wins over every other state so a refresh never flashes an error.
+ */
+export function describePictureSearch<T extends SearchToolLike & { serverId: string }>(
+	tools: T[],
+	selection: ImageSearchToolSelection | null,
+	state: PictureSearchState
+): PictureSearchSetup<T> {
+	if (state.loading) return { kind: 'checking' };
+	if (!state.mcpEnabled) return { kind: 'mcp_disabled' };
+	if (state.enabledServers === 0) return { kind: 'no_server' };
+	if (state.toolsError) return { kind: 'load_failed' };
+	if (selection) {
+		const tool = tools.find(
+			(entry) => entry.serverId === selection.serverId && entry.name === selection.toolName
+		);
+		if (!tool) return { kind: 'selection_missing', selection };
+		if (!isPictureSearchTool(tool)) return { kind: 'selection_unsupported', selection };
+		return { kind: 'selected', tool };
+	}
+	const tool = pickSearchTool(tools);
+	return tool ? { kind: 'automatic', tool } : { kind: 'no_tool' };
+}
+
+export type ImageFetchSetup<T extends SearchToolLike & { serverId: string }> =
+	| { kind: 'checking' }
+	| { kind: 'mcp_disabled' }
+	| { kind: 'no_server' }
+	| { kind: 'load_failed' }
+	| { kind: 'ready'; tool: T }
+	| { kind: 'missing' };
+
+/** Whether the optional file-fetch tool is available for thumbnails. */
+export function describeImageFetch<T extends SearchToolLike & { serverId: string }>(
+	tools: T[],
+	state: PictureSearchState
+): ImageFetchSetup<T> {
+	if (state.loading) return { kind: 'checking' };
+	if (!state.mcpEnabled) return { kind: 'mcp_disabled' };
+	if (state.enabledServers === 0) return { kind: 'no_server' };
+	if (state.toolsError) return { kind: 'load_failed' };
+	const tool = tools.find((entry) => entry.name === IMAGE_FETCH_TOOL);
+	return tool ? { kind: 'ready', tool } : { kind: 'missing' };
+}
+
 /**
  * Last-resort subject for a picture request when the model and the recovery
  * call both failed to produce a query. Keeps the user's own words, minus the

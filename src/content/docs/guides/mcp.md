@@ -48,7 +48,7 @@ Open **Settings > MCP**.
 - **Env Vars** takes one `KEY=value` per line; blank lines and `#` comments are ignored.
 - **Inject text tool results as user messages** repeats each result as a user-side note. It helps local or SLIM models that ignore the strict tool role.
 
-**Picture search**: choose the tool Utsuwa uses when the companion shows pictures. **Automatic** picks a query-taking tool; an explicit choice is never replaced silently. If it disappears, the popup reports that no picture tool is configured.
+**Picture search**: choose the tool Utsuwa uses when the companion shows pictures. **Automatic** picks the best picture-capable tool; an explicit choice is never replaced silently. A status block below the picker shows the resolved search tool and whether the optional image loader (`fetch_file_from_url`) is available; a selection that disappears or cannot search pictures is flagged instead of replaced.
 
 **Available Tools**: press **Refresh** to list the tools of all enabled servers. Each entry shows the tool name, its server, and the description the model sees. Per-server failures (bad token, wrong URL, spawn error) are shown right here instead of silently producing an empty list.
 
@@ -124,7 +124,7 @@ The companion can show you pictures without needing model tool-calling. When the
 
 The selection is explicit:
 
-- **Automatic (best matching)** picks a query-taking tool. This is the default.
+- **Automatic (best matching)** picks the best picture-capable tool. This is the default.
 - Choosing a server/tool pins it. If that tool disappears or stops taking a query, the app shows **No picture search tool configured** / a missing-tool error instead of silently switching to another server.
 - A clear close request is honored even if the model forgets the JSON field. "More" reuses the current query and page when needed.
 
