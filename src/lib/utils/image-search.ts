@@ -331,7 +331,7 @@ export function isPictureSearchTool(tool: SearchToolLike): boolean {
  */
 export function isDedicatedPictureTool(tool: SearchToolLike): boolean {
 	if (!isPictureSearchTool(tool)) return false;
-	return /(image|photo|picture|bild|foto)/i.test(tool.name);
+	return /(image|photo|picture|bild|foto|stock|pexafy|unsplash|pexels|pixabay)/i.test(tool.name);
 }
 
 /** Lower is a better image-search candidate; null means "not a candidate". */

@@ -719,6 +719,29 @@ test('fetchImage aborts with ImageFetchCancelled when the user declines', async 
 	assert.equal(called, false);
 });
 
+test('fetchImage skips a confirmation-listed file fetcher', async () => {
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [fetchTool],
+				servers: [{ id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true, askBeforeRun: false }],
+				enabledServers: [{ id: 'files', enabled: true }],
+				imageSearchTool: null
+			}),
+			call: async () => {
+				calls++;
+				return { images: [{ mimeType: 'image/png', data: 'AA' }] };
+			},
+			publicEnv: { PUBLIC_MCP_CONFIRM_TOOLS: 'fetch_file_from_url' }
+		},
+		async ({ fetchImage }) => {
+			assert.equal(await fetchImage('https://example.com/a.png'), null);
+			assert.equal(calls, 0, 'the listed file fetcher is not called');
+		}
+	);
+});
+
 test('openImageResult opens a source page directly with noopener', async () => {
 	await withSearchCore(
 		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },

@@ -469,6 +469,10 @@ test('only dedicated picture tools are hidden from the model', () => {
 		isDedicatedPictureTool({ name: 'searxng_web_search', inputSchema: { properties: { query: {} } } }),
 		false
 	);
+	assert.equal(
+		isDedicatedPictureTool({ name: 'unsplash_search', inputSchema: { properties: { query: {} } } }),
+		true
+	);
 });
 
 test('no_paging copy explains the tool limit without sending users to settings', () => {

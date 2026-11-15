@@ -163,6 +163,8 @@ export interface SendCompanionMessageOptions {
 	stallTimeoutMs?: number;
 	/** Hard cap on the whole turn. */
 	turnTimeoutMs?: number;
+	/** Cap for the query-only picture recovery call. */
+	imageRecoveryTimeoutMs?: number;
 }
 
 let activeTurn: AbortController | null = null;
@@ -196,12 +198,13 @@ async function recoverImageIntent(
 	llm: NonNullable<ReturnType<typeof resolveActiveLLM>>,
 	signal: AbortSignal,
 	currentQuery?: string,
-	currentPage?: number
+	currentPage?: number,
+	timeoutMs = IMAGE_RECOVERY_TIMEOUT_MS
 ): Promise<ImageIntentRecovery> {
 	const controller = new AbortController();
 	const timer = setTimeout(
 		() => controller.abort(new Error('Image intent recovery timed out')),
-		IMAGE_RECOVERY_TIMEOUT_MS
+		timeoutMs
 	);
 	const forwardAbort = () => controller.abort(signal.reason);
 	if (signal.aborted) controller.abort(signal.reason);
@@ -236,7 +239,12 @@ export async function sendCompanionMessage(
 	hooks: CompanionChatHooks,
 	options: SendCompanionMessageOptions = {}
 ): Promise<void> {
-	const { systemEvent = false, stallTimeoutMs = 90_000, turnTimeoutMs = 600_000 } = options;
+	const {
+		systemEvent = false,
+		stallTimeoutMs = 90_000,
+		turnTimeoutMs = 600_000,
+		imageRecoveryTimeoutMs = IMAGE_RECOVERY_TIMEOUT_MS
+	} = options;
 	if (!content.trim() && images.length === 0) return;
 
 	// A voice transcript can land while a reply (or a reminder turn) is still
@@ -553,7 +561,8 @@ export async function sendCompanionMessage(
 						llm,
 						signal,
 						imageSearchStore.isOpen ? imageSearchStore.currentQuery : undefined,
-						imageSearchStore.isOpen ? imageSearchStore.currentPage : undefined
+						imageSearchStore.isOpen ? imageSearchStore.currentPage : undefined,
+						imageRecoveryTimeoutMs
 					)
 				);
 				if (recovery.status === 'intent') {
@@ -597,7 +606,8 @@ export async function sendCompanionMessage(
 			!hasConfiguredImageSearchTool() &&
 			isExplicitImageRequest(content)
 		) {
-			reportImageIntentError('', 'no_tool');
+			const choice = chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool);
+			reportImageIntentError('', choice.error ?? 'no_tool');
 		} else if (
 			!imageSearch &&
 			!systemEvent &&
