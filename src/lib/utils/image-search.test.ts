@@ -325,3 +325,25 @@ test('parseImageResults reads Pexafy search_photos output', () => {
 	assert.equal(results[0].license, 'free');
 	assert.equal(results[0].attribution, 'Photo by johnNaturePhotos on Pixabay');
 });
+
+test('reverse image search tools are not picture-search candidates', () => {
+	const byImage = {
+		name: 'search_photos_by_image',
+		description: 'Find similar photographs from a reference picture',
+		inputSchema: {
+			type: 'object',
+			properties: { image_url: { type: 'string' }, english_search_sentence: { type: 'string' } }
+		}
+	};
+	const byText = {
+		name: 'search_photos',
+		description: 'Search free stock photographs',
+		inputSchema: {
+			type: 'object',
+			properties: { english_search_sentence: { type: 'string' } },
+			required: ['english_search_sentence']
+		}
+	};
+	assert.equal(isPictureSearchTool(byImage), false);
+	assert.equal(pickSearchTool([byImage, byText])?.name, 'search_photos');
+});

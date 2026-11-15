@@ -276,10 +276,13 @@ export function isPictureSearchTool(tool: SearchToolLike): boolean {
 	if (!queryArgKey(tool)) return false;
 	const name = tool.name.toLowerCase();
 	if (NON_PICTURE_TOOL_RE.test(name)) return false;
+	const props = tool.inputSchema?.properties ?? {};
+	// Reverse image search takes a reference picture instead of a subject, so it
+	// answers a text-only query with instructions rather than results.
+	if (['image_url', 'image_file', 'image_base64', 'photo_id'].some((key) => key in props)) return false;
 	const text = `${name} ${tool.description ?? ''}`;
 	if (PICTURE_HINT_RE.test(text)) return true;
 	// SearXNG's general web tool is image-capable through its categories option.
-	const props = tool.inputSchema?.properties ?? {};
 	return name === 'searxng_web_search' || ('categories' in props && 'response_format' in props);
 }
 
