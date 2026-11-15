@@ -442,6 +442,38 @@ test('fetchImage returns the first image block from the fetch tool', async () =>
 	);
 });
 
+test('fetchImage without confirm never calls the tool when the server asks first', async () => {
+	let asked = 0;
+	let called = false;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [fetchTool],
+				servers: [{ id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true, askBeforeRun: true }],
+				enabledServers: [{ id: 'files', enabled: true }],
+				imageSearchTool: null,
+				confirmToolCall: async () => {
+					asked++;
+					return true;
+				}
+			}),
+			call: async () => {
+				called = true;
+				throw new Error('should not run');
+			}
+		},
+		async ({ fetchImage, closeImageChannel }) => {
+			try {
+				assert.equal(await fetchImage('https://cdn.example/a.jpg'), null);
+				assert.equal(asked, 0);
+				assert.equal(called, false);
+			} finally {
+				closeImageChannel();
+			}
+		}
+	);
+});
+
 test('fetchImage returns null without a fetch tool or an enabled server', async () => {
 	await withSearchCore(
 		{ store: searchStore({ tools: [] }), call: async () => { throw new Error('should not run'); } },
