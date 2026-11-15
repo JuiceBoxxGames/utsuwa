@@ -37,7 +37,11 @@ function searchStore(overrides: Record<string, unknown> = {}): Record<string, un
 
 /** Boot one Vite server with a fake MCP store/client for the search core. */
 async function withSearchCore(
-	fixture: { store: Record<string, unknown>; call: (...args: unknown[]) => Promise<unknown> },
+	fixture: {
+		store: Record<string, unknown>;
+		call: (...args: unknown[]) => Promise<unknown>;
+		publicEnv?: Record<string, string>;
+	},
 	fn: (mod: Record<string, any>) => Promise<void>
 ): Promise<void> {
 	const root = fileURLToPath(new URL('../../../', import.meta.url)).replace(/\/$/, '');
@@ -45,7 +49,8 @@ async function withSearchCore(
 	globals.__imageSearchFixture = fixture;
 	const replacements: Record<string, string> = {
 		'src/lib/stores/mcp.svelte': 'export const mcpStore = globalThis.__imageSearchFixture.store;',
-		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);'
+		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);',
+		'$env/dynamic/public': 'export const env = globalThis.__imageSearchFixture.publicEnv ?? {};'
 	};
 	const vite = await createServer({
 		root,
@@ -132,7 +137,8 @@ test('searchImages turns the selected MCP result into loading/results events', a
 	globals.__imageSearchFixture = fixture;
 	const replacements: Record<string, string> = {
 		'src/lib/stores/mcp.svelte': 'export const mcpStore = globalThis.__imageSearchFixture.store;',
-		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);'
+		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);',
+		'$env/dynamic/public': 'export const env = globalThis.__imageSearchFixture.publicEnv ?? {};'
 	};
 	const vite = await createServer({
 		root,
@@ -206,7 +212,8 @@ test('searchImages emits a visible no_tool error instead of returning silently',
 	globals.__imageSearchFixture = { store, call: async () => { throw new Error('should not run'); } };
 	const replacements: Record<string, string> = {
 		'src/lib/stores/mcp.svelte': 'export const mcpStore = globalThis.__imageSearchFixture.store;',
-		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);'
+		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);',
+		'$env/dynamic/public': 'export const env = globalThis.__imageSearchFixture.publicEnv ?? {};'
 	};
 	const vite = await createServer({
 		root,
@@ -316,6 +323,33 @@ test('searchImages refuses to repeat page 1 when the tool cannot page', async ()
 				assert.equal(calls, 0, 'the tool is not asked for the same page again');
 				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
 				assert.equal(events[1].code, 'no_paging');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('searchImages refuses a confirmation-listed tool', async () => {
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore(),
+			call: async () => {
+				calls++;
+				return { content: '[]' };
+			},
+			publicEnv: { PUBLIC_MCP_CONFIRM_TOOLS: 'searxng_image_search' }
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats'), []);
+				assert.equal(calls, 0, 'the listed tool is not called');
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
+				assert.equal(events[1].code, 'confirm_required');
 			} finally {
 				stop();
 				closeImageChannel();
@@ -683,4 +717,111 @@ test('fetchImage aborts with ImageFetchCancelled when the user declines', async 
 	);
 	assert.equal(asked, 1);
 	assert.equal(called, false);
+});
+
+test('openImageResult opens a source page directly with noopener', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			const popup = { opener: 'x' as unknown, location: { href: '' }, close() {} };
+			const opened: string[] = [];
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: (url: string) => { opened.push(url); return popup; } };
+			try {
+				assert.equal(await openImageResult('https://example.com/article'), 'opened');
+				assert.deepEqual(opened, ['https://example.com/article']);
+				assert.equal(popup.opener, null);
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult reports a blocked popup instead of a generic failure', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => null };
+			try {
+				assert.equal(await openImageResult('https://example.com/article'), 'blocked');
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult rejects non-raster data URLs without opening a tab', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			let opened = 0;
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => { opened++; return { opener: null, location: { href: '' }, close() {} }; } };
+			try {
+				assert.equal(await openImageResult('data:image/svg+xml;base64,AA'), 'failed');
+				assert.equal(opened, 0);
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult renders a raster data URL through a blob', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			const popup = { opener: null as unknown, location: { href: '' }, close() {} };
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => popup };
+			const urlApi = URL as unknown as { createObjectURL: (blob: Blob) => string; revokeObjectURL: (url: string) => void };
+			const previousCreate = urlApi.createObjectURL;
+			const previousRevoke = urlApi.revokeObjectURL;
+			urlApi.createObjectURL = () => 'blob:test';
+			urlApi.revokeObjectURL = () => {};
+			try {
+				assert.equal(await openImageResult('data:image/png;base64,AAAA'), 'opened');
+				assert.equal(popup.location.href, 'blob:test');
+			} finally {
+				urlApi.createObjectURL = previousCreate;
+				urlApi.revokeObjectURL = previousRevoke;
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult reports a cancelled confirmation', async () => {
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [fetchTool],
+				servers: [{ id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true, askBeforeRun: true }],
+				enabledServers: [{ id: 'files', enabled: true }],
+				imageSearchTool: null,
+				confirmToolCall: async () => false
+			}),
+			call: async () => { throw new Error('should not call'); }
+		},
+		async ({ openImageResult }) => {
+			let closed = false;
+			const popup = { opener: null, location: { href: '' }, close: () => { closed = true; } };
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => popup };
+			try {
+				assert.equal(await openImageResult('https://cdn.example.com/a.png'), 'cancelled');
+				assert.equal(closed, true);
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
 });

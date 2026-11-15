@@ -487,9 +487,9 @@
 			{#if pictureSearchBlocked}
 				<p class="form-error" role="alert">
 					<strong>{pictureSearchTool?.name}</strong> is listed in
-					<code>PUBLIC_MCP_CONFIRM_TOOLS</code>. The picture search calls this tool directly, and
-					that list blocks direct calls with 403, so every search would fail. Remove the name from
-					the list or pick another tool.
+					<code>PUBLIC_MCP_CONFIRM_TOOLS</code>. Picture search never runs a confirmation-listed
+					tool automatically, so every search would fail. Remove the name from the list or pick
+					another tool.
 				</p>
 			{:else if pictureSetup.kind === 'selection_unsupported'}
 				<p class="form-error" role="alert">

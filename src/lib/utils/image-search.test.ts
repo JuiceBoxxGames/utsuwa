@@ -17,6 +17,7 @@ import {
 	isDedicatedPictureTool,
 	isDirectImageUrl,
 	isExplicitImageRequest,
+	isToolOnConfirmList,
 	parseImageResults,
 	pickSearchTool,
 	queryArgKey,
@@ -475,4 +476,16 @@ test('no_paging copy explains the tool limit without sending users to settings',
 		message: 'This picture tool cannot load more results. Try a different subject.',
 		settings: false
 	});
+});
+
+test('isToolOnConfirmList matches exact names only', () => {
+	assert.equal(isToolOnConfirmList('search_photos', 'other, search_photos'), true);
+	assert.equal(isToolOnConfirmList('search_photos', 'search_photos_by_image'), false);
+	assert.equal(isToolOnConfirmList('search_photos', undefined), false);
+});
+
+test('confirm_required copy points to the MCP settings', () => {
+	const copy = imageSearchErrorCopy('confirm_required');
+	assert.equal(copy.settings, true);
+	assert.match(copy.message, /PUBLIC_MCP_CONFIRM_TOOLS/);
 });

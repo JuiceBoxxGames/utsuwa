@@ -13,7 +13,8 @@ export type ImageSearchErrorCode =
 	| 'empty_results'
 	| 'cancelled'
 	| 'empty_query'
-	| 'no_paging';
+	| 'no_paging'
+	| 'confirm_required';
 
 export interface ImageSearchToolInfo {
 	serverId: string;

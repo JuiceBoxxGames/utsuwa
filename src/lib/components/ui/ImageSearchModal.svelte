@@ -271,7 +271,9 @@
 	async function openImage(url: string) {
 		openError = null
 		const outcome = await openImageResult(url)
-		if (outcome === 'failed') {
+		if (outcome === 'blocked') {
+			openError = 'Your browser blocked the new tab. Allow pop-ups for this site and try again.'
+		} else if (outcome === 'failed') {
 			openError = 'This picture could not be opened. The host may block direct downloads.'
 		}
 	}

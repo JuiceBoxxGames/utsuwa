@@ -46,6 +46,15 @@ export function imageOpenLabel(url: string): 'Open picture' | 'Open source' {
 	return isDirectImageUrl(url) ? 'Open picture' : 'Open source';
 }
 
+/** True when a tool name appears in the comma-separated PUBLIC_MCP_CONFIRM_TOOLS list. */
+export function isToolOnConfirmList(toolName: string, raw: string | undefined | null): boolean {
+	return (raw ?? '')
+		.split(',')
+		.map((name) => name.trim())
+		.filter(Boolean)
+		.includes(toolName);
+}
+
 /** True when the selected search tool can request another result page. */
 export function supportsImagePaging(
 	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined
@@ -525,6 +534,12 @@ export function imageSearchErrorCopy(
 			return {
 				message: 'This picture tool cannot load more results. Try a different subject.',
 				settings: false
+			};
+		case 'confirm_required':
+			return {
+				message:
+					'This picture tool requires manual confirmation and cannot run automatically. Remove it from PUBLIC_MCP_CONFIRM_TOOLS or choose another tool.',
+				settings: true
 			};
 		case 'empty_results':
 			return {

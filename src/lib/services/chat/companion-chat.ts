@@ -182,6 +182,9 @@ type ImageIntentRecovery =
 			closeImages?: boolean;
 	  };
 
+/** Recovery must not keep the composer locked behind a hanging provider. */
+const IMAGE_RECOVERY_TIMEOUT_MS = 8_000;
+
 /**
  * Query-only recovery when native speech tools swallowed the state block.
  * It never asks for URLs and never runs a search tool. A valid answer without
@@ -195,23 +198,36 @@ async function recoverImageIntent(
 	currentQuery?: string,
 	currentPage?: number
 ): Promise<ImageIntentRecovery> {
-	const extracted = await completeJson({
-		...llm,
-		system: buildImageIntentSystemPrompt(),
-		user: `User: ${content}
+	const controller = new AbortController();
+	const timer = setTimeout(
+		() => controller.abort(new Error('Image intent recovery timed out')),
+		IMAGE_RECOVERY_TIMEOUT_MS
+	);
+	const forwardAbort = () => controller.abort(signal.reason);
+	if (signal.aborted) controller.abort(signal.reason);
+	else signal.addEventListener('abort', forwardAbort, { once: true });
+	try {
+		const extracted = await completeJson({
+			...llm,
+			system: buildImageIntentSystemPrompt(),
+			user: `User: ${content}
 Currently open picture popup: ${currentQuery ?? 'none'} (page ${currentPage ?? 1}).`,
-		maxTokens: 180,
-		signal
-	});
-	if (!extracted) return { status: 'failed' };
-	const parsed = parseResponse(extracted);
-	if (!parsed.imageSearch && !parsed.closeImages) return { status: 'declined' };
-	return {
-		status: 'intent',
-		imageSearch: parsed.imageSearch,
-		imagePage: parsed.imagePage,
-		closeImages: parsed.closeImages
-	};
+			maxTokens: 180,
+			signal: controller.signal
+		});
+		if (!extracted) return { status: 'failed' };
+		const parsed = parseResponse(extracted);
+		if (!parsed.imageSearch && !parsed.closeImages) return { status: 'declined' };
+		return {
+			status: 'intent',
+			imageSearch: parsed.imageSearch,
+			imagePage: parsed.imagePage,
+			closeImages: parsed.closeImages
+		};
+	} finally {
+		clearTimeout(timer);
+		signal.removeEventListener('abort', forwardAbort);
+	}
 }
 
 export async function sendCompanionMessage(

@@ -207,7 +207,7 @@ html:has(.app, .overlay-app, .docs-site) .search-input { min-width: 0; font-size
 /* Keep native form semantics while reproducing T3's checkbox and radio geometry. */
 html:has(.app, .overlay-app, .docs-site) input:is([type='checkbox'], [type='radio']) {
 	appearance: none; -webkit-appearance: none; flex: 0 0 16px; width: 16px; height: 16px; margin: 0;
-	border: 1px solid var(--border-light); border-radius: var(--radius-badge); background: var(--bg-page);
+	border: 1px solid var(--t3-input); border-radius: var(--radius-badge); background: var(--bg-page);
 	box-shadow: none; cursor: pointer; vertical-align: middle;
 }
 html:has(.app, .overlay-app, .docs-site) input[type='radio'] { border-radius: 50%; }

@@ -6,6 +6,7 @@
  * and publishes a platform/window-independent event. Presentation lives in the
  * image-search store and modal; no store is touched here.
  */
+import { env as publicEnv } from '$env/dynamic/public';
 import { mcpStore } from '$lib/stores/mcp.svelte';
 import { callTool } from '$lib/services/mcp/capability';
 import type { McpTool } from '$lib/types/mcp';
@@ -15,6 +16,7 @@ import {
 	chooseImageSearchTool,
 	IMAGE_FETCH_TOOL,
 	isDirectImageUrl,
+	isToolOnConfirmList,
 	parseImageResults,
 	queryArgKey,
 	supportsImagePaging,
@@ -99,6 +101,8 @@ function errorMessage(code: ImageSearchErrorCode): string {
 			return 'The picture request had no search query';
 		case 'no_paging':
 			return 'The selected picture tool cannot load more results';
+		case 'confirm_required':
+			return 'The selected picture tool requires manual confirmation';
 		default:
 			return 'Search failed';
 	}
@@ -196,6 +200,10 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 		publishError(requestId, cleanQuery, 'tool_unavailable');
 		return [];
 	}
+	if (isToolOnConfirmList(tool.name, publicEnv.PUBLIC_MCP_CONFIRM_TOOLS)) {
+		publishError(requestId, cleanQuery, 'confirm_required');
+		return [];
+	}
 
 	const args = buildSearchArgs(tool, cleanQuery, safePage);
 	if (safePage > 1 && !supportsImagePaging(tool)) {
@@ -291,6 +299,7 @@ export async function fetchImage(
 	}
 	const server = findImageFetchServer();
 	if (!server) return null;
+	if (isToolOnConfirmList(IMAGE_FETCH_TOOL, publicEnv.PUBLIC_MCP_CONFIRM_TOOLS)) return null;
 	const args = { url, max_dimension: IMAGE_FETCH_MAX_DIMENSION };
 	if (server.askBeforeRun !== false) {
 		// Batch prefetch must not queue one dialog per image; only an explicit
@@ -327,7 +336,7 @@ export async function fetchImageAsDataUrl(
 	return toDataUrl(image.mimeType, image.data) || null;
 }
 
-export type OpenImageOutcome = 'opened' | 'cancelled' | 'failed';
+export type OpenImageOutcome = 'opened' | 'cancelled' | 'blocked' | 'failed';
 
 /**
  * Open a result in a new tab. Source pages open directly; image bytes go
@@ -351,13 +360,13 @@ export async function openImageResult(url: string): Promise<OpenImageOutcome> {
 	// fetch prompt and the old silent fallback from "picture" to "web page".
 	if (!isData && !isDirectImageUrl(url)) {
 		const source = window.open(url, '_blank');
-		if (!source) return 'failed';
+		if (!source) return 'blocked';
 		source.opener = null;
 		return 'opened';
 	}
 
 	const popup = window.open('', '_blank');
-	if (!popup) return 'failed';
+	if (!popup) return 'blocked';
 	popup.opener = null;
 	const close = () => {
 		try { popup.close(); } catch { /* already gone */ }
