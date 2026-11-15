@@ -255,7 +255,7 @@ export interface SearchToolLike {
 	inputSchema?: { properties?: Record<string, unknown> };
 }
 
-const QUERY_KEYS = ['query', 'q', 'search', 'term', 'prompt'];
+const QUERY_KEYS = ['query', 'q', 'search', 'term', 'prompt', 'english_search_sentence'];
 
 /** The parameter a tool uses for the search text, or null if it takes no query. */
 export function queryArgKey(tool: SearchToolLike): string | null {

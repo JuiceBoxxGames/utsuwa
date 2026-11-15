@@ -288,3 +288,40 @@ test('error copy turns search codes into plain language', () => {
 	assert.match(failed.message, /failed/i);
 	assert.equal(failed.settings, false);
 });
+
+test('Pexafy search_photos is a query tool with its own argument name', () => {
+	const tool = {
+		name: 'search_photos',
+		description: 'Search free stock photographs',
+		inputSchema: {
+			type: 'object',
+			properties: { english_search_sentence: { type: 'string' } }
+		}
+	};
+	assert.equal(queryArgKey(tool), 'english_search_sentence');
+	assert.equal(isPictureSearchTool(tool), true);
+});
+
+test('parseImageResults reads Pexafy search_photos output', () => {
+	const content = JSON.stringify({
+		success: true,
+		data: [
+			{
+				urls: { regular: 'https://cdn.pixabay.com/photo/nature_1280.jpg' },
+				preview_url: 'https://thumb.pexafy.com/abc/480w.jpg',
+				source_image_url: 'https://pixabay.com/photos/nature-6810212/',
+				alt_description: 'Foggy mountain landscape with autumn trees',
+				source: 'Pixabay',
+				license_type: 'free',
+				attribution: { plain: 'Photo by johnNaturePhotos on Pixabay' }
+			}
+		]
+	});
+	const results = parseImageResults(content, []);
+	assert.equal(results.length, 1);
+	assert.equal(results[0].thumbnail, 'https://thumb.pexafy.com/abc/480w.jpg');
+	assert.equal(results[0].url, 'https://pixabay.com/photos/nature-6810212/');
+	assert.equal(results[0].title, 'Foggy mountain landscape with autumn trees');
+	assert.equal(results[0].license, 'free');
+	assert.equal(results[0].attribution, 'Photo by johnNaturePhotos on Pixabay');
+});

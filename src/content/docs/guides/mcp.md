@@ -134,7 +134,7 @@ Concrete examples:
 
 - **SearXNG**: `searxng_web_search` with `categories=images`; Utsuwa sets JSON/result-detail arguments for you.
 - **Brave**: `brave_image_search` from Brave's MCP server; Utsuwa reads `items[].url` plus `properties.url`.
-- **Pexafy**: HTTP `https://mcp.pexafy.com/mcp`, tool `search_photos`; free stock photos with licence and attribution. Utsuwa's MCP client supports no auth or a Bearer MCP key, not OAuth; the anonymous endpoint may work, but verify it on your deployment.
+- **Pexafy**: HTTP `https://mcp.pexafy.com/mcp`, tool `search_photos`; free stock photos with licence and attribution. Utsuwa fills that tool's required `english_search_sentence`; the anonymous endpoint works, and the MCP client supports no auth or a Bearer key, not OAuth. Verify it on your deployment.
 
 **No backend:** without a configured picture tool the feature is unavailable. The prompt says so, and an attempted search produces `No picture search tool configured`; there is no silent fallback to a different provider. A model's built-in web search is not visible to the app and is therefore not used as a picture backend yet.
 
