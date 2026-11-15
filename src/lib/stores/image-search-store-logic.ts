@@ -1,5 +1,9 @@
 import type { ImageSearchResult } from '$lib/utils/image-search';
-import type { ImageSearchErrorCode, ImageShowEvent } from '$lib/services/image-search/events';
+import type {
+	ImageSearchErrorCode,
+	ImageSearchToolInfo,
+	ImageShowEvent
+} from '$lib/services/image-search/events';
 
 export type ImageSearchStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -18,6 +22,7 @@ export interface ImageSearchState {
 	activeRequestId: string | null;
 	focusedIndex: number;
 	description: string | null;
+	tool: ImageSearchToolInfo | null;
 }
 
 export function createImageSearchState(): ImageSearchState {
@@ -30,7 +35,8 @@ export function createImageSearchState(): ImageSearchState {
 		page: 1,
 		activeRequestId: null,
 		focusedIndex: 0,
-		description: null
+		description: null,
+		tool: null
 	};
 }
 
@@ -64,7 +70,8 @@ export function readyImageSearch(
 	results: ImageSearchResult[],
 	query: string,
 	page: number,
-	requestId?: string
+	requestId?: string,
+	tool: ImageSearchToolInfo | null = null
 ): ImageSearchState {
 	return {
 		...createImageSearchState(),
@@ -74,7 +81,8 @@ export function readyImageSearch(
 		error: results.length ? null : { code: 'empty_results', message: 'No pictures found' },
 		query,
 		page,
-		activeRequestId: requestId ?? null
+		activeRequestId: requestId ?? null,
+		tool
 	};
 }
 
@@ -114,7 +122,7 @@ export function applyImageEventToState(state: ImageSearchState, event: ImageShow
 	if (!state.activeRequestId || event.requestId !== state.activeRequestId) return state;
 	if (event.type === 'error' && event.code === 'cancelled') return closeImageSearch();
 	if (event.type === 'results') {
-		return readyImageSearch(event.results, event.query, event.page, event.requestId);
+		return readyImageSearch(event.results, event.query, event.page, event.requestId, event.tool);
 	}
 	return errorImageSearch(event.code, event.message, event.query, event.requestId);
 }

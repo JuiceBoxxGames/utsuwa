@@ -1,5 +1,5 @@
 import type { ImageSearchResult } from '$lib/utils/image-search';
-import type { ImageShowEvent } from '$lib/services/image-search/events';
+import type { ImageSearchToolInfo, ImageShowEvent } from '$lib/services/image-search/events';
 import {
 	applyImageEventToState,
 	closeImageSearch,
@@ -37,9 +37,10 @@ export function setResults(
 	newResults: ImageSearchResult[],
 	query: string,
 	page = 1,
-	requestId?: string
+	requestId?: string,
+	tool: ImageSearchToolInfo | null = null
 ) {
-	state = readyImageSearch(newResults, query, page, requestId);
+	state = readyImageSearch(newResults, query, page, requestId, tool);
 }
 
 export function setError(
@@ -92,6 +93,9 @@ export const imageSearchStore = {
 	},
 	get currentDescription() {
 		return state.description;
+	},
+	get tool() {
+		return state.tool;
 	},
 	openModal,
 	closeModal,

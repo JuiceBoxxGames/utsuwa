@@ -90,8 +90,8 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 	let imagePage = parsed.imagePage;
 	let closeImages = parsed.closeImages;
 
-	// Generic state recovery only. Picture intent is deliberately inline-only:
-	// the app-driven picture path has no model-tool-result fallback.
+	// Generic state recovery only. Picture fields may come from the same
+	// extraction, but only as query intents — never URLs or tool results.
 	if (!llmUpdates) {
 		const extracted = await completeJson({
 			...llm,
@@ -107,9 +107,9 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 			// parseResponse handles both bare JSON (OpenAI json_object) and a
 			// model-added ```json fence (Anthropic). Don't re-wrap.
 			const fallbackParsed = parseResponse(extracted);
-			// Only take the state when the inline block was missing; a
-			// recovery run must not double-apply mood/memory.
-			if (!llmUpdates) llmUpdates = fallbackParsed.stateUpdates;
+			// This recovery run only happens when the inline state was missing,
+			// so mood/memory cannot be applied twice.
+			llmUpdates = fallbackParsed.stateUpdates;
 			// Query-only picture recovery: never URLs or tool-result harvesting.
 			if (!imageSearch) {
 				imageSearch = fallbackParsed.imageSearch;

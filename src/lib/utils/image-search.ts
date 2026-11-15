@@ -25,6 +25,35 @@ export function extractHostname(url: string): string {
 	}
 }
 
+/**
+ * True when a result URL points at image bytes we can show, rather than at a
+ * source page. Page URLs are the common case for search tools, so the popup
+ * must not promise "open picture" for them.
+ */
+export function isDirectImageUrl(url: string): boolean {
+	if (isRasterImageDataUrl(url)) return true;
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+		return /\.(?:jpe?g|png|webp|gif|avif|bmp)$/i.test(parsed.pathname);
+	} catch {
+		return false;
+	}
+}
+
+/** Honest label for the per-card open action. */
+export function imageOpenLabel(url: string): 'Open picture' | 'Open source' {
+	return isDirectImageUrl(url) ? 'Open picture' : 'Open source';
+}
+
+/** True when the selected search tool can request another result page. */
+export function supportsImagePaging(
+	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined
+): boolean {
+	const props = tool?.inputSchema?.properties;
+	return !!props && ('pageno' in props || 'page' in props || 'page_number' in props);
+}
+
 /** Build a safe `data:` URL from a raster image block, or "" when unsupported. */
 export function toDataUrl(mimeType: string, base64: string): string {
 	if (!base64 || !isRasterImageMimeType(mimeType)) return '';

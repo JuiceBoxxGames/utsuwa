@@ -14,6 +14,7 @@ import { assertSafeFetchUrl } from '$lib/services/providers/url-guard';
 import {
 	chooseImageSearchTool,
 	IMAGE_FETCH_TOOL,
+	isDirectImageUrl,
 	parseImageResults,
 	queryArgKey,
 	toDataUrl,
@@ -319,25 +320,37 @@ export async function fetchImageAsDataUrl(
 	return toDataUrl(image.mimeType, image.data) || null;
 }
 
+export type OpenImageOutcome = 'opened' | 'cancelled' | 'failed';
+
 /**
- * Open a result in a new tab. A data: result is decoded synchronously; an HTTP
- * image goes through the file-fetch tool and opens only after a successful
- * fetch (or the raw URL when no fetch tool exists).
+ * Open a result in a new tab. Source pages open directly; image bytes go
+ * through the file-fetch tool and fall back to the raw image URL. The caller
+ * gets an explicit outcome so a failed fetch never looks like a successful
+ * navigation.
  */
-export async function openImageResult(url: string): Promise<void> {
+export async function openImageResult(url: string): Promise<OpenImageOutcome> {
 	const isData = url.startsWith('data:');
 	if (isData) {
-		if (!isRasterImageDataUrl(url)) return;
+		if (!isRasterImageDataUrl(url)) return 'failed';
 	} else {
 		try {
 			assertSafeFetchUrl(url, true);
 		} catch {
-			return;
+			return 'failed';
 		}
 	}
 
+	// A source page is not an image. Opening it directly avoids a pointless
+	// fetch prompt and the old silent fallback from "picture" to "web page".
+	if (!isData && !isDirectImageUrl(url)) {
+		const source = window.open(url, '_blank');
+		if (!source) return 'failed';
+		source.opener = null;
+		return 'opened';
+	}
+
 	const popup = window.open('', '_blank');
-	if (!popup) return;
+	if (!popup) return 'failed';
 	popup.opener = null;
 	const close = () => {
 		try { popup.close(); } catch { /* already gone */ }
@@ -352,17 +365,21 @@ export async function openImageResult(url: string): Promise<void> {
 			const objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
 			popup.location.href = objectUrl;
 			setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+			return 'opened';
 		} catch {
 			close();
+			return 'failed';
 		}
-		return;
 	}
 
 	let dataUrl: string | null = null;
 	try {
 		dataUrl = await fetchImageAsDataUrl(url, { confirm: true });
 	} catch (err) {
-		if (err instanceof ImageFetchCancelled) return close();
+		if (err instanceof ImageFetchCancelled) {
+			close();
+			return 'cancelled';
+		}
 	}
 	if (dataUrl) {
 		try {
@@ -370,10 +387,11 @@ export async function openImageResult(url: string): Promise<void> {
 			const objectUrl = URL.createObjectURL(blob);
 			popup.location.href = objectUrl;
 			setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-			return;
+			return 'opened';
 		} catch {
-			// fall through to the raw URL
+			// Fall through to the raw image URL.
 		}
 	}
 	popup.location.href = url;
+	return 'opened';
 }

@@ -5,11 +5,17 @@
 		fetchImageAsDataUrl,
 		imageFetchCapability,
 		openImageResult,
+		searchImages,
 		type ImageFetchCapability
 	} from '$lib/services/image-search'
+	import { mcpStore } from '$lib/stores/mcp.svelte'
 	import { Icon } from '$lib/components/ui'
 	import { isRasterImageDataUrl } from '$lib/utils/image-mime'
-	import { imageSearchErrorCopy } from '$lib/utils/image-search'
+	import {
+		imageOpenLabel,
+		imageSearchErrorCopy,
+		supportsImagePaging
+	} from '$lib/utils/image-search'
 	import { onMount } from 'svelte'
 	import { displayStore } from '$lib/stores/display.svelte'
 	import { STORAGE_INVENTORY } from '$lib/db/storage-inventory'
@@ -25,6 +31,16 @@
 			imageSearchStore.currentQuery
 		)
 	)
+	const currentTool = $derived(
+		imageSearchStore.tool
+			? mcpStore.tools.find((entry) => entry.name === imageSearchStore.tool?.toolName)
+			: undefined
+	)
+	const canLoadMore = $derived(
+		!!currentTool && supportsImagePaging(currentTool) && imageSearchStore.currentPage < 10
+	)
+	let openError = $state<string | null>(null)
+	let moreBusy = $state(false)
 
 	$effect(() => {
 		const error = imageSearchStore.error
@@ -203,6 +219,7 @@
 			started.clear()
 			thumbUrls = {}
 			thumbStatus = {}
+			openError = null
 		}
 		void loadPreviews(results)
 	})
@@ -251,8 +268,24 @@
 		}
 	}
 
-	function openImage(url: string) {
-		void openImageResult(url)
+	async function openImage(url: string) {
+		openError = null
+		const outcome = await openImageResult(url)
+		if (outcome === 'failed') {
+			openError = 'This picture could not be opened. The host may block direct downloads.'
+		}
+	}
+
+	async function loadMore() {
+		const query = imageSearchStore.currentQuery
+		if (moreBusy || !query || !canLoadMore) return
+		moreBusy = true
+		openError = null
+		try {
+			await searchImages(query, imageSearchStore.currentPage + 1)
+		} finally {
+			moreBusy = false
+		}
 	}
 
 	// A click on a card moves the focus; her "what is on screen" then refers to
@@ -332,6 +365,9 @@
 						{/if}
 					</p>
 				{/if}
+				{#if openError}
+					<p class="open-error" role="alert">{openError}</p>
+				{/if}
 				{#if imageSearchStore.status === 'error'}
 					<div class="empty-state" role="alert">
 						<Icon name="alert" size={32} />
@@ -388,13 +424,35 @@
 								<button
 									class="open-btn"
 									onclick={() => openImage(result.url)}
-									aria-label={`Open ${result.title}`}
-									title="Open in new tab"
+									aria-label={`${imageOpenLabel(result.url)}: ${result.title}`}
+									title={imageOpenLabel(result.url)}
 								>
-									<Icon name="external-link" size={14} />
+									<span>{imageOpenLabel(result.url)}</span>
+									<Icon name="external-link" size={13} />
 								</button>
 							</div>
 						{/each}
+					</div>
+					<div class="panel-footer">
+						{#if imageSearchStore.tool}
+							<span
+								class="provider-label"
+								title={`${imageSearchStore.tool.serverName} · ${imageSearchStore.tool.toolName}`}
+							>
+								via {imageSearchStore.tool.serverName}
+							</span>
+						{/if}
+						{#if canLoadMore}
+							<button
+								type="button"
+								class="more-btn"
+								onclick={loadMore}
+								disabled={moreBusy}
+								aria-label="More pictures"
+							>
+								{moreBusy ? 'Loading…' : 'More pictures'}
+							</button>
+						{/if}
 					</div>
 				{/if}
 			</div>
@@ -775,36 +833,29 @@
 	}
 
 	.open-btn {
-		position: absolute;
-		top: 0.4rem;
-		right: 0.4rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 26px;
-		height: 26px;
-		border-radius: 50%;
-		border: 1px solid rgba(0, 0, 0, 0.1);
-		background: rgba(255, 255, 255, 0.9);
-		color: var(--text-tertiary);
+		gap: 0.3rem;
+		width: 100%;
+		padding: 0.45rem 0.5rem;
+		border: 0;
+		border-top: 1px solid rgba(0, 0, 0, 0.07);
+		background: transparent;
+		color: var(--text-secondary);
+		font-size: 0.68rem;
+		font-weight: 600;
 		cursor: pointer;
-		opacity: 0;
-		transition: opacity 0.15s, color 0.15s, transform 0.15s;
-	}
-
-	.image-card:hover .open-btn,
-	.open-btn:focus-visible {
-		opacity: 1;
+		transition: background 0.15s, color 0.15s;
 	}
 
 	.open-btn:hover {
+		background: var(--bg-tertiary);
 		color: var(--text-primary);
-		transform: scale(1.08);
 	}
 
 	:global(.dark) .open-btn {
-		background: rgba(0, 0, 0, 0.6);
-		border-color: rgba(255, 255, 255, 0.15);
+		border-top-color: rgba(255, 255, 255, 0.08);
 	}
 
 	:global(.dark) .image-card {
@@ -880,6 +931,59 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.panel-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		margin-top: 0.85rem;
+		padding-top: 0.65rem;
+		border-top: 1px solid rgba(0, 0, 0, 0.06);
+	}
+
+	:global(.dark) .panel-footer {
+		border-top-color: rgba(255, 255, 255, 0.08);
+	}
+
+	.provider-label {
+		font-size: 0.68rem;
+		color: var(--text-tertiary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.more-btn {
+		margin-left: auto;
+		padding: 0.35rem 0.7rem;
+		border: 1px solid var(--border-color);
+		border-radius: 999px;
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		font-size: 0.72rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	.more-btn:hover:not(:disabled) {
+		background: var(--bg-tertiary);
+	}
+
+	.more-btn:disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+
+	.open-error {
+		margin: 0 0 0.75rem;
+		padding: 0.5rem 0.65rem;
+		border-left: 3px solid var(--color-error);
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--color-error) 8%, var(--bg-secondary));
+		color: var(--color-error);
+		font-size: 0.72rem;
 	}
 
 	/* Empty state */

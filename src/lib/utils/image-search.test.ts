@@ -11,11 +11,14 @@ import {
 	isCloseImagesRequest,
 	isImageRequest,
 	isMoreImagesRequest,
+	imageOpenLabel,
 	imageQueryFromMessage,
 	imageSearchErrorCopy,
+	isDirectImageUrl,
 	parseImageResults,
 	pickSearchTool,
 	queryArgKey,
+	supportsImagePaging,
 	toDataUrl
 } from './image-search.ts';
 import { isRasterImageDataUrl, isRasterImageMimeType } from './image-mime.ts';
@@ -425,4 +428,20 @@ test('imageQueryFromMessage keeps the subject and drops the request scaffolding'
 	assert.equal(imageQueryFromMessage('Zeig mir Bilder von süßen Katzen!'), 'süßen Katzen');
 	assert.equal(imageQueryFromMessage('show me some cute cats'), 'cute cats');
 	assert.equal(imageQueryFromMessage('bitte ein paar Fotos von Bergen'), 'Bergen');
+});
+
+test('isDirectImageUrl and imageOpenLabel never promise a picture for a source page', () => {
+	assert.equal(isDirectImageUrl('data:image/png;base64,AA'), true);
+	assert.equal(isDirectImageUrl('https://cdn.example.com/a.JPG?x=1'), true);
+	assert.equal(isDirectImageUrl('https://example.com/article/123'), false);
+	assert.equal(isDirectImageUrl('javascript:alert(1)'), false);
+	assert.equal(imageOpenLabel('https://cdn.example.com/a.webp'), 'Open picture');
+	assert.equal(imageOpenLabel('https://example.com/article/123'), 'Open source');
+});
+
+test('supportsImagePaging only accepts tools with a declared page argument', () => {
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, pageno: {} } } }), true);
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, page: {} } } }), true);
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {} } } }), false);
+	assert.equal(supportsImagePaging(null), false);
 });

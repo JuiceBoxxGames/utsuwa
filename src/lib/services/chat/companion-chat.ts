@@ -450,8 +450,6 @@ export async function sendCompanionMessage(
 				run.map((call) => runToolCall(call, mcpTools, mcpToolNames, confirmToolNames, signal))
 			));
 			const toolEntries = collectToolResults(settled, run, skipped);
-			for (const entry of toolEntries) {
-			}
 			messages.push(...buildToolResultMessages(toolEntries));
 		}
 

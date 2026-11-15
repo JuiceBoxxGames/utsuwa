@@ -24,6 +24,16 @@ test('applies loading and results for the active request', () => {
 	assert.equal(state.status, 'ready');
 	assert.equal(state.isOpen, true);
 	assert.equal(state.results.length, 1);
+	assert.equal(state.tool?.serverName, 'S');
+});
+
+test('closing clears the provider label with the rest of the state', () => {
+	let state = applyImageEventToState(loadingImageSearch('cats', 1, 'r1'), {
+		id: '2', at: 2, type: 'results', requestId: 'r1', query: 'cats', page: 1,
+		results: [picture], tool: { serverId: 's', serverName: 'S', toolName: 't' }
+	});
+	state = closeImageSearch();
+	assert.equal(state.tool, null);
 });
 
 test('drops late results after close and results from an older request', () => {
