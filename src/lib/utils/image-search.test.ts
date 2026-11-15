@@ -9,6 +9,7 @@ import {
 	isCloseImagesRequest,
 	isImageRequest,
 	isMoreImagesRequest,
+	imageQueryFromMessage,
 	imageSearchErrorCopy,
 	parseImageResults,
 	pickSearchTool,
@@ -346,4 +347,11 @@ test('reverse image search tools are not picture-search candidates', () => {
 	};
 	assert.equal(isPictureSearchTool(byImage), false);
 	assert.equal(pickSearchTool([byImage, byText])?.name, 'search_photos');
+});
+
+test('imageQueryFromMessage keeps the subject and drops the request scaffolding', () => {
+	assert.equal(imageQueryFromMessage('zeig mir herbstliche Berglandschaften im Morgennebel'), 'herbstliche Berglandschaften im Morgennebel');
+	assert.equal(imageQueryFromMessage('Zeig mir Bilder von süßen Katzen!'), 'süßen Katzen');
+	assert.equal(imageQueryFromMessage('show me some cute cats'), 'cute cats');
+	assert.equal(imageQueryFromMessage('bitte ein paar Fotos von Bergen'), 'Bergen');
 });

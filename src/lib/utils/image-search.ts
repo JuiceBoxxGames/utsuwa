@@ -336,6 +336,21 @@ export function chooseImageSearchTool<T extends SearchToolLike & { serverId: str
 	return tool ? { tool, error: null } : { tool: null, error: 'no_tool' };
 }
 
+/**
+ * Last-resort subject for a picture request when the model and the recovery
+ * call both failed to produce a query. Keeps the user's own words, minus the
+ * request scaffolding ("show me pictures of ...").
+ */
+export function imageQueryFromMessage(text: string): string {
+	return text
+		.replace(/\b(?:please\s+)?(?:show|zeig(?:e)?|schick|send|find|such)\s+(?:me|mir)\b/gi, ' ')
+		.replace(/\b(?:some|a few|ein paar|bitte)\b/gi, ' ')
+		.replace(/\b(?:pictures?|images?|photos?|bilder?|fotos?)\b\s*(?:of|von|über|about)?/gi, ' ')
+		.replace(/\s+/g, ' ')
+		.replace(/^[\s,;:–-]+|[\s,;:.!?–-]+$/g, '')
+		.trim();
+}
+
 /** True when the user clearly asks to close the picture popup. */
 export function isCloseImagesRequest(text: string): boolean {
 	const value = text.toLowerCase();

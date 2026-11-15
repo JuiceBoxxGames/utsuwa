@@ -38,6 +38,7 @@ import {
 	searchImages
 } from '$lib/services/image-search';
 import {
+	imageQueryFromMessage,
 	isCloseImagesRequest,
 	isImageRequest,
 	isMoreImagesRequest,
@@ -535,8 +536,17 @@ export async function sendCompanionMessage(
 			imageSearch = imageSearchStore.currentQuery;
 			imagePage = imageSearchStore.currentPage + 1;
 		}
+		if (!closeRequested && !imageSearch && isShowImagesEnabled() && isImageRequest(content) && !isMoreImagesRequest(content)) {
+			// The model and the recovery call both failed to name a subject. The
+			// user's own wording is a better fallback than an error that blames them.
+			const fallback = imageQueryFromMessage(content);
+			if (fallback) {
+				imageSearch = fallback;
+				imagePage = undefined;
+			}
+		}
 		if (closeRequested) closeImages();
-		else if (!imageSearch && isShowImagesEnabled() && (turn.imageSearch !== undefined || imagePage !== undefined)) {
+		else if (!imageSearch && isShowImagesEnabled() && (isImageRequest(content) || isMoreImagesRequest(content))) {
 			// The model asked for pictures or a page but supplied no subject. Show
 			// the error instead of silently doing nothing.
 			reportImageIntentError(turn.imageSearch ?? '', 'empty_query');

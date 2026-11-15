@@ -1566,13 +1566,53 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			const { onImageShowEvent } = await server.ssrLoadModule('/src/lib/services/image-search/events.ts');
 			const stop = onImageShowEvent((event: { type: string; code?: string }) => events.push(event));
 			try {
-				await sendCompanionMessage('Hello, how are you?', [], hooks);
+				await sendCompanionMessage('zeig mir noch mehr Bilder', [], hooks);
 			} finally {
 				stop();
 				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
 			}
 			assert.equal(mcpCalls, 0, 'no picture tool call');
 			assert.ok(events.some((e) => e.type === 'error' && e.code === 'empty_query'), 'the panel gets an explained error');
+		});
+
+		await t.test('a picture request without a model query falls back to the user subject', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const serverConfig = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [serverConfig];
+			mcp.servers = [serverConfig];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'searxng_image_search', description: 'Search pictures', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			let providerCalls = 0;
+			let mcpArgs: Record<string, unknown> | null = null;
+			const reply = 'Sure!\n```json\n{"image_page":2}\n```';
+			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+				if (url === '/api/mcp/call') {
+					mcpArgs = JSON.parse(String(init.body)).args;
+					return new Response(JSON.stringify({ isError: false, content: '[]' }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				assert.equal(url, '/api/chat');
+				providerCalls++;
+				if (providerCalls === 1) {
+					return new Response(`0:${JSON.stringify(reply)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+				}
+				// The query-recovery call gets nothing usable, so the app falls back.
+				return new Response('', { headers: { 'Content-Type': 'application/json' } });
+			});
+			try {
+				await sendCompanionMessage('zeig mir herbstliche Berglandschaften im Morgennebel', [], hooks);
+			} finally {
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+			}
+			assert.equal(providerCalls, 2, 'the chat turn and the recovery call ran');
+			assert.deepEqual(mcpArgs, { query: 'herbstliche Berglandschaften im Morgennebel' });
 		});
 
 		await t.test('close_images wins over a simultaneous image_search', { timeout: 5000 }, async (t) => {
