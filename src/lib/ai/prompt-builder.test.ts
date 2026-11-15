@@ -761,6 +761,15 @@ test('the picture layer asks her to look before claiming pictures are shown', ()
 	assert.ok(!prompt.includes('Here are a few sweet cats'));
 });
 
+test('the picture layer never invites unprompted popups or promises', () => {
+	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true }));
+	assert.ok(!prompt.includes('surprise them'));
+	assert.ok(!prompt.includes('topic naturally calls'));
+	assert.ok(prompt.includes('Do not show pictures unprompted'));
+	assert.ok(!prompt.includes('There is more where that came from'));
+	assert.ok(prompt.includes('do not promise new pictures'));
+});
+
 test('a missing picture tool is called out in the prompt', () => {
 	const prompt = buildSystemPrompt(makeContext({ showImagesEnabled: true, imageSearchAvailable: false }));
 	assert.ok(prompt.includes('No usable picture search tool is configured right now.'));

@@ -520,7 +520,7 @@ function buildImageSearchLayer(ctx: PromptContext): string | null {
 			`  - Say that you are looking, not that the pictures are already on screen. The app shows them when the search finishes; if it is cancelled or fails, do not claim success.\n` +
 			`  - Use null when you are not showing pictures.\n` +
 			`  - Set "close_images": true when the user asks you to close the pictures.\n` +
-			`  - For "more", keep the same query and set "image_page" to the next page; otherwise use null.`
+			`  - For "more", keep the same query and set "image_page" to the next page; otherwise use null. Only when the user asks for more, and do not promise new pictures — some tools cannot page.`
 	);
 
 	parts.push(
@@ -529,7 +529,7 @@ function buildImageSearchLayer(ctx: PromptContext): string | null {
 			`  You: "With pleasure! Let me look for a few sweet cats."\n` +
 			`  ... { "image_search": "cute cats", "image_page": null, ... }\n\n` +
 			`  User: "Show me more of those"\n` +
-			`  You: "There is more where that came from."\n` +
+			`  You: "Let me see what else I can find."\n` +
 			`  ... { "image_search": "cute cats", "image_page": 2, ... }\n\n` +
 			`  User: "Can you close the pictures again?"\n` +
 			`  You: "Sure!"\n` +
@@ -547,9 +547,9 @@ function buildImageSearchLayer(ctx: PromptContext): string | null {
 	parts.push(
 		`WHEN TO USE:\n` +
 			`  - The user asks to see images, pictures, photos or visual references\n` +
-			`  - A topic naturally calls for something visual (landscapes, animals, art, food)\n` +
-			`  - You want to surprise them with something beautiful or interesting\n` +
-			`  Whenever you say you are showing a picture, you MUST also set "image_search" in that same reply.`
+			`  - The user asks for more of pictures already shown\n` +
+			`  - The user asks to close or hide the pictures\n` +
+			`  Do not show pictures unprompted. Whenever you say you are showing a picture, you MUST also set "image_search" in that same reply.`
 	);
 
 	if (ctx.imageModalOpen) {
