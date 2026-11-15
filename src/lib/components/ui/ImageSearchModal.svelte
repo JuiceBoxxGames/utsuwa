@@ -315,16 +315,20 @@
 			<div class="modal-content">
 				{#if anyMissing}
 					<p class="thumb-hint" role="status">
-						{#if fetchCap?.asksFirst}
+						{#if !fetchCap?.available}
+							No file-fetch tool is configured yet. Previews load through the
+							<code>fetch_file_from_url</code> MCP tool under Settings > MCP; enable it, then
+							<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
+						{:else if fetchCap.asksFirst}
 							"Ask before running tools" is on for your file-fetch server, so only the
 							first preview is requested instead of one confirmation per picture. Turn
 							it off under Settings > MCP to load every preview, then
 							<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
 						{:else}
-							Some previews are unavailable. Previews load through the
-							<code>fetch_file_from_url</code> MCP tool under Settings > MCP; enable it and
-							turn off "Ask before running tools" for that server, then
-							<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
+							Some previews could not be loaded from their source, for example because the
+							host blocks hotlinking or the file is gone. The file-fetch tool is
+							configured; <button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>
+							may help, or open the picture directly.
 						{/if}
 					</p>
 				{/if}
