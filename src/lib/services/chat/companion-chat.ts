@@ -623,11 +623,13 @@ export async function sendCompanionMessage(
 		} else if (imageSearch && isShowImagesEnabled()) {
 			const sameQuery =
 				imageSearchStore.currentQuery.trim().toLowerCase() === imageSearch.trim().toLowerCase();
-			const nextPage =
-				imagePage ??
-				(isMoreImagesRequest(content) && imageSearchStore.isOpen && sameQuery
-					? imageSearchStore.currentPage + 1
-					: 1);
+			const wantsMore = isMoreImagesRequest(content);
+			// Only an explicit "more" may advance the page. Models sometimes set
+			// image_page for "show me those again", which would make a non-paging
+			// tool fail with no_paging instead of showing the pictures again.
+			const nextPage = wantsMore
+				? (imagePage ?? (imageSearchStore.isOpen && sameQuery ? imageSearchStore.currentPage + 1 : 1))
+				: 1;
 			void searchImages(imageSearch, nextPage);
 		}
 

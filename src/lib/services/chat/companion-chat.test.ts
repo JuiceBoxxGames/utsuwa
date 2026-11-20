@@ -1511,7 +1511,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				await sendCompanionMessage('Zeig mir Bilder von Katzen.', [], hooks);
 				await mcpCall;
 				assert.equal(providerCalls, 2, 'the recovery call runs once');
-				assert.deepEqual(mcpArgs, { query: 'Katzen', pageno: 2 });
+				assert.deepEqual(mcpArgs, { query: 'Katzen' });
 			} finally {
 				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
 			}
@@ -1770,6 +1770,43 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			}
 			assert.equal(providerCalls, 1, 'no recovery call without a tool');
 			assert.ok(events.some((event) => event.type === 'error' && event.code === 'no_tool'));
+		});
+
+		await t.test('a repeated picture request stays on page one for non-paging tools', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const serverConfig = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [serverConfig];
+			mcp.servers = [serverConfig];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'search_photos', description: 'Search stock photos', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			let mcpArgs: Record<string, unknown> | null = null;
+			let resolveMcpCall: (() => void) | undefined;
+			const mcpCall = new Promise<void>((resolve) => { resolveMcpCall = resolve; });
+			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+				if (url === '/api/mcp/call') {
+					mcpArgs = JSON.parse(String(init.body)).args;
+					resolveMcpCall?.();
+					return new Response(JSON.stringify({ isError: false, content: JSON.stringify({ results: [{ title: 'Cat', url: 'https://x/cat', img_src: 'https://x/cat.jpg', source: 'x' }] }) }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				assert.equal(url, '/api/chat');
+				const reply = 'Sure!\n```json\n{"image_search":"Katzen","image_page":2}\n```';
+				return new Response(`0:${JSON.stringify(reply)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			try {
+				await sendCompanionMessage('Zeig mir noch mal die Kätzchenbilder', [], hooks);
+				await mcpCall;
+				assert.deepEqual(mcpArgs, { query: 'Katzen' }, 'repeat requests must not advance the page');
+			} finally {
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+			}
 		});
 
 		await t.test('close_images wins over a simultaneous image_search', { timeout: 5000 }, async (t) => {
