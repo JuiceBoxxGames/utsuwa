@@ -14,13 +14,15 @@ import { isRasterImageDataUrl } from '$lib/utils/image-mime';
 import { assertSafeFetchUrl } from '$lib/services/providers/url-guard';
 import {
 	chooseImageSearchTool,
+	countForPage,
 	IMAGE_FETCH_TOOL,
+	IMAGE_PAGE_SIZE,
+	imagePaging,
 	imageSearchErrorCopy,
 	isDirectImageUrl,
 	isToolOnConfirmList,
 	parseImageResults,
 	queryArgKey,
-	supportsImagePaging,
 	toDataUrl,
 	type ImageSearchResult
 } from '$lib/utils/image-search';
@@ -80,11 +82,9 @@ export function buildSearchArgs(tool: McpTool, query: string, page = 1): Record<
 	if ('result_detail' in props) args.result_detail = 'full';
 	if ('response_format' in props) args.response_format = 'json';
 	else if ('format' in props && !('result_detail' in props)) args.format = 'json';
-	if (page > 1) {
-		if ('pageno' in props) args.pageno = page;
-		else if ('page' in props) args.page = page;
-		else if ('page_number' in props) args.page_number = page;
-	}
+	const paging = imagePaging(tool);
+	if (page > 1 && paging?.kind === 'page') args[paging.arg] = page;
+	else if (page > 1 && paging?.kind === 'count') args[paging.arg] = countForPage(paging, page);
 	return args;
 }
 
@@ -219,12 +219,19 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 		return fail('confirm_required');
 	}
 
-	if (safePage > 1 && !supportsImagePaging(tool)) {
-		// The tool would return page one again. Keep the pictures that are
-		// already on screen and explain the limit instead of replacing them
-		// with an error panel.
-		publishImageNotice(cleanQuery, 'no_paging');
-		return [];
+	const paging = imagePaging(tool);
+	if (safePage > 1) {
+		// Keep the pictures that are already on screen and explain the limit
+		// instead of replacing them with an error panel. A page argument selects
+		// the next page; a count-based tool only gets a larger batch, so the
+		// request is pointless once the count stops growing.
+		const exhausted =
+			!paging ||
+			(paging.kind === 'count' && countForPage(paging, safePage) <= countForPage(paging, safePage - 1));
+		if (exhausted) {
+			publishImageNotice(cleanQuery, 'no_paging');
+			return [];
+		}
 	}
 
 	const args = buildSearchArgs(tool, cleanQuery, safePage);
@@ -251,8 +258,19 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 			publishError(requestId, cleanQuery, 'search_failed', result.content);
 			return [];
 		}
-		const images = parseImageResults(result.content, result.images);
+		const limit = paging?.kind === 'count' ? IMAGE_PAGE_SIZE * safePage : IMAGE_PAGE_SIZE;
+		const parsed = parseImageResults(result.content, result.images, limit);
+		// A count-based tool returns the same list again with more entries; the
+		// next page is the window after the pictures that were already shown.
+		const images =
+			paging?.kind === 'count' && safePage > 1
+				? parsed.slice(IMAGE_PAGE_SIZE * (safePage - 1), IMAGE_PAGE_SIZE * safePage)
+				: parsed;
 		if (!images.length) {
+			if (safePage > 1 && paging?.kind === 'count') {
+				publishImageNotice(cleanQuery, 'no_paging');
+				return [];
+			}
 			publishError(requestId, cleanQuery, 'empty_results', result.content.slice(0, 500));
 			return [];
 		}

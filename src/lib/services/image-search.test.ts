@@ -337,6 +337,85 @@ test('searchImages explains a missing page instead of repeating page one', async
 	);
 });
 
+test('a count-based tool serves the next slice for page two', async () => {
+	const countTool = {
+		...pictureTool,
+		name: 'brave_image_search',
+		description: 'Search images',
+		inputSchema: { type: 'object', properties: { query: {}, count: { maximum: 200 } } }
+	};
+	let args: Record<string, unknown> = {};
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [countTool],
+				imageSearchTool: { serverId: 'search', toolName: 'brave_image_search' }
+			}),
+			call: async (_server, _name, next) => {
+				args = next as Record<string, unknown>;
+				return {
+					content: JSON.stringify({
+						results: Array.from({ length: 36 }, (_, i) => ({
+							url: `https://page.example/${i}`,
+							properties: { url: `https://cdn.example/${i}.jpg` }
+						}))
+					})
+				};
+			}
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				const images = await searchImages('cats', 2);
+				assert.equal(args.count, 24, 'the batch grows by one page');
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'results']);
+				assert.equal(events[1].page, 2);
+				assert.equal(images.length, 12, 'only the new slice is shown');
+				assert.equal(images[0].url, 'https://page.example/12');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('a count-based tool that cannot grow any further shows a notice', async () => {
+	const countTool = {
+		...pictureTool,
+		name: 'search_photos',
+		description: 'Search stock photos',
+		inputSchema: { type: 'object', properties: { query: {}, count: { maximum: 24 } } }
+	};
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [countTool],
+				imageSearchTool: { serverId: 'search', toolName: 'search_photos' }
+			}),
+			call: async () => {
+				calls++;
+				return { content: '[]' };
+			}
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats', 3), []);
+				assert.equal(calls, 0, 'a batch that cannot grow is not requested again');
+				assert.deepEqual(events.map((event) => event.type), ['notice']);
+				assert.equal(events[0].code, 'no_paging');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
 test('searchImages refuses a confirmation-listed tool', async () => {
 	let calls = 0;
 	await withSearchCore(
@@ -446,6 +525,31 @@ test('buildSearchArgs sends only declared options and paging above page one', as
 			assert.deepEqual(
 				buildSearchArgs({ name: 'x', inputSchema: { properties: { q: {}, format: {} } } }, 'q', 1),
 				{ q: 'q', format: 'json' }
+			);
+			// Count-based tools keep their default on page one and grow the batch.
+			assert.deepEqual(
+				buildSearchArgs(
+					{ name: 'x', inputSchema: { properties: { query: {}, count: { maximum: 200 } } } },
+					'q',
+					1
+				),
+				{ query: 'q' }
+			);
+			assert.deepEqual(
+				buildSearchArgs(
+					{ name: 'x', inputSchema: { properties: { query: {}, count: { maximum: 200 } } } },
+					'q',
+					2
+				),
+				{ query: 'q', count: 24 }
+			);
+			assert.deepEqual(
+				buildSearchArgs(
+					{ name: 'x', inputSchema: { properties: { query: {}, count: { maximum: 40 } } } },
+					'q',
+					5
+				),
+				{ query: 'q', count: 40 }
 			);
 		}
 	);

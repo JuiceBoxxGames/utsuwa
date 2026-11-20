@@ -7,6 +7,8 @@ import {
 	extractHostname,
 	extractImageUrls,
 	chooseImageSearchTool,
+	countForPage,
+	imagePaging,
 	isPictureSearchTool,
 	isCloseImagesRequest,
 	isImageRequest,
@@ -77,6 +79,21 @@ test('parseImageResults caps the popup list at 12 entries', () => {
 		}))
 	}));
 	assert.equal(results.length, 12);
+});
+
+test('parseImageResults accepts a larger limit for count-based paging', () => {
+	const results = parseImageResults(
+		JSON.stringify({
+			results: Array.from({ length: 30 }, (_, i) => ({
+				url: `https://page.example/${i}`,
+				img_src: `https://cdn.example/${i}.jpg`
+			}))
+		}),
+		[],
+		24
+	);
+	assert.equal(results.length, 24);
+	assert.equal(results[23].url, 'https://page.example/23');
 });
 
 test('parseImageResults returns nothing for empty content', () => {
@@ -442,11 +459,37 @@ test('isDirectImageUrl and imageOpenLabel never promise a picture for a source p
 	assert.equal(imageOpenLabel('https://example.com/article/123'), 'Open source');
 });
 
-test('supportsImagePaging only accepts tools with a declared page argument', () => {
+test('supportsImagePaging accepts page and count tools only', () => {
 	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, pageno: {} } } }), true);
 	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, page: {} } } }), true);
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, count: {} } } }), true);
 	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {} } } }), false);
 	assert.equal(supportsImagePaging(null), false);
+});
+
+test('imagePaging prefers a page argument and reads the declared count maximum', () => {
+	assert.deepEqual(imagePaging({ inputSchema: { properties: { pageno: {}, count: {} } } }), {
+		kind: 'page',
+		arg: 'pageno'
+	});
+	assert.deepEqual(
+		imagePaging({ inputSchema: { properties: { query: {}, count: { maximum: 200 } } } }),
+		{ kind: 'count', arg: 'count', max: 200 }
+	);
+	assert.deepEqual(imagePaging({ inputSchema: { properties: { query: {}, limit: {} } } }), {
+		kind: 'count',
+		arg: 'limit',
+		max: 50
+	});
+	assert.equal(imagePaging({ inputSchema: { properties: { query: {} } } }), null);
+});
+
+test('countForPage grows by the page size and stops at the declared maximum', () => {
+	const paging = { kind: 'count' as const, arg: 'count' as const, max: 200 };
+	assert.equal(countForPage(paging, 1), 12);
+	assert.equal(countForPage(paging, 2), 24);
+	assert.equal(countForPage(paging, 10), 120);
+	assert.equal(countForPage({ ...paging, max: 50 }, 5), 50);
 });
 
 test('explicit image requests stay narrower than the recovery heuristic', () => {

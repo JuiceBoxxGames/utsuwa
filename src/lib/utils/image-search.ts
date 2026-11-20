@@ -55,12 +55,55 @@ export function isToolOnConfirmList(toolName: string, raw: string | undefined | 
 		.includes(toolName);
 }
 
+/** Pictures shown per request; also the step for tools that only take a count. */
+export const IMAGE_PAGE_SIZE = 12;
+
+const PAGE_ARGS = ['pageno', 'page', 'page_number'] as const;
+const COUNT_ARGS = ['count', 'limit', 'per_page', 'max_results'] as const;
+
+/**
+ * How a tool answers a request for more pictures:
+ * - `page`: a page argument selects the next page.
+ * - `count`: no page argument exists; a larger `count` returns a longer list
+ *   (Brave image search works this way) and the app shows the next slice.
+ */
+export type ImagePaging =
+	| { kind: 'page'; arg: (typeof PAGE_ARGS)[number] }
+	| { kind: 'count'; arg: (typeof COUNT_ARGS)[number]; max: number };
+
+export type CountImagePaging = Extract<ImagePaging, { kind: 'count' }>;
+
+function declaredMax(schema: unknown): number {
+	const record = schema && typeof schema === 'object' ? (schema as Record<string, unknown>) : {};
+	const max = record.maximum;
+	// Without a declared maximum, stay near the common default so an unknown
+	// tool is not asked for a count it may reject.
+	return typeof max === 'number' && Number.isFinite(max) && max >= 1 ? Math.floor(max) : 50;
+}
+
+/** The paging strategy of the selected picture tool, or null when it has none. */
+export function imagePaging(
+	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined
+): ImagePaging | null {
+	const props = tool?.inputSchema?.properties;
+	if (!props) return null;
+	for (const arg of PAGE_ARGS) if (arg in props) return { kind: 'page', arg };
+	for (const arg of COUNT_ARGS) {
+		if (arg in props) return { kind: 'count', arg, max: declaredMax(props[arg]) };
+	}
+	return null;
+}
+
 /** True when the selected search tool can request another result page. */
 export function supportsImagePaging(
 	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined
 ): boolean {
-	const props = tool?.inputSchema?.properties;
-	return !!props && ('pageno' in props || 'page' in props || 'page_number' in props);
+	return imagePaging(tool) !== null;
+}
+
+/** Count a count-based tool must receive for a page. */
+export function countForPage(paging: CountImagePaging, page: number): number {
+	return Math.min(paging.max, IMAGE_PAGE_SIZE * Math.max(1, Math.floor(page)));
 }
 
 /** Build a safe `data:` URL from a raster image block, or "" when unsupported. */
@@ -75,9 +118,9 @@ const IMAGE_URL_RE = /https?:\/\/[^\s"'<>\\]+\.(?:jpe?g|png|webp|gif|avif|bmp)(?
 
 /**
  * Pull direct image URLs out of a search tool result — JSON (img_src/thumbnail
- * fields) or plain text (any image-extension URL). De-duped, capped at 12.
+ * fields) or plain text (any image-extension URL). De-duped, capped at `limit`.
  */
-export function extractImageUrls(text: string): string[] {
+export function extractImageUrls(text: string, limit = IMAGE_PAGE_SIZE): string[] {
 	const found = new Set<string>();
 	const add = (value: unknown) => {
 		if (typeof value === 'string' && /^https?:\/\//i.test(value)) found.add(value.trim());
@@ -111,7 +154,7 @@ export function extractImageUrls(text: string): string[] {
 	for (const match of text.matchAll(/(?:Image Source|Image URL|Thumbnail)\s*:\s*(https?:\/\/[^\s]+)/gi)) {
 		found.add(match[1]);
 	}
-	return [...found].slice(0, 12);
+	return [...found].slice(0, limit);
 }
 
 const PAGE_URL_KEYS = ['url', 'link', 'href', 'page_url', 'pageUrl', 'source_url', 'sourceUrl'];
@@ -207,7 +250,8 @@ function collectResultRecords(data: unknown): Record<string, unknown>[] {
  */
 export function parseImageResults(
 	content: string,
-	images: Array<{ mimeType: string; data: string }> = []
+	images: Array<{ mimeType: string; data: string }> = [],
+	limit = IMAGE_PAGE_SIZE
 ): ImageSearchResult[] {
 	const results: ImageSearchResult[] = [];
 	const seen = new Set<string>();
@@ -260,27 +304,27 @@ export function parseImageResults(
 			...(license && { license }),
 			...(attribution && { attribution })
 		});
-		if (results.length >= 12) return results;
+		if (results.length >= limit) return results;
 	}
 
 	if (!results.length) {
-		for (const url of extractImageUrls(content)) {
+		for (const url of extractImageUrls(content, limit)) {
 			push({
 				title: extractHostname(url),
 				url,
 				thumbnail: url,
 				source: extractHostname(url)
 			});
-			if (results.length >= 12) return results;
+			if (results.length >= limit) return results;
 		}
 	}
 
 	// Some search servers return image content blocks instead of links.
-	for (const image of images.slice(0, 12 - results.length)) {
+	for (const image of images.slice(0, limit - results.length)) {
 		const dataUrl = toDataUrl(image.mimeType, image.data);
 		push({ title: 'Image', url: dataUrl, thumbnail: dataUrl, source: 'MCP image' });
 	}
-	return results.slice(0, 12);
+	return results.slice(0, limit);
 }
 
 // ── Choosing an image-search MCP tool ────────────────────────────────────────
