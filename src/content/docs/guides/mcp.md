@@ -126,7 +126,7 @@ The selection is explicit:
 
 - **Automatic (best matching)** picks the best picture-capable tool. This is the default.
 - Choosing a server/tool pins it. If that tool disappears or stops taking a query, the app shows **No picture search tool is configured yet. Choose one under Settings > MCP.** / a missing-tool error instead of silently switching to another server.
-- A clear close request is honored even if the model forgets the JSON field. "More" reuses the current query and the next page only when the selected tool declares a page argument.
+- A clear close request is honored even if the model forgets the JSON field. "More" reuses the current query and the next page only when the selected tool declares a page argument. With a one-page tool the pictures that are already on screen stay visible and a short note explains the limit instead of replacing them with an error.
 
 **Backends:** the app is not SearXNG-specific. Any MCP tool that takes a query and is recognisable as image/stock search can be selected: SearXNG's `searxng_web_search` (with `categories=images` and JSON results), Brave's `brave_image_search`, and Pexafy's `search_photos`, for example. Suggestions, page-readers, file-fetch and unrelated web/video/news tools are filtered out of the picker. The parser accepts SearXNG, Brave (`properties.url`) and Pexafy (`urls`, `attribution`) result shapes; license and credit are shown when the backend returns them. Pexafy's hosted endpoint may use OAuth or an MCP Bearer key; Utsuwa currently supports HTTP servers with no auth or a Bearer token, not OAuth. License metadata from open web image search is not a guarantee that an image is free to reuse.
 

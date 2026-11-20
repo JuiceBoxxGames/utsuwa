@@ -23,6 +23,8 @@ export interface ImageSearchState {
 	focusedIndex: number;
 	description: string | null;
 	tool: ImageSearchToolInfo | null;
+	/** Non-blocking hint shown next to the pictures (for example a tool limit). */
+	notice: string | null;
 }
 
 export function createImageSearchState(): ImageSearchState {
@@ -36,7 +38,8 @@ export function createImageSearchState(): ImageSearchState {
 		activeRequestId: null,
 		focusedIndex: 0,
 		description: null,
-		tool: null
+		tool: null,
+		notice: null
 	};
 }
 
@@ -119,6 +122,11 @@ export function describeImageSearch(state: ImageSearchState, description: string
 export function applyImageEventToState(state: ImageSearchState, event: ImageShowEvent): ImageSearchState {
 	if (event.type === 'close') return closeImageSearch();
 	if (event.type === 'loading') return loadingImageSearch(event.query, event.page, event.requestId);
+	if (event.type === 'notice') {
+		// A notice explains a limit; it only makes sense while pictures are on
+		// screen, so it never opens the panel or replaces existing results.
+		return state.isOpen && state.status === 'ready' ? { ...state, notice: event.message } : state;
+	}
 	if (!state.activeRequestId || event.requestId !== state.activeRequestId) return state;
 	if (event.type === 'error' && event.code === 'cancelled') return closeImageSearch();
 	if (event.type === 'results') {

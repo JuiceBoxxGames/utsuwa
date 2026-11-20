@@ -384,6 +384,9 @@
 						<p>No pictures found</p>
 					</div>
 				{:else}
+					{#if imageSearchStore.notice}
+						<p class="panel-notice" role="status">{imageSearchStore.notice}</p>
+					{/if}
 					<div class="image-grid" role="radiogroup" aria-label="Shown pictures">
 						{#each imageSearchStore.results as result, i}
 							<div class="image-card" class:focused={i === imageSearchStore.focusedIndex}>
@@ -585,6 +588,18 @@
 		background: color-mix(in srgb, var(--color-error) 8%, var(--bg-secondary));
 		color: var(--color-error);
 		font-size: 0.75rem;
+		line-height: 1.45;
+	}
+
+	/* Informational limit next to the pictures; never an error panel. */
+	.panel-notice {
+		margin: 0 0 0.75rem;
+		padding: 0.5rem 0.7rem;
+		border-left: 3px solid var(--accent);
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--accent) 8%, var(--bg-secondary));
+		color: var(--text-secondary);
+		font-size: 0.74rem;
 		line-height: 1.45;
 	}
 

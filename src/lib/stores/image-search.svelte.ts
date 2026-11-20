@@ -82,6 +82,9 @@ export const imageSearchStore = {
 	get error() {
 		return state.error;
 	},
+	get notice() {
+		return state.notice;
+	},
 	get currentQuery() {
 		return state.query;
 	},

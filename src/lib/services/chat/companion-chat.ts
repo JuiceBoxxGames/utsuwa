@@ -44,7 +44,8 @@ import {
 	isDedicatedPictureTool,
 	isExplicitImageRequest,
 	isImageRequest,
-	isMoreImagesRequest
+	isMoreImagesRequest,
+	supportsImagePaging
 } from '$lib/utils/image-search';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { getWorkingMemory, ensureSession } from '$lib/engine/memory-session';
@@ -63,6 +64,19 @@ function imagePreviewIssue(): 'ask' | 'missing' | undefined {
 		// Prompt building must never fail because of an optional hint.
 		return undefined;
 	}
+}
+
+/**
+ * Page a "more" request should search. A tool without paging must not be asked
+ * for page two: with pictures already on screen the core keeps them and shows
+ * a notice, otherwise the subject is searched from page one.
+ */
+function wantMorePage(modelPage: number | undefined, sameQuery: boolean): number {
+	const tool = chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool).tool;
+	const canPage = !tool || supportsImagePaging(tool);
+	const galleryOpen = imageSearchStore.isOpen && imageSearchStore.results.length > 0;
+	if (!canPage && !galleryOpen) return 1;
+	return modelPage ?? (imageSearchStore.isOpen && sameQuery ? imageSearchStore.currentPage + 1 : 1);
 }
 import { env as publicEnv } from '$env/dynamic/public';
 import { isMcpHardeningEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
@@ -627,9 +641,7 @@ export async function sendCompanionMessage(
 			// Only an explicit "more" may advance the page. Models sometimes set
 			// image_page for "show me those again", which would make a non-paging
 			// tool fail with no_paging instead of showing the pictures again.
-			const nextPage = wantsMore
-				? (imagePage ?? (imageSearchStore.isOpen && sameQuery ? imageSearchStore.currentPage + 1 : 1))
-				: 1;
+			const nextPage = wantsMore ? wantMorePage(imagePage, sameQuery) : 1;
 			void searchImages(imageSearch, nextPage);
 		}
 

@@ -49,6 +49,13 @@ export type ImageShowEvent =
 			code: ImageSearchErrorCode;
 			message: string;
 	  })
+	| (ImageEventBase & {
+			/** Explain a limit next to the pictures instead of replacing them. */
+			type: 'notice';
+			query: string;
+			code: ImageSearchErrorCode;
+			message: string;
+	  })
 	| (ImageEventBase & { type: 'close'; requestId?: string });
 
 export interface ImageEventMeta {

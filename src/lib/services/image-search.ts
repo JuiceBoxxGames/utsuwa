@@ -15,6 +15,7 @@ import { assertSafeFetchUrl } from '$lib/services/providers/url-guard';
 import {
 	chooseImageSearchTool,
 	IMAGE_FETCH_TOOL,
+	imageSearchErrorCopy,
 	isDirectImageUrl,
 	isToolOnConfirmList,
 	parseImageResults,
@@ -133,6 +134,21 @@ function publishError(
 }
 
 /**
+ * Explain a tool limit next to the pictures that are already on screen. A
+ * notice never opens the panel and never clears results.
+ */
+export function publishImageNotice(query: string, code: ImageSearchErrorCode): void {
+	publishImageShowEvent({
+		id: newImageEventId(),
+		at: Date.now(),
+		type: 'notice',
+		query: query.trim(),
+		code,
+		message: imageSearchErrorCopy(code).message
+	});
+}
+
+/**
  * Publish a picture-intent error that has no search request behind it (for
  * example a state block with an empty query). The loading event gives the
  * store a matching request id, so the panel opens with the explanation.
@@ -167,49 +183,52 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 	}
 	const safePage = Number.isFinite(page) ? Math.max(1, Math.min(10, Math.floor(page))) : 1;
 	const requestId = newImageEventId();
-
-	publishImageShowEvent({
-		id: newImageEventId(),
-		at: Date.now(),
-		type: 'loading',
-		requestId,
-		query: cleanQuery,
-		page: safePage
-	});
+	const publishLoading = () =>
+		publishImageShowEvent({
+			id: newImageEventId(),
+			at: Date.now(),
+			type: 'loading',
+			requestId,
+			query: cleanQuery,
+			page: safePage
+		});
+	// The panel opens on a failure with its explanation; a successful search
+	// publishes the same loading event right before it calls the tool.
+	const fail = (code: ImageSearchErrorCode, detail?: string): ImageSearchResult[] => {
+		publishLoading();
+		publishError(requestId, cleanQuery, code, detail);
+		return [];
+	};
 
 	try {
 		await mcpStore.ensureTools();
 	} catch (err) {
-		publishError(requestId, cleanQuery, 'search_failed', err instanceof Error ? err.message : String(err));
-		return [];
+		return fail('search_failed', err instanceof Error ? err.message : String(err));
 	}
 
 	if (mcpStore.toolsError && mcpStore.tools.length === 0) {
-		publishError(requestId, cleanQuery, 'search_failed', mcpStore.toolsError);
-		return [];
+		return fail('search_failed', mcpStore.toolsError);
 	}
 
 	const choice = chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool);
-	if (!choice.tool) {
-		publishError(requestId, cleanQuery, choice.error ?? 'no_tool');
-		return [];
-	}
+	if (!choice.tool) return fail(choice.error ?? 'no_tool');
 	const tool = choice.tool;
 	const server = mcpStore.servers.find((entry) => entry.id === tool.serverId && entry.enabled);
-	if (!server) {
-		publishError(requestId, cleanQuery, 'tool_unavailable');
-		return [];
-	}
+	if (!server) return fail('tool_unavailable');
 	if (isToolOnConfirmList(tool.name, publicEnv.PUBLIC_MCP_CONFIRM_TOOLS)) {
-		publishError(requestId, cleanQuery, 'confirm_required');
+		return fail('confirm_required');
+	}
+
+	if (safePage > 1 && !supportsImagePaging(tool)) {
+		// The tool would return page one again. Keep the pictures that are
+		// already on screen and explain the limit instead of replacing them
+		// with an error panel.
+		publishImageNotice(cleanQuery, 'no_paging');
 		return [];
 	}
 
 	const args = buildSearchArgs(tool, cleanQuery, safePage);
-	if (safePage > 1 && !supportsImagePaging(tool)) {
-		publishError(requestId, cleanQuery, 'no_paging');
-		return [];
-	}
+	publishLoading();
 	try {
 		if (server.askBeforeRun !== false) {
 			let confirmed = false;

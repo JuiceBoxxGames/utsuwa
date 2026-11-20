@@ -6,7 +6,8 @@ import {
 	createImageSearchState,
 	focusImageSearch,
 	loadingImageSearch,
-	readyImageSearch
+	readyImageSearch,
+	type ImageSearchState
 } from './image-search-store-logic.ts';
 
 const picture = { title: 'A', url: 'https://x/a.jpg', thumbnail: 'https://x/a-thumb.jpg', source: 'x' };
@@ -53,6 +54,58 @@ test('drops late results after close and results from an older request', () => {
 	});
 	assert.equal(newer.status, 'loading');
 	assert.equal(newer.page, 2);
+});
+
+test('a notice explains a limit without touching the shown pictures', () => {
+	let state: ImageSearchState = applyImageEventToState(loadingImageSearch('cats', 1, 'r1'), {
+		id: '2', at: 2, type: 'results', requestId: 'r1', query: 'cats', page: 1,
+		results: [picture], tool: { serverId: 's', serverName: 'S', toolName: 't' }
+	});
+	state = applyImageEventToState(state, {
+		id: '3', at: 3, type: 'notice', query: 'cats', code: 'no_paging',
+		message: 'This picture tool cannot load more results. Try a different subject.'
+	});
+	assert.equal(state.status, 'ready');
+	assert.equal(state.isOpen, true);
+	assert.equal(state.results.length, 1);
+	assert.equal(state.notice, 'This picture tool cannot load more results. Try a different subject.');
+});
+
+test('a notice never opens the panel and is dropped while loading or closed', () => {
+	const idle = createImageSearchState();
+	assert.equal(
+		applyImageEventToState(idle, { id: 'n1', at: 1, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit' }),
+		idle
+	);
+	const loading = loadingImageSearch('cats', 2, 'r1');
+	assert.equal(
+		applyImageEventToState(loading, { id: 'n2', at: 2, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit' }),
+		loading
+	);
+	const closed = applyImageEventToState(loading, { id: 'close', at: 3, type: 'close' });
+	assert.equal(
+		applyImageEventToState(closed, { id: 'n3', at: 4, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit' }),
+		closed
+	);
+});
+
+test('new results clear an old notice', () => {
+	let state: ImageSearchState = {
+		...readyImageSearch([picture], 'cats', 1, 'r1'),
+		notice: 'old limit'
+	};
+	state = applyImageEventToState(state, {
+		id: 'n', at: 1, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit'
+	});
+	assert.equal(state.notice, 'limit');
+	state = applyImageEventToState(state, {
+		id: '2', at: 2, type: 'loading', requestId: 'r2', query: 'dogs', page: 1
+	});
+	state = applyImageEventToState(state, {
+		id: '3', at: 3, type: 'results', requestId: 'r2', query: 'dogs', page: 1,
+		results: [{ ...picture, url: 'https://x/dog.jpg' }], tool: { serverId: 's', serverName: 'S', toolName: 't' }
+	});
+	assert.equal(state.notice, null);
 });
 
 test('closing clears the active request and focusing clears the old description', () => {

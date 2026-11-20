@@ -296,7 +296,7 @@ test('searchImages explains an empty query instead of doing nothing', async () =
 	);
 });
 
-test('searchImages refuses to repeat page 1 when the tool cannot page', async () => {
+test('searchImages explains a missing page instead of repeating page one', async () => {
 	const noPageTool = {
 		...pictureTool,
 		name: 'search_photos',
@@ -321,8 +321,14 @@ test('searchImages refuses to repeat page 1 when the tool cannot page', async ()
 			try {
 				assert.deepEqual(await searchImages('cats', 2), []);
 				assert.equal(calls, 0, 'the tool is not asked for the same page again');
-				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
-				assert.equal(events[1].code, 'no_paging');
+				// A notice keeps the pictures that are on screen; it must not open
+				// or replace them with an error panel.
+				assert.deepEqual(events.map((event) => event.type), ['notice']);
+				assert.equal(events[0].code, 'no_paging');
+				assert.equal(
+					events[0].message,
+					'This picture tool cannot load more results. Try a different subject.'
+				);
 			} finally {
 				stop();
 				closeImageChannel();

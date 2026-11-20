@@ -1809,6 +1809,93 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			}
 		});
 
+		await t.test('a "more" request for a non-paging tool keeps the shown pictures', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const serverConfig = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [serverConfig];
+			mcp.servers = [serverConfig];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'search_photos', description: 'Search stock photos', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			const store = fixtures.imageSearchStore as Record<string, unknown>;
+			store.isOpen = true;
+			store.results = [{ title: 'Cat', url: 'https://x/cat.jpg', thumbnail: 'https://x/cat.jpg', source: 'x' }];
+			store.currentQuery = 'Katzen';
+			store.currentPage = 1;
+			let mcpCalls = 0;
+			t.mock.method(globalThis, 'fetch', async (url: string) => {
+				if (url === '/api/mcp/call') {
+					mcpCalls++;
+					return new Response(JSON.stringify({ isError: false, content: '[]' }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				assert.equal(url, '/api/chat');
+				const reply = 'Sure!\n```json\n{"image_search":"Katzen","image_page":2}\n```';
+				return new Response(`0:${JSON.stringify(reply)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			const { onImageShowEvent } = await server.ssrLoadModule('/src/lib/services/image-search/events.ts');
+			const events: string[] = [];
+			let resolveNotice: (() => void) | undefined;
+			const notice = new Promise<void>((resolve) => { resolveNotice = resolve; });
+			const stop = onImageShowEvent((event: { type: string }) => {
+				events.push(event.type);
+				if (event.type === 'notice') resolveNotice?.();
+			});
+			try {
+				await sendCompanionMessage('Zeig mir noch mehr Kätzchenbilder', [], hooks);
+				await notice;
+				assert.deepEqual(events, ['notice'], 'the limit is explained next to the pictures');
+				assert.equal(mcpCalls, 0, 'a non-paging tool is never asked for page two');
+			} finally {
+				stop();
+				store.isOpen = false; store.results = []; store.currentQuery = ''; store.currentPage = 1;
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+			}
+		});
+
+		await t.test('a "more" request without shown pictures searches page one', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const serverConfig = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [serverConfig];
+			mcp.servers = [serverConfig];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'search_photos', description: 'Search stock photos', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			let mcpArgs: Record<string, unknown> | null = null;
+			let resolveMcpCall: (() => void) | undefined;
+			const mcpCall = new Promise<void>((resolve) => { resolveMcpCall = resolve; });
+			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+				if (url === '/api/mcp/call') {
+					mcpArgs = JSON.parse(String(init.body)).args;
+					resolveMcpCall?.();
+					return new Response(JSON.stringify({ isError: false, content: JSON.stringify({ results: [{ title: 'Cat', url: 'https://x/cat', img_src: 'https://x/cat.jpg', source: 'x' }] }) }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				assert.equal(url, '/api/chat');
+				const reply = 'Sure!\n```json\n{"image_search":"Katzen","image_page":2}\n```';
+				return new Response(`0:${JSON.stringify(reply)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+			});
+			try {
+				await sendCompanionMessage('Zeig mir noch mehr Kätzchenbilder', [], hooks);
+				await mcpCall;
+				assert.deepEqual(mcpArgs, { query: 'Katzen' }, 'nothing is on screen, so the subject is searched from page one');
+			} finally {
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+			}
+		});
+
 		await t.test('close_images wins over a simultaneous image_search', { timeout: 5000 }, async (t) => {
 			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
 			const mcp = fixtures.mcpStore as {
