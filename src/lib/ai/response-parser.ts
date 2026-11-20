@@ -422,6 +422,11 @@ function cleanDialogue(text: string, companionName?: string): string {
 	cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 	cleaned = cleaned.trim();
 
+	// Some models repeat the whole reply verbatim, often after a native speech
+	// tool call. Collapse an exact doubled block; short emphatic repeats stay.
+	const doubled = cleaned.match(/^([\s\S]{20,}?)\s+\1$/i);
+	if (doubled) cleaned = doubled[1].trim();
+
 	// If we stripped everything, return a fallback
 	if (!cleaned) {
 		cleaned = 'Hmm... *thinking*';

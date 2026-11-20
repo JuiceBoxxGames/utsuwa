@@ -422,3 +422,9 @@ test('image_search is trimmed and an empty value is dropped', () => {
 	assert.equal(parseResponse('Hi.\n```json\n{"image_search":null}\n```').imageSearch, undefined);
 	assert.equal(parseResponse('Hi.\n```json\n{"image_search":"  red pandas "}\n```').imageSearch, 'red pandas');
 });
+
+test('a verbatim doubled reply is collapsed to one copy', () => {
+	const sentence = '¡Claro, volvemos a lo clásico! Dann hole ich dir jetzt die süßen gatitos zurück – die gehen ja immer.';
+	const parsed = parseResponse(`${sentence} ${sentence}\n\`\`\`json\n{"mood_change":{"emotion":"happy"}}\n\`\`\``);
+	assert.equal(parsed.dialogue, sentence);
+});

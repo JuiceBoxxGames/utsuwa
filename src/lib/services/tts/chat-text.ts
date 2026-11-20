@@ -173,7 +173,11 @@ export function cleanSpeechMarkers(
 	const withStateFences = options?.keepStateFences
 		? withLegacy
 		: withLegacy.replace(/```json[\s\S]*?```/gi, '');
-	return stripAngleBlocks(withStateFences).replace(/(?<=[.!?])\s+/g, ' ');
+	const textOnly = stripAngleBlocks(withStateFences).replace(/(?<=[.!?])\s+/g, ' ');
+	// A model can emit the same reply once as native speech text and once as
+	// plain text. Collapse an exact doubled block, but keep short repeats.
+	const doubled = textOnly.match(/^([\s\S]{20,}?)\s+\1$/i);
+	return doubled ? doubled[1].trim() : textOnly;
 }
 
 /**
