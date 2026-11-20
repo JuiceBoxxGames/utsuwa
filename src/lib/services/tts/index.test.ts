@@ -148,3 +148,11 @@ test('unlockAudioContext is a no-op without AudioContext (SSR)', () => {
 	assert.doesNotThrow(() => unlockAudioContext());
 	globalThis.AudioContext = saved;
 });
+
+test('getSharedAudioContext recreates a closed context', () => {
+	const closed = getSharedAudioContext() as unknown as MockAudioContext;
+	closed.state = 'closed';
+	const fresh = getSharedAudioContext() as unknown as MockAudioContext;
+	assert.notEqual(fresh, closed);
+	assert.equal(fresh.state, 'running');
+});

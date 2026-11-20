@@ -8,7 +8,7 @@
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import type { TtsSettingsState } from '$lib/stores/ai-services-settings.svelte';
 	import type { ProviderMetadata } from '$lib/services/providers/registry';
-	import { getSharedAudioContext } from '$lib/services/tts';
+	import { getSharedAudioContext, unlockAudioContext } from '$lib/services/tts';
 	import { getTTSBaseUrl } from '$lib/services/providers/local-endpoints';
 	import * as omnivoice from '$lib/services/tts/omnivoice-client';
 	import {
@@ -154,6 +154,9 @@
 	});
 
 	async function preview(alt: boolean) {
+		// Must run inside the click gesture: resuming after the network await is
+		// too late for Safari's autoplay policy and can leave the context silent.
+		unlockAudioContext();
 		previewLoading = true;
 		previewError = '';
 		try {
