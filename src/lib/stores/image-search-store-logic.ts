@@ -21,7 +21,6 @@ export interface ImageSearchState {
 	page: number;
 	activeRequestId: string | null;
 	focusedIndex: number;
-	description: string | null;
 	tool: ImageSearchToolInfo | null;
 	/** Non-blocking hint shown next to the pictures (for example a tool limit). */
 	notice: string | null;
@@ -37,20 +36,8 @@ export function createImageSearchState(): ImageSearchState {
 		page: 1,
 		activeRequestId: null,
 		focusedIndex: 0,
-		description: null,
 		tool: null,
 		notice: null
-	};
-}
-
-export function openImageSearch(results: ImageSearchResult[], query: string): ImageSearchState {
-	return {
-		...createImageSearchState(),
-		results,
-		isOpen: true,
-		status: 'ready',
-		query,
-		page: 1
 	};
 }
 
@@ -129,11 +116,7 @@ export function errorImageSearch(
 
 export function focusImageSearch(state: ImageSearchState, index: number): ImageSearchState {
 	if (index < 0 || index >= state.results.length || index === state.focusedIndex) return state;
-	return { ...state, focusedIndex: index, description: null };
-}
-
-export function describeImageSearch(state: ImageSearchState, description: string | null): ImageSearchState {
-	return { ...state, description };
+	return { ...state, focusedIndex: index };
 }
 
 /**

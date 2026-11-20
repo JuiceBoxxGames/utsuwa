@@ -227,7 +227,9 @@ test('isImageRequest finds picture nouns and ignores time questions', () => {
 test('isCloseImagesRequest recognizes close phrases in both languages', () => {
 	assert.equal(isCloseImagesRequest('Schließ die Bilder.'), true);
 	assert.equal(isCloseImagesRequest('Close the pictures, please.'), true);
-	assert.equal(isCloseImagesRequest('Mach das Fenster zu'), true);
+	assert.equal(isCloseImagesRequest('Mach das Popup zu'), true);
+	// "Fenster" alone may mean the browser window or a dialog, not the panel.
+	assert.equal(isCloseImagesRequest('Mach das Fenster zu'), false);
 	assert.equal(isCloseImagesRequest('Zeig mir noch mehr Bilder'), false);
 	assert.equal(isCloseImagesRequest('Wie spät ist es?'), false);
 });

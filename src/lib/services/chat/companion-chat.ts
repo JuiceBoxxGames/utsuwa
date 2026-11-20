@@ -43,8 +43,8 @@ import {
 	isCloseImagesRequest,
 	isDedicatedPictureTool,
 	isExplicitImageRequest,
-	isImageRequest,
 	isMoreImagesRequest,
+	mentionsPictures,
 	supportsImagePaging
 } from '$lib/utils/image-search';
 import { reminderStore } from '$lib/stores/reminders.svelte';
@@ -566,7 +566,13 @@ export async function sendCompanionMessage(
 			!closeRequested &&
 			isShowImagesEnabled() &&
 			hasConfiguredImageSearchTool() &&
-			(isImageRequest(content) || isMoreImagesRequest(content));
+			// Only an explicit picture request (or a model reply that talks
+			// about pictures it forgot to set) is worth the extra provider call.
+			// A bare "show me ..." would run the recovery on every such turn and
+			// delay the reply by up to the recovery timeout.
+			(isExplicitImageRequest(content) ||
+				isMoreImagesRequest(content) ||
+				mentionsPictures(displayDialogue));
 		if (canRecover) {
 			try {
 				recovery = await untilAborted(
@@ -600,7 +606,10 @@ export async function sendCompanionMessage(
 			!imageSearch &&
 			!systemEvent &&
 			recovery?.status === 'failed' &&
-			isImageRequest(content) &&
+			// Only an explicit picture request may fall back to the user's own
+			// wording. "Show me the code" is not a picture wish; a failed
+			// recovery must not start a search for it.
+			isExplicitImageRequest(content) &&
 			!isMoreImagesRequest(content)
 		) {
 			// The recovery call failed and the model named no subject. Only then
@@ -737,7 +746,9 @@ async function prepareMcpTurn(provider: string, content: string) {
 	// JSON. Dedicated picture tools stay hidden so models do not call them
 	// themselves and narrate the call twice. General web search stays
 	// available, except on a picture turn where the app already searches.
-	const imageTurn = isImageRequest(content) || isMoreImagesRequest(content);
+	// Narrow on purpose: "find me a hotel" is a web-search turn, not a picture
+	// turn, and keeping its search tool matters.
+	const imageTurn = isExplicitImageRequest(content) || isMoreImagesRequest(content);
 	const selectedImageTool = chooseImageSearchTool(
 		mcpStore.tools,
 		mcpStore.imageSearchTool

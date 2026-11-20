@@ -270,11 +270,15 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (!visible) return
-		if (e.key === 'Escape') {
-			e.preventDefault()
-			closePictures()
-		}
+		if (!visible || e.key !== 'Escape') return
+		const target = e.target as HTMLElement | null
+		const typing =
+			!!target &&
+			(target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+		// Escape in the composer belongs to the composer, not the panel.
+		if (typing && !panelEl?.contains(target)) return
+		e.preventDefault()
+		closePictures()
 	}
 
 	async function openImage(url: string) {

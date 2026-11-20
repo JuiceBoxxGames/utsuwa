@@ -57,9 +57,6 @@ export const imageSearchStore = {
 	get focusedIndex() {
 		return state.focusedIndex;
 	},
-	get currentDescription() {
-		return state.description;
-	},
 	get tool() {
 		return state.tool;
 	},

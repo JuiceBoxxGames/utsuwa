@@ -118,13 +118,12 @@ test('new results clear an old notice', () => {
 	assert.equal(state.notice, null);
 });
 
-test('closing clears the active request and focusing clears the old description', () => {
+test('closing clears the active request and focusing moves the index', () => {
 	const closed = closeImageSearch();
 	assert.equal(closed.activeRequestId, null);
 	assert.equal(closed.results.length, 0);
-	const focused = focusImageSearch({ ...loadingImageSearch(createImageSearchState(), 'cats', 1, 'r'), results: [picture, { ...picture, url: 'https://x/b.jpg' }], description: 'old' }, 1);
+	const focused = focusImageSearch({ ...loadingImageSearch(createImageSearchState(), 'cats', 1, 'r'), results: [picture, { ...picture, url: 'https://x/b.jpg' }] }, 1);
 	assert.equal(focused.focusedIndex, 1);
-	assert.equal(focused.description, null);
 });
 
 test('focusImageSearch ignores negative and out-of-range indices', () => {

@@ -63,6 +63,9 @@ function makeContext(overrides: Partial<PromptContext> = {}): PromptContext {
 		memories: emptyMemories(),
 		userMessage: 'hey!',
 		systemTime: new Date('2026-07-03T12:00:00'),
+		// Production always resolves this from the tool list; the full picture
+		// layer is what most prompt tests exercise.
+		imageSearchAvailable: true,
 		...overrides
 	};
 }

@@ -533,11 +533,18 @@ export function imageQueryFromMessage(text: string): string {
 		.trim();
 }
 
+/** True when a text names pictures (user request or model reply). */
+export function mentionsPictures(text: string): boolean {
+	return /\b(pictures?|images?|photos?|bilder?|fotos?)\b/i.test(text);
+}
+
 /** True when the user clearly asks to close the picture popup. */
 export function isCloseImagesRequest(text: string): boolean {
 	const value = text.toLowerCase();
 	const close = /\b(close|hide|dismiss|schlie(?:ß|ss)|mach.*zu|zumachen|beende|ausblenden)/.test(value);
-	const target = /\b(pictures?|images?|photos?|bilder?|fotos?|popup|fenster)/.test(value);
+	// "Fenster" alone is too broad: "close the window" may mean the browser
+	// window or a dialog. Only picture words and the popup name count.
+	const target = /\b(pictures?|images?|photos?|bilder?|fotos?|popup)/.test(value);
 	return close && target;
 }
 
@@ -565,7 +572,7 @@ export function isImageRequest(text: string): boolean {
  * so ambiguous "show me the code" stays silent.
  */
 export function isExplicitImageRequest(text: string): boolean {
-	return /\b(pictures?|images?|photos?|bilder?|fotos?)\b/i.test(text);
+	return mentionsPictures(text);
 }
 
 export interface ImageSearchErrorCopy {

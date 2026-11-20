@@ -100,19 +100,14 @@ test('companion chat preserves native speech across direct and hosted state bloc
 		imageSearchStore: {
 			isOpen: false,
 			isVisible: false,
-			isLoading: false,
 			error: null as string | null,
 			currentQuery: '',
 			currentPage: 1,
-			currentDescription: null as string | null,
 			focusedIndex: 0,
 			results: [] as unknown[],
-			setLoading: () => {},
-			openModal: () => {},
 			closeModal: () => {},
-			setError: () => {},
-			setDescription: () => {},
-			setFocus: () => {}
+			setFocus: () => {},
+			applyImageEvent: () => {}
 		},
 		isTauri: () => direct,
 		processCompanionTurn: async ({ companionResponse }: { companionResponse: string }) => {
@@ -1644,15 +1639,15 @@ test('companion chat preserves native speech across direct and hosted state bloc
 				return new Response('', { headers: { 'Content-Type': 'application/json' } });
 			});
 			try {
-				await sendCompanionMessage('zeig mir herbstliche Berglandschaften im Morgennebel', [], hooks);
+				await sendCompanionMessage('zeig mir Bilder von herbstlichen Berglandschaften im Morgennebel', [], hooks);
 			} finally {
 				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
 			}
 			assert.equal(providerCalls, 2, 'the chat turn and the recovery call ran');
-			assert.deepEqual(mcpArgs, { query: 'herbstliche Berglandschaften im Morgennebel' });
+			assert.deepEqual(mcpArgs, { query: 'herbstlichen Berglandschaften im Morgennebel' });
 		});
 
-		await t.test('a declined recovery does not override the model with a picture search', { timeout: 5000 }, async (t) => {
+		await t.test('an unrelated show-me request never runs the picture recovery', { timeout: 5000 }, async (t) => {
 			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
 			const mcp = fixtures.mcpStore as {
 				serverEnabled: boolean;
@@ -1669,29 +1664,80 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			mcp.hasActiveTools = true;
 			let providerCalls = 0;
 			let mcpCalls = 0;
-			t.mock.method(globalThis, 'fetch', async (url: string) => {
+			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
 				if (url === '/api/mcp/call') {
 					mcpCalls++;
 					return new Response(JSON.stringify({ isError: false, content: '[]' }), { headers: { 'Content-Type': 'application/json' } });
 				}
 				providerCalls++;
-				const text = providerCalls === 1
-					? 'Sure!\n```json\n{"mood_change":{"emotion":"happy"}}\n```'
-					: '{}';
-				return new Response(`0:${JSON.stringify(text)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+				if (providerCalls === 1) {
+					return new Response(`0:${JSON.stringify('Sure!\n```json\n{"mood_change":{"emotion":"happy"}}\n```')}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+				}
+				// A recovery call must not happen; hang so a regression times out.
+				return new Promise((_, reject) => {
+					init.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+				});
 			});
 			const events: Array<{ type: string }> = [];
 			const { onImageShowEvent } = await server.ssrLoadModule('/src/lib/services/image-search/events.ts');
 			const stop = onImageShowEvent((event: { type: string }) => events.push(event));
 			try {
-				await sendCompanionMessage('Show me the code', [], hooks);
+				await sendCompanionMessage('Show me the code', [], hooks, { imageRecoveryTimeoutMs: 20 });
 			} finally {
 				stop();
 				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
 			}
-			assert.equal(providerCalls, 2, 'the recovery call ran');
-			assert.equal(mcpCalls, 0, 'the recovery decline must not start a search');
+			assert.equal(providerCalls, 1, 'no picture recovery for a bare "show me" request');
+			assert.equal(mcpCalls, 0, 'no picture search');
 			assert.deepEqual(events, [], 'no popup or error for an unrelated request');
+		});
+
+		await t.test('a failed recovery never searches for the user\'s words', { timeout: 5000 }, async (t) => {
+			direct = false; llmProvider = 'openai-compatible'; speechEnabled = false; resetTurn();
+			const mcp = fixtures.mcpStore as {
+				serverEnabled: boolean;
+				enabledServers: unknown[];
+				servers: unknown[];
+				tools: unknown[];
+				hasActiveTools: boolean;
+			};
+			const serverConfig = { id: 'search', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true };
+			mcp.serverEnabled = true;
+			mcp.enabledServers = [serverConfig];
+			mcp.servers = [serverConfig];
+			mcp.tools = [{ serverId: 'search', serverName: 'Search', name: 'searxng_image_search', description: 'Search pictures', inputSchema: { type: 'object', properties: { query: {} } } }];
+			mcp.hasActiveTools = true;
+			let providerCalls = 0;
+			let mcpCalls = 0;
+			t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+				if (url === '/api/mcp/call') {
+					mcpCalls++;
+					return new Response(JSON.stringify({ isError: false, content: '[]' }), { headers: { 'Content-Type': 'application/json' } });
+				}
+				providerCalls++;
+				if (providerCalls === 1) {
+					// The model mentions pictures but forgets the query field.
+					const reply = 'Ich zeige dir gleich ein paar Bilder.\n```json\n{"mood_change":{"emotion":"happy"}}\n```';
+					return new Response(`0:${JSON.stringify(reply)}\n`, { headers: { 'Content-Type': 'text/event-stream' } });
+				}
+				return new Promise((_, reject) => {
+					init.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+				});
+			});
+			const events: Array<{ type: string }> = [];
+			const { onImageShowEvent } = await server.ssrLoadModule('/src/lib/services/image-search/events.ts');
+			const stop = onImageShowEvent((event: { type: string }) => events.push(event));
+			try {
+				// Not an explicit picture request: the failed recovery must not
+				// turn "zeig mir das mal" into a search.
+				await sendCompanionMessage('zeig mir das mal', [], hooks, { imageRecoveryTimeoutMs: 20 });
+			} finally {
+				stop();
+				mcp.hasActiveTools = false; mcp.tools = []; mcp.servers = []; mcp.enabledServers = []; mcp.serverEnabled = false;
+			}
+			assert.equal(providerCalls, 2, 'the model mentioned pictures, so recovery ran');
+			assert.equal(mcpCalls, 0, 'the fallback must not search the user\'s words');
+			assert.deepEqual(events, [], 'no popup for an implicit request');
 		});
 
 		await t.test('a hanging recovery times out and falls back to the user subject', { timeout: 5000 }, async (t) => {

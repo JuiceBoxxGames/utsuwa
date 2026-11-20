@@ -500,18 +500,22 @@ If it is worth keeping, put it in new_memory as your impression in your own word
 function buildImageSearchLayer(ctx: PromptContext): string | null {
 	if (!ctx.showImagesEnabled) return null;
 
+	// Without a usable tool the full layer only costs context on every turn;
+	// one honest sentence is enough. The model still sets image_search so the
+	// app can show the exact error.
+	if (!ctx.imageSearchAvailable) {
+		return (
+			`SHOWING PICTURES\n\n` +
+			`No usable picture search tool is configured right now. If the user asks for pictures, say that a search tool must be selected in Settings > MCP, and still set "image_search" so the app can show the exact error. Do not claim you showed pictures.`
+		);
+	}
+
 	const parts: string[] = [];
 
 	parts.push(
 		`SHOWING PICTURES\n\n` +
 			`You can show the user pictures. Say a short sentence and set "image_search" to what the pictures should be of — the application searches with the user's configured tool and shows the results in a popup. You never search yourself and you never embed images.`
 	);
-
-	if (!ctx.imageSearchAvailable) {
-		parts.push(
-			`No usable picture search tool is configured right now. If the user asks for pictures, say that a search tool must be selected in Settings > MCP, and still set "image_search" so the app can show the exact error. Do not claim you showed pictures.`
-		);
-	}
 
 	parts.push(
 		`HOW TO USE:\n` +
