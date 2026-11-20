@@ -58,14 +58,36 @@ export function closeImageSearch(): ImageSearchState {
 	return createImageSearchState();
 }
 
-export function loadingImageSearch(query: string, page: number, requestId?: string): ImageSearchState {
+/**
+ * Start a search. The pictures already on screen stay visible while the next
+ * page loads — a "more" request must not blank the panel — but a different
+ * subject starts from a clean state so old pictures never masquerade as new
+ * results.
+ */
+export function loadingImageSearch(
+	state: ImageSearchState,
+	query: string,
+	page: number,
+	requestId?: string
+): ImageSearchState {
+	const keep = state.isOpen && state.query === query && state.results.length > 0;
+	if (!keep) {
+		return {
+			...createImageSearchState(),
+			isOpen: true,
+			status: 'loading',
+			query,
+			page,
+			activeRequestId: requestId ?? null
+		};
+	}
 	return {
-		...createImageSearchState(),
-		isOpen: true,
+		...state,
 		status: 'loading',
-		query,
 		page,
-		activeRequestId: requestId ?? null
+		activeRequestId: requestId ?? null,
+		error: null,
+		notice: null
 	};
 }
 
@@ -121,7 +143,7 @@ export function describeImageSearch(state: ImageSearchState, description: string
  */
 export function applyImageEventToState(state: ImageSearchState, event: ImageShowEvent): ImageSearchState {
 	if (event.type === 'close') return closeImageSearch();
-	if (event.type === 'loading') return loadingImageSearch(event.query, event.page, event.requestId);
+	if (event.type === 'loading') return loadingImageSearch(state, event.query, event.page, event.requestId);
 	if (event.type === 'notice') {
 		// A notice explains a limit; it only makes sense while pictures are on
 		// screen, so it never opens the panel or replaces existing results.

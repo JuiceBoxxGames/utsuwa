@@ -24,7 +24,15 @@
 	// over it, and the loading state is a small status pill rather than a modal.
 	let panelEl: HTMLElement | undefined = $state()
 	let previouslyFocused: HTMLElement | null = null
-	const visible = $derived(imageSearchStore.isOpen && imageSearchStore.status !== 'loading')
+	const visible = $derived(
+		imageSearchStore.isOpen &&
+			(imageSearchStore.status !== 'loading' || imageSearchStore.results.length > 0)
+	)
+	const loadingFresh = $derived(
+		imageSearchStore.isOpen &&
+			imageSearchStore.status === 'loading' &&
+			imageSearchStore.results.length === 0
+	)
 	const errorCopy = $derived(
 		imageSearchErrorCopy(
 			imageSearchStore.error?.code ?? 'search_failed',
@@ -280,7 +288,7 @@
 
 	async function loadMore() {
 		const query = imageSearchStore.currentQuery
-		if (moreBusy || !query || !canLoadMore) return
+		if (moreBusy || !query || !canLoadMore || imageSearchStore.status === 'loading') return
 		moreBusy = true
 		openError = null
 		try {
@@ -306,7 +314,7 @@
 
 <svelte:window onkeydown={handleKeydown} onpointermove={onPointerMove} onpointerup={endPointer} />
 
-{#if imageSearchStore.isOpen && imageSearchStore.status === 'loading'}
+{#if loadingFresh}
 	<div class="search-status" role="status" aria-live="polite">
 		<Icon name="refresh" size={16} />
 		<span>Searching pictures…</span>
@@ -384,7 +392,9 @@
 						<p>No pictures found</p>
 					</div>
 				{:else}
-					{#if imageSearchStore.notice}
+					{#if imageSearchStore.status === 'loading'}
+						<p class="panel-notice" role="status">Loading pictures…</p>
+					{:else if imageSearchStore.notice}
 						<p class="panel-notice" role="status">{imageSearchStore.notice}</p>
 					{/if}
 					<div class="image-grid" role="radiogroup" aria-label="Shown pictures">
@@ -452,10 +462,10 @@
 								type="button"
 								class="more-btn"
 								onclick={loadMore}
-								disabled={moreBusy}
+								disabled={moreBusy || imageSearchStore.status === 'loading'}
 								aria-label="More pictures"
 							>
-								{moreBusy ? 'Loading…' : 'More pictures'}
+								{moreBusy || imageSearchStore.status === 'loading' ? 'Loading…' : 'More pictures'}
 							</button>
 						{/if}
 					</div>

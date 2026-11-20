@@ -30,7 +30,7 @@ export function closeModal() {
 }
 
 export function setLoading(query: string, page = 1, requestId?: string) {
-	state = loadingImageSearch(query, page, requestId);
+	state = loadingImageSearch(state, query, page, requestId);
 }
 
 export function setResults(
@@ -72,9 +72,9 @@ export const imageSearchStore = {
 	get isOpen() {
 		return state.isOpen;
 	},
-	/** The panel is only on screen with results or an error, never during loading. */
+	/** The panel stays on screen while the next page loads if pictures are already shown. */
 	get isVisible() {
-		return state.isOpen && state.status !== 'loading';
+		return state.isOpen && (state.status !== 'loading' || state.results.length > 0);
 	},
 	get status() {
 		return state.status;
