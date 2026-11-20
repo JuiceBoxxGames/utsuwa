@@ -21,6 +21,7 @@ import {
 	imageSearchErrorCopy,
 	isDirectImageUrl,
 	isToolOnConfirmList,
+	MAX_IMAGE_PAGE,
 	parseImageResults,
 	queryArgKey,
 	toDataUrl,
@@ -40,6 +41,8 @@ export interface ImageFetchCapability {
 	available: boolean;
 	/** True when the server asks before running tools, so each fetch confirms. */
 	asksFirst: boolean;
+	/** True when PUBLIC_MCP_CONFIRM_TOOLS lists the fetch tool, so previews cannot run automatically. */
+	blocked: boolean;
 }
 
 function findImageFetchServer() {
@@ -51,7 +54,11 @@ function findImageFetchServer() {
 /** Current view for prompt context, from the already loaded tool list. */
 export function imageFetchCapabilitySync(): ImageFetchCapability {
 	const server = findImageFetchServer();
-	return { available: server !== null, asksFirst: server ? server.askBeforeRun !== false : false };
+	return {
+		available: server !== null,
+		asksFirst: server ? server.askBeforeRun !== false : false,
+		blocked: isToolOnConfirmList(IMAGE_FETCH_TOOL, publicEnv.PUBLIC_MCP_CONFIRM_TOOLS)
+	};
 }
 
 /** Resolve preview capability after tool discovery. */
@@ -135,16 +142,20 @@ function publishError(
 
 /**
  * Explain a tool limit next to the pictures that are already on screen. A
- * notice never opens the panel and never clears results.
+ * notice never opens the panel and never clears results. It carries the
+ * request id so a late notice cannot comment on a newer search.
  */
-export function publishImageNotice(query: string, code: ImageSearchErrorCode): void {
+export function publishImageNotice(
+	requestId: string,
+	query: string,
+	code: ImageSearchErrorCode
+): void {
 	publishImageShowEvent({
 		id: newImageEventId(),
 		at: Date.now(),
 		type: 'notice',
-		query: query.trim(),
-		code,
-		message: imageSearchErrorCopy(code).message
+		requestId,
+		message: imageSearchErrorCopy(code, query).message
 	});
 }
 
@@ -181,7 +192,9 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 		reportImageIntentError('', 'empty_query');
 		return [];
 	}
-	const safePage = Number.isFinite(page) ? Math.max(1, Math.min(10, Math.floor(page))) : 1;
+	const safePage = Number.isFinite(page)
+		? Math.max(1, Math.min(MAX_IMAGE_PAGE, Math.floor(page)))
+		: 1;
 	const requestId = newImageEventId();
 	const publishLoading = () =>
 		publishImageShowEvent({
@@ -229,7 +242,10 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 			!paging ||
 			(paging.kind === 'count' && countForPage(paging, safePage) <= countForPage(paging, safePage - 1));
 		if (exhausted) {
-			publishImageNotice(cleanQuery, 'no_paging');
+			// The notice must resolve the loading state it belongs to, or the
+			// panel would stay on "Loading pictures…" forever.
+			publishLoading();
+			publishImageNotice(requestId, cleanQuery, 'no_paging');
 			return [];
 		}
 	}
@@ -267,8 +283,11 @@ export async function searchImages(query: string, page = 1): Promise<ImageSearch
 				? parsed.slice(IMAGE_PAGE_SIZE * (safePage - 1), IMAGE_PAGE_SIZE * safePage)
 				: parsed;
 		if (!images.length) {
-			if (safePage > 1 && paging?.kind === 'count') {
-				publishImageNotice(cleanQuery, 'no_paging');
+			if (safePage > 1) {
+				// A page tool can run out of results just like a count tool; keep
+				// the pictures that are already shown and explain the limit
+				// instead of replacing them with an error panel.
+				publishImageNotice(requestId, cleanQuery, 'no_paging');
 				return [];
 			}
 			publishError(requestId, cleanQuery, 'empty_results', result.content.slice(0, 500));

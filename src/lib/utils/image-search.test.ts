@@ -7,6 +7,7 @@ import {
 	extractHostname,
 	extractImageUrls,
 	chooseImageSearchTool,
+	canLoadMoreImages,
 	countForPage,
 	imagePaging,
 	isPictureSearchTool,
@@ -441,6 +442,31 @@ test('describeImageFetch reports the file-fetch tool or its absence', () => {
 		describeImageFetch([], { ...readyState, loading: true }).kind,
 		'checking'
 	);
+});
+
+test('describeImageFetch reports a confirmation-listed fetch tool as blocked', () => {
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+	assert.deepEqual(describeImageFetch([fetch], readyState, 'fetch_file_from_url'), {
+		kind: 'blocked',
+		tool: fetch
+	});
+	assert.equal(describeImageFetch([fetch], readyState, 'other_tool').kind, 'ready');
+});
+
+test('canLoadMoreImages respects the declared count maximum', () => {
+	const count = (maximum: number) => ({
+		inputSchema: { properties: { query: {}, count: { maximum } } }
+	});
+	// A maximum of one page has no headroom: the button must not be offered.
+	assert.equal(canLoadMoreImages(count(12), 1), false);
+	assert.equal(canLoadMoreImages(count(24), 1), true);
+	assert.equal(canLoadMoreImages(count(24), 2), false);
+	// Page-based tools can page until the shared cap.
+	const page = { inputSchema: { properties: { query: {}, pageno: {} } } };
+	assert.equal(canLoadMoreImages(page, 1), true);
+	assert.equal(canLoadMoreImages(page, 9), true);
+	assert.equal(canLoadMoreImages(page, 10), false);
+	assert.equal(canLoadMoreImages({ inputSchema: { properties: { query: {} } } }, 1), false);
 });
 
 test('imageQueryFromMessage keeps the subject and drops the request scaffolding', () => {

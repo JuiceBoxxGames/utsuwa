@@ -1850,7 +1850,7 @@ test('companion chat preserves native speech across direct and hosted state bloc
 			try {
 				await sendCompanionMessage('Zeig mir noch mehr Kätzchenbilder', [], hooks);
 				await notice;
-				assert.deepEqual(events, ['notice'], 'the limit is explained next to the pictures');
+				assert.deepEqual(events, ['loading', 'notice'], 'the limit is explained next to the pictures');
 				assert.equal(mcpCalls, 0, 'a non-paging tool is never asked for page two');
 			} finally {
 				stop();

@@ -62,7 +62,7 @@ test('a notice explains a limit without touching the shown pictures', () => {
 		results: [picture], tool: { serverId: 's', serverName: 'S', toolName: 't' }
 	});
 	state = applyImageEventToState(state, {
-		id: '3', at: 3, type: 'notice', query: 'cats', code: 'no_paging',
+		id: '3', at: 3, type: 'notice', requestId: 'r1',
 		message: 'This picture tool cannot load more results. Try a different subject.'
 	});
 	assert.equal(state.status, 'ready');
@@ -71,20 +71,30 @@ test('a notice explains a limit without touching the shown pictures', () => {
 	assert.equal(state.notice, 'This picture tool cannot load more results. Try a different subject.');
 });
 
-test('a notice never opens the panel and is dropped while loading or closed', () => {
+test('a notice resolves the request it belongs to and never opens the panel', () => {
 	const idle = createImageSearchState();
 	assert.equal(
-		applyImageEventToState(idle, { id: 'n1', at: 1, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit' }),
+		applyImageEventToState(idle, { id: 'n1', at: 1, type: 'notice', requestId: 'r1', message: 'limit' }),
 		idle
 	);
-	const loading = loadingImageSearch(createImageSearchState(), 'cats', 2, 'r1');
+	// A paging request that yields no new page must leave "loading" and keep
+	// the pictures on screen (regression: the panel stayed on "Loading…").
+	const ready = readyImageSearch([picture], 'cats', 1, 'r1');
+	const loading = loadingImageSearch(ready, 'cats', 2, 'r2');
+	const noticed = applyImageEventToState(loading, {
+		id: 'n2', at: 2, type: 'notice', requestId: 'r2', message: 'limit'
+	});
+	assert.equal(noticed.status, 'ready');
+	assert.equal(noticed.notice, 'limit');
+	assert.equal(noticed.results.length, 1);
+	// A notice from an older request must not comment on the current search.
 	assert.equal(
-		applyImageEventToState(loading, { id: 'n2', at: 2, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit' }),
+		applyImageEventToState(loading, { id: 'n3', at: 3, type: 'notice', requestId: 'r1', message: 'stale' }),
 		loading
 	);
-	const closed = applyImageEventToState(loading, { id: 'close', at: 3, type: 'close' });
+	const closed = applyImageEventToState(loading, { id: 'close', at: 4, type: 'close' });
 	assert.equal(
-		applyImageEventToState(closed, { id: 'n3', at: 4, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit' }),
+		applyImageEventToState(closed, { id: 'n4', at: 5, type: 'notice', requestId: 'r2', message: 'limit' }),
 		closed
 	);
 });
@@ -95,7 +105,7 @@ test('new results clear an old notice', () => {
 		notice: 'old limit'
 	};
 	state = applyImageEventToState(state, {
-		id: 'n', at: 1, type: 'notice', query: 'cats', code: 'no_paging', message: 'limit'
+		id: 'n', at: 1, type: 'notice', requestId: 'r1', message: 'limit'
 	});
 	assert.equal(state.notice, 'limit');
 	state = applyImageEventToState(state, {

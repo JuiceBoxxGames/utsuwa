@@ -52,8 +52,7 @@ export type ImageShowEvent =
 	| (ImageEventBase & {
 			/** Explain a limit next to the pictures instead of replacing them. */
 			type: 'notice';
-			query: string;
-			code: ImageSearchErrorCode;
+			requestId: string;
 			message: string;
 	  })
 	| (ImageEventBase & { type: 'close'; requestId?: string });

@@ -1,15 +1,9 @@
-import type { ImageSearchResult } from '$lib/utils/image-search';
-import type { ImageSearchToolInfo, ImageShowEvent } from '$lib/services/image-search/events';
+import type { ImageShowEvent } from '$lib/services/image-search/events';
 import {
 	applyImageEventToState,
 	closeImageSearch,
 	createImageSearchState,
-	describeImageSearch,
-	errorImageSearch,
 	focusImageSearch,
-	loadingImageSearch,
-	openImageSearch,
-	readyImageSearch,
 	type ImageSearchState,
 	type ImageSearchStatus,
 	type ImageSearchStoreError
@@ -21,39 +15,8 @@ export type { ImageSearchStatus, ImageSearchStoreError };
 // Svelte runes so the popup and the companion prompt see one source of truth.
 let state = $state<ImageSearchState>(createImageSearchState());
 
-export function openModal(newResults: ImageSearchResult[], query: string) {
-	state = openImageSearch(newResults, query);
-}
-
 export function closeModal() {
 	state = closeImageSearch();
-}
-
-export function setLoading(query: string, page = 1, requestId?: string) {
-	state = loadingImageSearch(state, query, page, requestId);
-}
-
-export function setResults(
-	newResults: ImageSearchResult[],
-	query: string,
-	page = 1,
-	requestId?: string,
-	tool: ImageSearchToolInfo | null = null
-) {
-	state = readyImageSearch(newResults, query, page, requestId, tool);
-}
-
-export function setError(
-	code: ImageSearchStoreError['code'],
-	message: string,
-	query = '',
-	requestId?: string
-) {
-	state = errorImageSearch(code, message, query, requestId);
-}
-
-export function setDescription(description: string | null) {
-	state = describeImageSearch(state, description);
 }
 
 export function setFocus(index: number) {
@@ -100,12 +63,7 @@ export const imageSearchStore = {
 	get tool() {
 		return state.tool;
 	},
-	openModal,
 	closeModal,
-	setLoading,
-	setResults,
-	setError,
-	setDescription,
 	setFocus,
 	applyImageEvent
 };

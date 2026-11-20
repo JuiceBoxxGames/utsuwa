@@ -5,6 +5,7 @@
  */
 import type { McpAuth, McpServerError, McpToolImage } from '$lib/types/mcp';
 import { isRasterImageMimeType } from '../../utils/image-mime.ts';
+import { parseToolNameList } from '../../utils/tool-names.ts';
 
 export const MCP_PROTOCOL_VERSION = '2024-11-05';
 export const MCP_CLIENT_NAME = 'utsuwa';
@@ -288,12 +289,7 @@ export function singleFlight<T>(fn: () => Promise<T>): () => Promise<T> {
  * Parse a comma-separated tool-name list (env config). Blank entries are
  * dropped, so an unset or empty value yields an empty list.
  */
-export function parseToolNameList(raw: string | undefined | null): string[] {
-	return (raw ?? '')
-		.split(',')
-		.map((name) => name.trim())
-		.filter(Boolean);
-}
+export { parseToolNameList };
 
 /**
  * Link-local and cloud-metadata hosts are blocked on the server-side HTTP

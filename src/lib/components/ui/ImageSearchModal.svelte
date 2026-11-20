@@ -12,9 +12,9 @@
 	import { Icon } from '$lib/components/ui'
 	import { isRasterImageDataUrl } from '$lib/utils/image-mime'
 	import {
+		canLoadMoreImages,
 		imageOpenLabel,
-		imageSearchErrorCopy,
-		supportsImagePaging
+		imageSearchErrorCopy
 	} from '$lib/utils/image-search'
 	import { onMount } from 'svelte'
 	import { displayStore } from '$lib/stores/display.svelte'
@@ -24,10 +24,7 @@
 	// over it, and the loading state is a small status pill rather than a modal.
 	let panelEl: HTMLElement | undefined = $state()
 	let previouslyFocused: HTMLElement | null = null
-	const visible = $derived(
-		imageSearchStore.isOpen &&
-			(imageSearchStore.status !== 'loading' || imageSearchStore.results.length > 0)
-	)
+	const visible = $derived(imageSearchStore.isVisible)
 	const loadingFresh = $derived(
 		imageSearchStore.isOpen &&
 			imageSearchStore.status === 'loading' &&
@@ -41,11 +38,15 @@
 	)
 	const currentTool = $derived(
 		imageSearchStore.tool
-			? mcpStore.tools.find((entry) => entry.name === imageSearchStore.tool?.toolName)
+			? mcpStore.tools.find(
+					(entry) =>
+						entry.serverId === imageSearchStore.tool?.serverId &&
+						entry.name === imageSearchStore.tool?.toolName
+				)
 			: undefined
 	)
 	const canLoadMore = $derived(
-		!!currentTool && supportsImagePaging(currentTool) && imageSearchStore.currentPage < 10
+		!!currentTool && canLoadMoreImages(currentTool, imageSearchStore.currentPage)
 	)
 	let openError = $state<string | null>(null)
 	let moreBusy = $state(false)
@@ -232,19 +233,40 @@
 		void loadPreviews(results)
 	})
 
+	let focusMoved = false
+
 	$effect(() => {
 		if (visible) {
 			previouslyFocused = document.activeElement as HTMLElement | null
-			panelEl?.focus()
-		} else {
+			const active = document.activeElement as HTMLElement | null
+			// The panel is not modal: never pull focus out of a field the user is
+			// typing in just because pictures arrived.
+			const typing =
+				!!active &&
+				(active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)
+			if (!typing) {
+				panelEl?.focus()
+				focusMoved = true
+			} else {
+				focusMoved = false
+			}
+		} else if (focusMoved) {
 			previouslyFocused?.focus()
 			previouslyFocused = null
+			focusMoved = false
 		}
 	})
 
 	function closePictures() {
 		closeImages()
 		imageSearchStore.closeModal()
+		// Base64 previews can be several megabytes; drop them with the panel.
+		loadSeq++
+		thumbUrls = {}
+		thumbStatus = {}
+		started.clear()
+		lastResults = null
+		openError = null
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -252,27 +274,6 @@
 		if (e.key === 'Escape') {
 			e.preventDefault()
 			closePictures()
-			return
-		}
-		if (e.key !== 'Tab' || !panelEl) return
-		const focusable = [...panelEl.querySelectorAll<HTMLElement>(
-			'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
-		)].filter((el) => el.offsetParent !== null)
-		if (!focusable.length) return
-		const first = focusable[0]
-		const last = focusable[focusable.length - 1]
-		const active = document.activeElement
-		if (active === panelEl || !panelEl.contains(active)) {
-			e.preventDefault()
-			;(e.shiftKey ? last : first).focus()
-			return
-		}
-		if (e.shiftKey && active === first) {
-			e.preventDefault()
-			last.focus()
-		} else if (!e.shiftKey && document.activeElement === last) {
-			e.preventDefault()
-			first.focus()
 		}
 	}
 
@@ -361,6 +362,11 @@
 						{#if !fetchCap?.available}
 							No file-fetch tool is configured yet. Previews load through the
 							<code>fetch_file_from_url</code> MCP tool under Settings > MCP; enable it, then
+							<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
+						{:else if fetchCap.blocked}
+							<code>fetch_file_from_url</code> is listed in <code>PUBLIC_MCP_CONFIRM_TOOLS</code>,
+							so previews cannot be fetched automatically. Remove it from that list under
+							Settings > MCP, then
 							<button type="button" class="thumb-retry" onclick={retryPreviews}>retry</button>.
 						{:else if fetchCap.asksFirst}
 							"Ask before running tools" is on for your file-fetch server, so only the

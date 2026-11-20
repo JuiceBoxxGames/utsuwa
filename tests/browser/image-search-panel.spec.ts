@@ -4,7 +4,7 @@ import { openApp } from './helpers';
 const pixel =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jD1sAAAAASUVORK5CYII=';
 
-test('searching stays a status pill, then the panel holds focus and closes with Escape', async ({ page }) => {
+test('searching stays a status pill, then the panel opens without trapping focus and closes with Escape', async ({ page }) => {
 	await openApp(page);
 	await page.evaluate(async () => {
 		const path = '/src/lib/stores/image-search.svelte.ts';
@@ -51,8 +51,14 @@ test('searching stays a status pill, then the panel holds focus and closes with 
 	await expect(dialog).toContainText('via Search');
 	await expect(dialog.getByRole('button', { name: 'Open source: A cat' })).toBeVisible();
 
+	// The panel is not modal: Tab past its last control must leave it instead
+	// of wrapping back to the first one.
+	await dialog.getByRole('button', { name: 'Open source: A cat' }).focus();
 	await page.keyboard.press('Tab');
-	await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+	const insideDialog = await page.evaluate(
+		() => !!document.activeElement?.closest('[role="dialog"]')
+	);
+	expect(insideDialog).toBe(false);
 
 	await page.keyboard.press('Escape');
 	await expect(dialog).toHaveCount(0);

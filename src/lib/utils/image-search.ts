@@ -4,6 +4,7 @@
  * and builds the structured results here.
  */
 import type { ImageSearchErrorCode } from '$lib/services/image-search/events';
+import { parseToolNameList } from './tool-names.ts';
 import { isRasterImageDataUrl, isRasterImageMimeType } from './image-mime.ts';
 export { isRasterImageMimeType } from './image-mime.ts';
 
@@ -48,15 +49,14 @@ export function imageOpenLabel(url: string): 'Open picture' | 'Open source' {
 
 /** True when a tool name appears in the comma-separated PUBLIC_MCP_CONFIRM_TOOLS list. */
 export function isToolOnConfirmList(toolName: string, raw: string | undefined | null): boolean {
-	return (raw ?? '')
-		.split(',')
-		.map((name) => name.trim())
-		.filter(Boolean)
-		.includes(toolName);
+	return parseToolNameList(raw).includes(toolName);
 }
 
 /** Pictures shown per request; also the step for tools that only take a count. */
 export const IMAGE_PAGE_SIZE = 12;
+
+/** Hard cap on pages, shared by the core clamp and the panel button. */
+export const MAX_IMAGE_PAGE = 10;
 
 const PAGE_ARGS = ['pageno', 'page', 'page_number'] as const;
 const COUNT_ARGS = ['count', 'limit', 'per_page', 'max_results'] as const;
@@ -104,6 +104,21 @@ export function supportsImagePaging(
 /** Count a count-based tool must receive for a page. */
 export function countForPage(paging: CountImagePaging, page: number): number {
 	return Math.min(paging.max, IMAGE_PAGE_SIZE * Math.max(1, Math.floor(page)));
+}
+
+/**
+ * True when asking for the next page can actually return new pictures. A
+ * count-based tool whose declared maximum is already reached for the current
+ * page would return the same list again, so the button must not be offered.
+ */
+export function canLoadMoreImages(
+	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined,
+	page: number
+): boolean {
+	const paging = imagePaging(tool);
+	if (!paging || page >= MAX_IMAGE_PAGE) return false;
+	if (paging.kind === 'page') return true;
+	return countForPage(paging, page + 1) > countForPage(paging, page);
 }
 
 /** Build a safe `data:` URL from a raster image block, or "" when unsupported. */
@@ -482,19 +497,25 @@ export type ImageFetchSetup<T extends SearchToolLike & { serverId: string }> =
 	| { kind: 'no_server' }
 	| { kind: 'load_failed' }
 	| { kind: 'ready'; tool: T }
+	| { kind: 'blocked'; tool: T }
 	| { kind: 'missing' };
 
 /** Whether the optional file-fetch tool is available for thumbnails. */
 export function describeImageFetch<T extends SearchToolLike & { serverId: string }>(
 	tools: T[],
-	state: PictureSearchState
+	state: PictureSearchState,
+	confirmList?: string | null
 ): ImageFetchSetup<T> {
 	if (state.loading) return { kind: 'checking' };
 	if (!state.mcpEnabled) return { kind: 'mcp_disabled' };
 	if (state.enabledServers === 0) return { kind: 'no_server' };
 	if (state.toolsError) return { kind: 'load_failed' };
 	const tool = tools.find((entry) => entry.name === IMAGE_FETCH_TOOL);
-	return tool ? { kind: 'ready', tool } : { kind: 'missing' };
+	if (!tool) return { kind: 'missing' };
+	// A confirmation-listed tool cannot run automatically, so previews never
+	// load; report the real cause instead of "ready".
+	if (isToolOnConfirmList(IMAGE_FETCH_TOOL, confirmList)) return { kind: 'blocked', tool };
+	return { kind: 'ready', tool };
 }
 
 /**

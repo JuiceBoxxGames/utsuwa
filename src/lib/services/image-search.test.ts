@@ -321,12 +321,12 @@ test('searchImages explains a missing page instead of repeating page one', async
 			try {
 				assert.deepEqual(await searchImages('cats', 2), []);
 				assert.equal(calls, 0, 'the tool is not asked for the same page again');
-				// A notice keeps the pictures that are on screen; it must not open
-				// or replace them with an error panel.
-				assert.deepEqual(events.map((event) => event.type), ['notice']);
-				assert.equal(events[0].code, 'no_paging');
+				// The notice resolves the loading event it belongs to, so the
+				// panel leaves "Loading…" and keeps the pictures on screen.
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events[1].requestId, events[0].requestId);
 				assert.equal(
-					events[0].message,
+					events[1].message,
 					'This picture tool cannot load more results. Try a different subject.'
 				);
 			} finally {
@@ -406,8 +406,79 @@ test('a count-based tool that cannot grow any further shows a notice', async () 
 			try {
 				assert.deepEqual(await searchImages('cats', 3), []);
 				assert.equal(calls, 0, 'a batch that cannot grow is not requested again');
-				assert.deepEqual(events.map((event) => event.type), ['notice']);
-				assert.equal(events[0].code, 'no_paging');
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events[1].requestId, events[0].requestId);
+				assert.equal(
+					events[1].message,
+					'This picture tool cannot load more results. Try a different subject.'
+				);
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('an empty follow-up page keeps the gallery and resolves the loading state', async () => {
+	const countTool = {
+		...pictureTool,
+		name: 'brave_image_search',
+		description: 'Search images',
+		inputSchema: { type: 'object', properties: { query: {}, count: { maximum: 50 } } }
+	};
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [countTool],
+				imageSearchTool: { serverId: 'search', toolName: 'brave_image_search' }
+			}),
+			call: async () => ({
+				content: JSON.stringify({
+					results: Array.from({ length: 10 }, (_, i) => ({
+						url: `https://page.example/${i}`,
+						properties: { url: `https://cdn.example/${i}.jpg` }
+					}))
+				})
+			})
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				// Page two asks for 24, the tool returns only 10: the slice after
+				// the first 12 is empty. The notice must resolve the loading state
+				// (regression: the panel stayed on "Loading pictures…" forever).
+				assert.deepEqual(await searchImages('cats', 2), []);
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events[1].requestId, events[0].requestId);
+				assert.equal(
+					events[1].message,
+					'This picture tool cannot load more results. Try a different subject.'
+				);
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('an empty page of a page-based tool keeps the gallery', async () => {
+	await withSearchCore(
+		{
+			store: searchStore(),
+			call: async () => ({ content: '[]' })
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats', 2), []);
+				// A page tool that runs out of results is a limit, not a failure:
+				// no error panel, no cleared gallery.
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events.some((event) => event.type === 'error'), false);
 			} finally {
 				stop();
 				closeImageChannel();
@@ -484,13 +555,22 @@ test('searchImages reports a tool error result as search_failed', async () => {
 	assert.equal(events[1].code, 'search_failed');
 });
 
-test('searchImages reports an image-less result as empty_results', async () => {
-	const events = await searchEvents({
-		store: searchStore(),
-		call: async () => ({ toolName: 'searxng_image_search', isError: false, content: 'nothing here' })
-	});
-	assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
-	assert.equal(events[1].code, 'empty_results');
+test('searchImages reports an image-less first page as empty_results', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => ({ toolName: 'searxng_image_search', isError: false, content: 'nothing here' }) },
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats'), []);
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
+				assert.equal(events[1].code, 'empty_results');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
 });
 
 test('buildSearchArgs sends only declared options and paging above page one', async () => {

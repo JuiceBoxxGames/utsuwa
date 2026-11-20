@@ -145,9 +145,12 @@ export function applyImageEventToState(state: ImageSearchState, event: ImageShow
 	if (event.type === 'close') return closeImageSearch();
 	if (event.type === 'loading') return loadingImageSearch(state, event.query, event.page, event.requestId);
 	if (event.type === 'notice') {
-		// A notice explains a limit; it only makes sense while pictures are on
-		// screen, so it never opens the panel or replaces existing results.
-		return state.isOpen && state.status === 'ready' ? { ...state, notice: event.message } : state;
+		// A notice explains a limit next to the pictures. It never opens the
+		// panel; it only resolves the request it belongs to (a paging request
+		// that produced no new page), so the panel leaves "loading" instead of
+		// waiting for a result event that will never come.
+		if (!state.isOpen || event.requestId !== state.activeRequestId) return state;
+		return { ...state, status: 'ready', notice: event.message };
 	}
 	if (!state.activeRequestId || event.requestId !== state.activeRequestId) return state;
 	if (event.type === 'error' && event.code === 'cancelled') return closeImageSearch();

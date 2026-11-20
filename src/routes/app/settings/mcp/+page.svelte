@@ -45,7 +45,9 @@
 	const pictureSetup = $derived(
 		describePictureSearch(mcpStore.tools, mcpStore.imageSearchTool, toolsState)
 	);
-	const fetchSetup = $derived(describeImageFetch(mcpStore.tools, toolsState));
+	const fetchSetup = $derived(
+		describeImageFetch(mcpStore.tools, toolsState, publicEnv.PUBLIC_MCP_CONFIRM_TOOLS)
+	);
 	const confirmToolNames = $derived(parseToolNameList(publicEnv.PUBLIC_MCP_CONFIRM_TOOLS));
 	const pictureSearchTool = $derived(
 		pictureSetup.kind === 'selected' || pictureSetup.kind === 'automatic' ? pictureSetup.tool : null
@@ -93,6 +95,8 @@
 				return 'Tool list failed to load';
 			case 'ready':
 				return `Ready: ${fetchSetup.tool.serverName}`;
+			case 'blocked':
+				return 'Blocked by PUBLIC_MCP_CONFIRM_TOOLS';
 			case 'missing':
 				return 'Not configured';
 		}
@@ -474,7 +478,7 @@
 				</div>
 				<div class="doctor-row">
 					<span class="doctor-label">Image loader</span>
-					<span class="doctor-value" class:doctor-warn={fetchSetup.kind === 'missing'}>
+					<span class="doctor-value" class:doctor-warn={fetchSetup.kind === 'missing' || fetchSetup.kind === 'blocked'}>
 						{fetchStatus}
 					</span>
 				</div>

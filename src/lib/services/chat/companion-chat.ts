@@ -53,31 +53,6 @@ import { buildAdvancedParams, buildMessages, describeImagesRequest, type ChatLoo
 import { TurnStream } from '$lib/services/chat/turn-stream';
 import { pseudoCallFromTool } from '$lib/services/tts/speech-compiler';
 import { buildSpeechTools, shouldUseSpeechTools } from '$lib/services/tts/tool-definitions';
-
-/** Why the open picture popup may show placeholders, for the prompt. */
-function imagePreviewIssue(): 'ask' | 'missing' | undefined {
-	try {
-		const capability = imageFetchCapabilitySync();
-		if (!capability.available) return 'missing';
-		return capability.asksFirst ? 'ask' : undefined;
-	} catch {
-		// Prompt building must never fail because of an optional hint.
-		return undefined;
-	}
-}
-
-/**
- * Page a "more" request should search. A tool without paging must not be asked
- * for page two: with pictures already on screen the core keeps them and shows
- * a notice, otherwise the subject is searched from page one.
- */
-function wantMorePage(modelPage: number | undefined, sameQuery: boolean): number {
-	const tool = chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool).tool;
-	const canPage = !tool || supportsImagePaging(tool);
-	const galleryOpen = imageSearchStore.isOpen && imageSearchStore.results.length > 0;
-	if (!canPage && !galleryOpen) return 1;
-	return modelPage ?? (imageSearchStore.isOpen && sameQuery ? imageSearchStore.currentPage + 1 : 1);
-}
 import { env as publicEnv } from '$env/dynamic/public';
 import { isMcpHardeningEnabled, parseToolNameList } from '$lib/services/mcp/protocol';
 import { mcpStore } from '$lib/stores/mcp.svelte';
@@ -102,6 +77,31 @@ import {
 import type { McpCollectedToolCall, McpTool } from '$lib/types/mcp';
 import type { TTSProvider } from '$lib/types';
 import type { EventDefinition } from '$lib/types/events';
+
+/** Why the open picture popup may show placeholders, for the prompt. */
+function imagePreviewIssue(): 'ask' | 'missing' | undefined {
+	try {
+		const capability = imageFetchCapabilitySync();
+		if (!capability.available || capability.blocked) return 'missing';
+		return capability.asksFirst ? 'ask' : undefined;
+	} catch {
+		// Prompt building must never fail because of an optional hint.
+		return undefined;
+	}
+}
+
+/**
+ * Page a "more" request should search. A tool without paging must not be asked
+ * for page two: with pictures already on screen the core keeps them and shows
+ * a notice, otherwise the subject is searched from page one.
+ */
+function wantMorePage(modelPage: number | undefined, sameQuery: boolean): number {
+	const tool = chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool).tool;
+	const canPage = !tool || supportsImagePaging(tool);
+	const galleryOpen = imageSearchStore.isOpen && imageSearchStore.results.length > 0;
+	if (!canPage && !galleryOpen) return 1;
+	return modelPage ?? (imageSearchStore.isOpen && sameQuery ? imageSearchStore.currentPage + 1 : 1);
+}
 
 export interface CompanionChatHooks {
 	/** Toggle the typing indicator. */
