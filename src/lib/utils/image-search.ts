@@ -567,13 +567,16 @@ export function isImageRequest(text: string): boolean {
 }
 
 /**
- * Narrower than `isImageRequest`: the user names pictures explicitly. Used to
- * decide whether a missing tool or an empty query deserves a visible error,
- * so ambiguous "show me the code" stays silent.
+ * Narrower than `isImageRequest`: the user names pictures AND asks for them.
+ * Gates the recovery call and the visible errors, so "show me the code" and
+ * "I took a photo today" both stay silent.
  */
 export function isExplicitImageRequest(text: string): boolean {
-	return mentionsPictures(text);
+	return mentionsPictures(text) && ASK_FOR_PICTURES.test(text);
 }
+
+const ASK_FOR_PICTURES =
+	/\b(?:(?:show|send|find|get|give|zeig(?:e)?|schick|such(?:e)?|find(?:e)?|gib)\s+(?:me|us|mir|uns)|search|look\s+up|pull\s+up|(?:can|could|may|let)\s+(?:i|we|me|us)\s+see|(?:want|like|wanna)\s+to\s+see)\b/i;
 
 export interface ImageSearchErrorCopy {
 	message: string;
