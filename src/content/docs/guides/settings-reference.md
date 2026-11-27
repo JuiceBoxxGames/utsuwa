@@ -230,6 +230,8 @@ Settings > MCP connects Model Context Protocol servers so she can call their too
 
 Each saved server has an enable switch, **Edit server**, and **Remove server**.
 
+**Picture search** selects the MCP tool Utsuwa uses when the companion wants to show pictures. **Automatic** picks a query-taking tool; an explicit choice is never replaced silently. If no suitable tool exists, the popup shows **No picture search tool is configured yet. Choose one under Settings > MCP.**
+
 **Available Tools** lists the tools your enabled servers expose. **Refresh** reloads them. See [MCP Servers](/docs/guides/mcp).
 
 ## Memory

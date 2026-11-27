@@ -1,15 +1,9 @@
-import type { ImageSearchResult } from '$lib/utils/image-search';
 import type { ImageShowEvent } from '$lib/services/image-search/events';
 import {
 	applyImageEventToState,
 	closeImageSearch,
 	createImageSearchState,
-	describeImageSearch,
-	errorImageSearch,
 	focusImageSearch,
-	loadingImageSearch,
-	openImageSearch,
-	readyImageSearch,
 	type ImageSearchState,
 	type ImageSearchStatus,
 	type ImageSearchStoreError
@@ -21,38 +15,8 @@ export type { ImageSearchStatus, ImageSearchStoreError };
 // Svelte runes so the popup and the companion prompt see one source of truth.
 let state = $state<ImageSearchState>(createImageSearchState());
 
-export function openModal(newResults: ImageSearchResult[], query: string) {
-	state = openImageSearch(newResults, query);
-}
-
 export function closeModal() {
 	state = closeImageSearch();
-}
-
-export function setLoading(query: string, page = 1, requestId?: string) {
-	state = loadingImageSearch(query, page, requestId);
-}
-
-export function setResults(
-	newResults: ImageSearchResult[],
-	query: string,
-	page = 1,
-	requestId?: string
-) {
-	state = readyImageSearch(newResults, query, page, requestId);
-}
-
-export function setError(
-	code: ImageSearchStoreError['code'],
-	message: string,
-	query = '',
-	requestId?: string
-) {
-	state = errorImageSearch(code, message, query, requestId);
-}
-
-export function setDescription(description: string | null) {
-	state = describeImageSearch(state, description);
 }
 
 export function setFocus(index: number) {
@@ -71,11 +35,18 @@ export const imageSearchStore = {
 	get isOpen() {
 		return state.isOpen;
 	},
+	/** The panel stays on screen while the next page loads if pictures are already shown. */
+	get isVisible() {
+		return state.isOpen && (state.status !== 'loading' || state.results.length > 0);
+	},
 	get status() {
 		return state.status;
 	},
 	get error() {
 		return state.error;
+	},
+	get notice() {
+		return state.notice;
 	},
 	get currentQuery() {
 		return state.query;
@@ -86,15 +57,10 @@ export const imageSearchStore = {
 	get focusedIndex() {
 		return state.focusedIndex;
 	},
-	get currentDescription() {
-		return state.description;
+	get tool() {
+		return state.tool;
 	},
-	openModal,
 	closeModal,
-	setLoading,
-	setResults,
-	setError,
-	setDescription,
 	setFocus,
 	applyImageEvent
 };

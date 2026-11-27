@@ -18,16 +18,35 @@ import { toPromptActions } from '$lib/stores/animation-library-parser';
 import { getTTSProvider } from '$lib/services/providers/registry';
 import { buildTTSOptions } from '$lib/services/tts/tts-options';
 import { cleanSpeechMarkers, stripThinkingBlocks } from '$lib/services/tts/chat-text';
-import { streamChat } from '$lib/services/llm/transport';
+import { completeJson, streamChat } from '$lib/services/llm/transport';
 import { RETRY_DELAYS_MS } from '$lib/services/llm/retry';
 import { missingLLMMessage, resolveActiveLLM, resolveVisionLLM, visionModelEnabled } from '$lib/services/llm/active-llm';
 
 import { processCompanionTurn } from '$lib/services/chat/companion-turn';
 import { parseResponse } from '$lib/ai/response-parser';
 import { retrieveRelevantContext } from '$lib/engine/memory';
-import { buildSystemPrompt, buildMcpSecurityInstructions, truncateChatHistory, type PromptContext } from '$lib/ai/prompt-builder';
+import { buildImageIntentSystemPrompt, buildSystemPrompt, buildMcpSecurityInstructions, truncateChatHistory, type PromptContext } from '$lib/ai/prompt-builder';
 import { keepImage, type PreparedImage } from '$lib/services/storage/keepsakes';
 import { extractReminderTags, tryExtractReminderFromUserMessage } from '$lib/utils/reminders';
+import { imageSearchStore } from '$lib/stores/image-search.svelte';
+import {
+	closeImages,
+	hasConfiguredImageSearchTool,
+	imageFetchCapabilitySync,
+	isShowImagesEnabled,
+	reportImageIntentError,
+	searchImages
+} from '$lib/services/image-search';
+import {
+	chooseImageSearchTool,
+	imageQueryFromMessage,
+	isCloseImagesRequest,
+	isDedicatedPictureTool,
+	isExplicitImageRequest,
+	isMoreImagesRequest,
+	mentionsPictures,
+	supportsImagePaging
+} from '$lib/utils/image-search';
 import { reminderStore } from '$lib/stores/reminders.svelte';
 import { getWorkingMemory, ensureSession } from '$lib/engine/memory-session';
 import { buildAdvancedParams, buildMessages, describeImagesRequest, type ChatLoopMessage } from '$lib/services/chat/turn-context';
@@ -58,6 +77,31 @@ import {
 import type { McpCollectedToolCall, McpTool } from '$lib/types/mcp';
 import type { TTSProvider } from '$lib/types';
 import type { EventDefinition } from '$lib/types/events';
+
+/** Why the open picture popup may show placeholders, for the prompt. */
+function imagePreviewIssue(): 'ask' | 'missing' | undefined {
+	try {
+		const capability = imageFetchCapabilitySync();
+		if (!capability.available || capability.blocked) return 'missing';
+		return capability.asksFirst ? 'ask' : undefined;
+	} catch {
+		// Prompt building must never fail because of an optional hint.
+		return undefined;
+	}
+}
+
+/**
+ * Page a "more" request should search. A tool without paging must not be asked
+ * for page two: with pictures already on screen the core keeps them and shows
+ * a notice, otherwise the subject is searched from page one.
+ */
+function wantMorePage(modelPage: number | undefined, sameQuery: boolean): number {
+	const tool = chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool).tool;
+	const canPage = !tool || supportsImagePaging(tool);
+	const galleryOpen = imageSearchStore.isOpen && imageSearchStore.results.length > 0;
+	if (!canPage && !galleryOpen) return 1;
+	return modelPage ?? (imageSearchStore.isOpen && sameQuery ? imageSearchStore.currentPage + 1 : 1);
+}
 
 export interface CompanionChatHooks {
 	/** Toggle the typing indicator. */
@@ -98,6 +142,12 @@ async function buildCompanionPrompt(
 		userMessage,
 		systemTime: new Date(),
 		hasImages,
+		showImagesEnabled: isShowImagesEnabled(),
+		imageSearchAvailable: hasConfiguredImageSearchTool(),
+		imageModalOpen: imageSearchStore.isVisible,
+		imageModalQuery: imageSearchStore.isVisible ? imageSearchStore.currentQuery : undefined,
+		imageModalPage: imageSearchStore.isVisible ? imageSearchStore.currentPage : undefined,
+		imagePreviewIssue: imageSearchStore.isVisible ? imagePreviewIssue() : undefined,
 		contextSize,
 		pendingReminders: reminderStore.upcoming.map((r) => ({ triggerAt: r.triggerAt, content: r.content })),
 		sessionStartedAt: workingMemory.sessionStartedAt,
@@ -127,6 +177,8 @@ export interface SendCompanionMessageOptions {
 	stallTimeoutMs?: number;
 	/** Hard cap on the whole turn. */
 	turnTimeoutMs?: number;
+	/** Cap for the query-only picture recovery call. */
+	imageRecoveryTimeoutMs?: number;
 }
 
 let activeTurn: AbortController | null = null;
@@ -136,13 +188,77 @@ export function cancelActiveTurn() {
 	activeTurn?.abort(new Error('Stopped'));
 }
 
+type ImageIntentRecovery =
+	| { status: 'declined' }
+	| { status: 'failed' }
+	| {
+			status: 'intent';
+			imageSearch?: string;
+			imagePage?: number;
+			closeImages?: boolean;
+	  };
+
+/** Recovery must not keep the composer locked behind a hanging provider. */
+const IMAGE_RECOVERY_TIMEOUT_MS = 8_000;
+
+/**
+ * Query-only recovery when native speech tools swallowed the state block.
+ * It never asks for URLs and never runs a search tool. A valid answer without
+ * picture fields is `declined`; only a failed call is `failed`, so the caller
+ * never overrides the model's explicit "no".
+ */
+async function recoverImageIntent(
+	content: string,
+	llm: NonNullable<ReturnType<typeof resolveActiveLLM>>,
+	signal: AbortSignal,
+	currentQuery?: string,
+	currentPage?: number,
+	timeoutMs = IMAGE_RECOVERY_TIMEOUT_MS
+): Promise<ImageIntentRecovery> {
+	const controller = new AbortController();
+	const timer = setTimeout(
+		() => controller.abort(new Error('Image intent recovery timed out')),
+		timeoutMs
+	);
+	const forwardAbort = () => controller.abort(signal.reason);
+	if (signal.aborted) controller.abort(signal.reason);
+	else signal.addEventListener('abort', forwardAbort, { once: true });
+	try {
+		const extracted = await completeJson({
+			...llm,
+			system: buildImageIntentSystemPrompt(),
+			user: `User: ${content}
+Currently open picture popup: ${currentQuery ?? 'none'} (page ${currentPage ?? 1}).`,
+			maxTokens: 180,
+			signal: controller.signal
+		});
+		if (!extracted) return { status: 'failed' };
+		const parsed = parseResponse(extracted);
+		if (!parsed.imageSearch && !parsed.closeImages) return { status: 'declined' };
+		return {
+			status: 'intent',
+			imageSearch: parsed.imageSearch,
+			imagePage: parsed.imagePage,
+			closeImages: parsed.closeImages
+		};
+	} finally {
+		clearTimeout(timer);
+		signal.removeEventListener('abort', forwardAbort);
+	}
+}
+
 export async function sendCompanionMessage(
 	content: string,
 	images: PreparedImage[],
 	hooks: CompanionChatHooks,
 	options: SendCompanionMessageOptions = {}
 ): Promise<void> {
-	const { systemEvent = false, stallTimeoutMs = 90_000, turnTimeoutMs = 600_000 } = options;
+	const {
+		systemEvent = false,
+		stallTimeoutMs = 90_000,
+		turnTimeoutMs = 600_000,
+		imageRecoveryTimeoutMs = IMAGE_RECOVERY_TIMEOUT_MS
+	} = options;
 	if (!content.trim() && images.length === 0) return;
 
 	// A voice transcript can land while a reply (or a reminder turn) is still
@@ -205,6 +321,12 @@ export async function sendCompanionMessage(
 		const { provider } = llm;
 
 		const contextSize = consciousnessSettings.contextSize || undefined;
+
+		// Tool discovery must finish before the prompt is built: the image layer
+		// and MCP security text depend on the actual capability/tool snapshot.
+		const { mcpTools, mcpToolNames, confirmToolNames, security } = await untilAborted(
+			prepareMcpTurn(provider, systemEvent ? '' : content)
+		);
 
 		let systemPrompt = await untilAborted(buildCompanionPrompt(
 			content,
@@ -292,7 +414,6 @@ export async function sendCompanionMessage(
 			stream.delta(roundFull);
 		};
 
-		const { mcpTools, mcpToolNames, confirmToolNames, security } = await prepareMcpTurn(provider);
 		const useMcpLoop = mcpTools.length > 0;
 		// Added before truncation so the layer counts against the context budget.
 		if (security) systemPrompt += '\n\n' + security;
@@ -382,7 +503,8 @@ export async function sendCompanionMessage(
 			const settled = await untilAborted(Promise.allSettled(
 				run.map((call) => runToolCall(call, mcpTools, mcpToolNames, confirmToolNames, signal))
 			));
-			messages.push(...buildToolResultMessages(collectToolResults(settled, run, skipped)));
+			const toolEntries = collectToolResults(settled, run, skipped);
+			messages.push(...buildToolResultMessages(toolEntries));
 		}
 
 		// Native dialogue is kept in the saved response here, not replayed
@@ -421,7 +543,7 @@ export async function sendCompanionMessage(
 			companionResponse: cleanedCompanionResponse,
 			llm: { ...llm, hasImages: images.length > 0 },
 			systemEvent,
-			debug: import.meta.env.DEV
+			showImagesEnabled: isShowImagesEnabled(),
 		}));
 
 		if (directReminder) await scheduleReminderFallback(directReminder, fullContent);
@@ -429,14 +551,113 @@ export async function sendCompanionMessage(
 		hooks.onNewMemory?.(turn.newMemory);
 		if (turn.triggeredEvent) hooks.setActiveEvent(turn.triggeredEvent);
 
-		// turn.dialogue is already clean for OmniVoice because companionResponse
-		// was stripped of speak()/gesture() syntax before processCompanionTurn.
 		const displayDialogue = turn.dialogue;
+
+		// The model hands image intent over as a query in the state JSON. The app
+		// runs the configured MCP search tool and publishes structured results.
+		// A clear close request is honored even when the model forgets the field.
+		let imageSearch = turn.imageSearch;
+		let imagePage = turn.imagePage;
+		let closeRequested = turn.closeImages || isCloseImagesRequest(content);
+		let recovery: ImageIntentRecovery | null = null;
+		const canRecover =
+			!systemEvent &&
+			!imageSearch &&
+			!closeRequested &&
+			isShowImagesEnabled() &&
+			hasConfiguredImageSearchTool() &&
+			// Only an explicit picture request (or a model reply that talks
+			// about pictures it forgot to set) is worth the extra provider call.
+			// A bare "show me ..." would run the recovery on every such turn and
+			// delay the reply by up to the recovery timeout.
+			(isExplicitImageRequest(content) ||
+				isMoreImagesRequest(content) ||
+				mentionsPictures(displayDialogue));
+		if (canRecover) {
+			try {
+				recovery = await untilAborted(
+					recoverImageIntent(
+						content,
+						llm,
+						signal,
+						imageSearchStore.isOpen ? imageSearchStore.currentQuery : undefined,
+						imageSearchStore.isOpen ? imageSearchStore.currentPage : undefined,
+						imageRecoveryTimeoutMs
+					)
+				);
+				if (recovery.status === 'intent') {
+					if (recovery.closeImages) closeRequested = true;
+					if (recovery.imageSearch) {
+						imageSearch = recovery.imageSearch;
+						imagePage = recovery.imagePage;
+					}
+				}
+			} catch (err) {
+				if (signal.aborted) throw err;
+				recovery = { status: 'failed' };
+			}
+		}
+		if (!closeRequested && !imageSearch && isMoreImagesRequest(content) && imageSearchStore.isOpen && imageSearchStore.currentQuery) {
+			imageSearch = imageSearchStore.currentQuery;
+			imagePage = imageSearchStore.currentPage + 1;
+		}
+		if (
+			!closeRequested &&
+			!imageSearch &&
+			!systemEvent &&
+			recovery?.status === 'failed' &&
+			// Only an explicit picture request may fall back to the user's own
+			// wording. "Show me the code" is not a picture wish; a failed
+			// recovery must not start a search for it.
+			isExplicitImageRequest(content) &&
+			!isMoreImagesRequest(content)
+		) {
+			// The recovery call failed and the model named no subject. Only then
+			// may the user's own wording stand in; a successful recovery that
+			// declined picture intent is never overridden.
+			const fallback = imageQueryFromMessage(content);
+			if (fallback) {
+				imageSearch = fallback;
+				imagePage = undefined;
+			}
+		}
+		if (closeRequested) closeImages();
+		else if (
+			!imageSearch &&
+			!systemEvent &&
+			isShowImagesEnabled() &&
+			!hasConfiguredImageSearchTool() &&
+			isExplicitImageRequest(content)
+		) {
+			const choice = chooseImageSearchTool(mcpStore.tools, mcpStore.imageSearchTool);
+			reportImageIntentError('', choice.error ?? 'no_tool');
+		} else if (
+			!imageSearch &&
+			!systemEvent &&
+			isShowImagesEnabled() &&
+			canRecover &&
+			(recovery?.status !== 'declined' || isMoreImagesRequest(content)) &&
+			isExplicitImageRequest(content)
+		) {
+			// The model asked for pictures or a page but supplied no subject. Show
+			// the error instead of silently doing nothing. A recovery answer that
+			// explicitly declined picture intent stays silent.
+			reportImageIntentError('', 'empty_query');
+		} else if (imageSearch && isShowImagesEnabled()) {
+			const sameQuery =
+				imageSearchStore.currentQuery.trim().toLowerCase() === imageSearch.trim().toLowerCase();
+			const wantsMore = isMoreImagesRequest(content);
+			// Only an explicit "more" may advance the page. Models sometimes set
+			// image_page for "show me those again", which would make a non-paging
+			// tool fail with no_paging instead of showing the pictures again.
+			const nextPage = wantsMore ? wantMorePage(imagePage, sameQuery) : 1;
+			void searchImages(imageSearch, nextPage);
+		}
 
 		chatStore.updateLastMessage(displayDialogue);
 		hooks.setLatestResponse(displayDialogue);
 
-		if (turn.dialogue) {
+		if (displayDialogue) {
 			// During OmniVoice streaming the avatar is driven by ttsStore.isSpeaking
 			// and the real audio analyser, so a text-length estimate would desync.
 			// Only fall back to the estimated talking timer for non-streaming paths.
@@ -445,7 +666,7 @@ export async function sendCompanionMessage(
 			}
 
 			if (speechState?.enabled && !streamingTTS) {
-				ttsStore.speak(turn.dialogue, ttsOptions);
+				ttsStore.speak(displayDialogue, ttsOptions);
 			}
 		}
 
@@ -507,7 +728,7 @@ function startTurnGuard(stallTimeoutMs: number, turnTimeoutMs: number) {
 // never touch MCP see the exact same chat behavior as before.
 // Anthropic requests carry no tool definitions at all, so MCP stays out
 // of that path.
-async function prepareMcpTurn(provider: string) {
+async function prepareMcpTurn(provider: string, content: string) {
 	const mcpConfigured = mcpStore.servers.some((s) => s.enabled);
 	if (mcpConfigured) {
 		try {
@@ -521,9 +742,29 @@ async function prepareMcpTurn(provider: string) {
 	const enabledServerIds = new Set(
 		mcpStore.servers.filter((s) => s.enabled).map((s) => s.id)
 	);
+	// Picture search is app-driven: the model only sets a query in its state
+	// JSON. Dedicated picture tools stay hidden so models do not call them
+	// themselves and narrate the call twice. General web search stays
+	// available, except on a picture turn where the app already searches.
+	// Narrow on purpose: "find me a hotel" is a web-search turn, not a picture
+	// turn, and keeping its search tool matters.
+	const imageTurn = isExplicitImageRequest(content) || isMoreImagesRequest(content);
+	const selectedImageTool = chooseImageSearchTool(
+		mcpStore.tools,
+		mcpStore.imageSearchTool
+	).tool;
 	const mcpTools =
 		mcpConfigured && provider !== 'anthropic' && mcpStore.hasActiveTools
-			? mcpStore.tools.filter((tool) => enabledServerIds.has(tool.serverId))
+			? mcpStore.tools.filter(
+					(tool) =>
+						enabledServerIds.has(tool.serverId) &&
+						!isDedicatedPictureTool(tool) &&
+						!(
+							imageTurn &&
+							selectedImageTool?.serverId === tool.serverId &&
+							selectedImageTool.name === tool.name
+						)
+				)
 			: [];
 	// Hardening is on unless opted out: tool results are untrusted data and
 	// state-changing actions need an explicit user request.

@@ -5,6 +5,12 @@ import { stripThinkingBlocks } from './thinking-blocks.ts';
 export interface ParsedResponse {
 	dialogue: string;
 	stateUpdates: Partial<StateUpdates> | null;
+	/** Search query for pictures the companion wants to show (app resolves it). */
+	imageSearch?: string;
+	/** 1-based page for "show me more"; unset means the first page. */
+	imagePage?: number;
+	/** True when the companion is closing the image popup this turn. */
+	closeImages?: boolean;
 	parseError?: string;
 }
 
@@ -24,6 +30,9 @@ interface LLMStateOutput {
 	triggered_event?: string | null;
 	action?: string | null;
 	expression?: string | null;
+	image_search?: string | null;
+	image_page?: number | null;
+	close_images?: boolean | null;
 }
 
 // Animation ids the model may name in "action"; the library checks it exists
@@ -124,7 +133,7 @@ function cutHallucinatedTurn(text: string, companionName?: string): string {
 
 // JSON objects we care about carry at least one of these keys.
 const STATE_KEY_RE =
-	/"(?:mood_change|affection_delta|trust_delta|intimacy_delta|comfort_delta|respect_delta|new_memory)"/;
+	/"(?:mood_change|affection_delta|trust_delta|intimacy_delta|comfort_delta|respect_delta|new_memory|image_search|image_page|close_images)"/;
 
 // Reasoning models (R1-style) emit a scratchpad before the answer. Strip it so
 // the trace never reaches the chat bubble or the JSON parser. Handles the
@@ -171,6 +180,15 @@ function findStateObject(text: string): string | null {
 // strips // and /* */ comments and trailing commas, then falls back to pulling
 // the first balanced object out of surrounding prose.
 function tryParseJson(text: string): LLMStateOutput | null {
+	// Parse the raw text first: it is valid JSON most of the time, and the
+	// comment/trailing-comma repair below would otherwise corrupt values that
+	// contain "//" — state values can contain URLs.
+	const direct = text.trim();
+	try {
+		return JSON.parse(direct) as LLMStateOutput;
+	} catch {
+		/* fall through to the repaired form */
+	}
 	const repaired = text
 		.replace(/\/\/[^\n\r]*/g, '')
 		.replace(/\/\*[\s\S]*?\*\//g, '')
@@ -199,6 +217,7 @@ export function parseResponse(rawResponse: string, companionName?: string): Pars
 	const raw = stripReasoning(rawResponse);
 	let dialogue = raw.trim();
 	let stateUpdates: Partial<StateUpdates> | null = null;
+	let llmOutput: LLMStateOutput | null = null;
 	let parseError: string | undefined;
 
 	// Prefer a fenced ```json block; otherwise grab the first bare JSON object
@@ -207,6 +226,7 @@ export function parseResponse(rawResponse: string, companionName?: string): Pars
 	if (fenced) {
 		const parsed = tryParseJson(fenced[1]);
 		if (parsed) {
+			llmOutput = parsed;
 			stateUpdates = convertLLMOutput(parsed);
 		} else {
 			parseError = 'Failed to parse JSON state block';
@@ -224,6 +244,7 @@ export function parseResponse(rawResponse: string, companionName?: string): Pars
 		if (obj) {
 			const parsed = tryParseJson(obj);
 			if (parsed) {
+				llmOutput = parsed;
 				stateUpdates = convertLLMOutput(parsed);
 				dialogue = raw.replace(obj, '').trim();
 			}
@@ -231,7 +252,26 @@ export function parseResponse(rawResponse: string, companionName?: string): Pars
 	}
 
 	dialogue = cleanDialogue(dialogue, companionName);
-	return { dialogue, stateUpdates, parseError };
+	return { dialogue, stateUpdates, ...extractImageIntent(llmOutput), parseError };
+}
+
+// Image intent rides in the state JSON. `image_search` is a short query the app
+// resolves through the configured MCP picture tool; `image_page` asks for the
+// next page ("show me more"). No model-supplied URLs are accepted.
+function extractImageIntent(
+	output: LLMStateOutput | null
+): Pick<ParsedResponse, 'imageSearch' | 'imagePage' | 'closeImages'> {
+	const query = typeof output?.image_search === 'string' ? output.image_search.trim() : '';
+	const rawPage = output?.image_page;
+	const page =
+		typeof rawPage === 'number' && Number.isFinite(rawPage)
+			? Math.max(1, Math.min(10, Math.floor(rawPage)))
+			: undefined;
+	return {
+		imageSearch: query || undefined,
+		imagePage: page && page > 1 ? page : undefined,
+		closeImages: output?.close_images === true ? true : undefined
+	};
 }
 
 // Convert LLM output format to our StateUpdates format
@@ -381,6 +421,11 @@ function cleanDialogue(text: string, companionName?: string): string {
 	// Clean up whitespace
 	cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 	cleaned = cleaned.trim();
+
+	// Some models repeat the whole reply verbatim, often after a native speech
+	// tool call. Collapse an exact doubled block; short emphatic repeats stay.
+	const doubled = cleaned.match(/^([\s\S]{20,}?)\s+\1$/i);
+	if (doubled) cleaned = doubled[1].trim();
 
 	// If we stripped everything, return a fallback
 	if (!cleaned) {

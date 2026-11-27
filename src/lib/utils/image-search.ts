@@ -3,6 +3,8 @@
  * model supplies only a query in its state JSON; the app searches through MCP
  * and builds the structured results here.
  */
+import type { ImageSearchErrorCode } from '$lib/services/image-search/events';
+import { parseToolNameList } from './tool-names.ts';
 import { isRasterImageDataUrl, isRasterImageMimeType } from './image-mime.ts';
 export { isRasterImageMimeType } from './image-mime.ts';
 
@@ -24,6 +26,101 @@ export function extractHostname(url: string): string {
 	}
 }
 
+/**
+ * True when a result URL points at image bytes we can show, rather than at a
+ * source page. Page URLs are the common case for search tools, so the popup
+ * must not promise "open picture" for them.
+ */
+export function isDirectImageUrl(url: string): boolean {
+	if (isRasterImageDataUrl(url)) return true;
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+		return /\.(?:jpe?g|png|webp|gif|avif|bmp)$/i.test(parsed.pathname);
+	} catch {
+		return false;
+	}
+}
+
+/** Honest label for the per-card open action. */
+export function imageOpenLabel(url: string): 'Open picture' | 'Open source' {
+	return isDirectImageUrl(url) ? 'Open picture' : 'Open source';
+}
+
+/** True when a tool name appears in the comma-separated PUBLIC_MCP_CONFIRM_TOOLS list. */
+export function isToolOnConfirmList(toolName: string, raw: string | undefined | null): boolean {
+	return parseToolNameList(raw).includes(toolName);
+}
+
+/** Pictures shown per request; also the step for tools that only take a count. */
+export const IMAGE_PAGE_SIZE = 12;
+
+/** Hard cap on pages, shared by the core clamp and the panel button. */
+export const MAX_IMAGE_PAGE = 10;
+
+const PAGE_ARGS = ['pageno', 'page', 'page_number'] as const;
+const COUNT_ARGS = ['count', 'limit', 'per_page', 'max_results'] as const;
+
+/**
+ * How a tool answers a request for more pictures:
+ * - `page`: a page argument selects the next page.
+ * - `count`: no page argument exists; a larger `count` returns a longer list
+ *   (Brave image search works this way) and the app shows the next slice.
+ */
+export type ImagePaging =
+	| { kind: 'page'; arg: (typeof PAGE_ARGS)[number] }
+	| { kind: 'count'; arg: (typeof COUNT_ARGS)[number]; max: number };
+
+export type CountImagePaging = Extract<ImagePaging, { kind: 'count' }>;
+
+function declaredMax(schema: unknown): number {
+	const record = schema && typeof schema === 'object' ? (schema as Record<string, unknown>) : {};
+	const max = record.maximum;
+	// Without a declared maximum, stay near the common default so an unknown
+	// tool is not asked for a count it may reject.
+	return typeof max === 'number' && Number.isFinite(max) && max >= 1 ? Math.floor(max) : 50;
+}
+
+/** The paging strategy of the selected picture tool, or null when it has none. */
+export function imagePaging(
+	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined
+): ImagePaging | null {
+	const props = tool?.inputSchema?.properties;
+	if (!props) return null;
+	for (const arg of PAGE_ARGS) if (arg in props) return { kind: 'page', arg };
+	for (const arg of COUNT_ARGS) {
+		if (arg in props) return { kind: 'count', arg, max: declaredMax(props[arg]) };
+	}
+	return null;
+}
+
+/** True when the selected search tool can request another result page. */
+export function supportsImagePaging(
+	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined
+): boolean {
+	return imagePaging(tool) !== null;
+}
+
+/** Count a count-based tool must receive for a page. */
+export function countForPage(paging: CountImagePaging, page: number): number {
+	return Math.min(paging.max, IMAGE_PAGE_SIZE * Math.max(1, Math.floor(page)));
+}
+
+/**
+ * True when asking for the next page can actually return new pictures. A
+ * count-based tool whose declared maximum is already reached for the current
+ * page would return the same list again, so the button must not be offered.
+ */
+export function canLoadMoreImages(
+	tool: { inputSchema?: { properties?: Record<string, unknown> } } | null | undefined,
+	page: number
+): boolean {
+	const paging = imagePaging(tool);
+	if (!paging || page >= MAX_IMAGE_PAGE) return false;
+	if (paging.kind === 'page') return true;
+	return countForPage(paging, page + 1) > countForPage(paging, page);
+}
+
 /** Build a safe `data:` URL from a raster image block, or "" when unsupported. */
 export function toDataUrl(mimeType: string, base64: string): string {
 	if (!base64 || !isRasterImageMimeType(mimeType)) return '';
@@ -36,9 +133,9 @@ const IMAGE_URL_RE = /https?:\/\/[^\s"'<>\\]+\.(?:jpe?g|png|webp|gif|avif|bmp)(?
 
 /**
  * Pull direct image URLs out of a search tool result — JSON (img_src/thumbnail
- * fields) or plain text (any image-extension URL). De-duped, capped at 12.
+ * fields) or plain text (any image-extension URL). De-duped, capped at `limit`.
  */
-export function extractImageUrls(text: string): string[] {
+export function extractImageUrls(text: string, limit = IMAGE_PAGE_SIZE): string[] {
 	const found = new Set<string>();
 	const add = (value: unknown) => {
 		if (typeof value === 'string' && /^https?:\/\//i.test(value)) found.add(value.trim());
@@ -72,7 +169,7 @@ export function extractImageUrls(text: string): string[] {
 	for (const match of text.matchAll(/(?:Image Source|Image URL|Thumbnail)\s*:\s*(https?:\/\/[^\s]+)/gi)) {
 		found.add(match[1]);
 	}
-	return [...found].slice(0, 12);
+	return [...found].slice(0, limit);
 }
 
 const PAGE_URL_KEYS = ['url', 'link', 'href', 'page_url', 'pageUrl', 'source_url', 'sourceUrl'];
@@ -168,7 +265,8 @@ function collectResultRecords(data: unknown): Record<string, unknown>[] {
  */
 export function parseImageResults(
 	content: string,
-	images: Array<{ mimeType: string; data: string }> = []
+	images: Array<{ mimeType: string; data: string }> = [],
+	limit = IMAGE_PAGE_SIZE
 ): ImageSearchResult[] {
 	const results: ImageSearchResult[] = [];
 	const seen = new Set<string>();
@@ -221,27 +319,27 @@ export function parseImageResults(
 			...(license && { license }),
 			...(attribution && { attribution })
 		});
-		if (results.length >= 12) return results;
+		if (results.length >= limit) return results;
 	}
 
 	if (!results.length) {
-		for (const url of extractImageUrls(content)) {
+		for (const url of extractImageUrls(content, limit)) {
 			push({
 				title: extractHostname(url),
 				url,
 				thumbnail: url,
 				source: extractHostname(url)
 			});
-			if (results.length >= 12) return results;
+			if (results.length >= limit) return results;
 		}
 	}
 
 	// Some search servers return image content blocks instead of links.
-	for (const image of images.slice(0, 12 - results.length)) {
+	for (const image of images.slice(0, limit - results.length)) {
 		const dataUrl = toDataUrl(image.mimeType, image.data);
 		push({ title: 'Image', url: dataUrl, thumbnail: dataUrl, source: 'MCP image' });
 	}
-	return results.slice(0, 12);
+	return results.slice(0, limit);
 }
 
 // ── Choosing an image-search MCP tool ────────────────────────────────────────
@@ -254,7 +352,7 @@ export interface SearchToolLike {
 	inputSchema?: { properties?: Record<string, unknown> };
 }
 
-const QUERY_KEYS = ['query', 'q', 'search', 'term', 'prompt'];
+const QUERY_KEYS = ['query', 'q', 'search', 'term', 'prompt', 'english_search_sentence'];
 
 /** The parameter a tool uses for the search text, or null if it takes no query. */
 export function queryArgKey(tool: SearchToolLike): string | null {
@@ -275,11 +373,24 @@ export function isPictureSearchTool(tool: SearchToolLike): boolean {
 	if (!queryArgKey(tool)) return false;
 	const name = tool.name.toLowerCase();
 	if (NON_PICTURE_TOOL_RE.test(name)) return false;
+	const props = tool.inputSchema?.properties ?? {};
+	// Reverse image search takes a reference picture instead of a subject, so it
+	// answers a text-only query with instructions rather than results.
+	if (['image_url', 'image_file', 'image_base64', 'photo_id'].some((key) => key in props)) return false;
 	const text = `${name} ${tool.description ?? ''}`;
 	if (PICTURE_HINT_RE.test(text)) return true;
 	// SearXNG's general web tool is image-capable through its categories option.
-	const props = tool.inputSchema?.properties ?? {};
 	return name === 'searxng_web_search' || ('categories' in props && 'response_format' in props);
+}
+
+/**
+ * A picture-only tool (image search, stock photos). General web search tools
+ * such as `searxng_web_search` stay available to the model; only these
+ * dedicated tools are hidden because the app drives them.
+ */
+export function isDedicatedPictureTool(tool: SearchToolLike): boolean {
+	if (!isPictureSearchTool(tool)) return false;
+	return /(image|photo|picture|bild|foto|stock|pexafy|unsplash|pexels|pixabay)/i.test(tool.name);
 }
 
 /** Lower is a better image-search candidate; null means "not a candidate". */
@@ -332,11 +443,108 @@ export function chooseImageSearchTool<T extends SearchToolLike & { serverId: str
 	return tool ? { tool, error: null } : { tool: null, error: 'no_tool' };
 }
 
+/** MCP tool name used to fetch a single image (the filefetcher server). */
+export const IMAGE_FETCH_TOOL = 'fetch_file_from_url';
+
+/** Snapshot of MCP tool discovery, used by the settings doctor. */
+export interface PictureSearchState {
+	loading: boolean;
+	mcpEnabled: boolean;
+	enabledServers: number;
+	toolsError: boolean;
+}
+
+export type PictureSearchSetup<T extends SearchToolLike & { serverId: string }> =
+	| { kind: 'checking' }
+	| { kind: 'mcp_disabled' }
+	| { kind: 'no_server' }
+	| { kind: 'load_failed' }
+	| { kind: 'selected'; tool: T }
+	| { kind: 'automatic'; tool: T }
+	| { kind: 'selection_unsupported'; selection: ImageSearchToolSelection }
+	| { kind: 'selection_missing'; selection: ImageSearchToolSelection }
+	| { kind: 'no_tool' };
+
+/**
+ * Explain what the app will do for picture search, including states the
+ * dropdown alone cannot show (loading, unavailable selection, no candidates).
+ * Loading wins over every other state so a refresh never flashes an error.
+ */
+export function describePictureSearch<T extends SearchToolLike & { serverId: string }>(
+	tools: T[],
+	selection: ImageSearchToolSelection | null,
+	state: PictureSearchState
+): PictureSearchSetup<T> {
+	if (state.loading) return { kind: 'checking' };
+	if (!state.mcpEnabled) return { kind: 'mcp_disabled' };
+	if (state.enabledServers === 0) return { kind: 'no_server' };
+	if (state.toolsError) return { kind: 'load_failed' };
+	if (selection) {
+		const tool = tools.find(
+			(entry) => entry.serverId === selection.serverId && entry.name === selection.toolName
+		);
+		if (!tool) return { kind: 'selection_missing', selection };
+		if (!isPictureSearchTool(tool)) return { kind: 'selection_unsupported', selection };
+		return { kind: 'selected', tool };
+	}
+	const tool = pickSearchTool(tools);
+	return tool ? { kind: 'automatic', tool } : { kind: 'no_tool' };
+}
+
+export type ImageFetchSetup<T extends SearchToolLike & { serverId: string }> =
+	| { kind: 'checking' }
+	| { kind: 'mcp_disabled' }
+	| { kind: 'no_server' }
+	| { kind: 'load_failed' }
+	| { kind: 'ready'; tool: T }
+	| { kind: 'blocked'; tool: T }
+	| { kind: 'missing' };
+
+/** Whether the optional file-fetch tool is available for thumbnails. */
+export function describeImageFetch<T extends SearchToolLike & { serverId: string }>(
+	tools: T[],
+	state: PictureSearchState,
+	confirmList?: string | null
+): ImageFetchSetup<T> {
+	if (state.loading) return { kind: 'checking' };
+	if (!state.mcpEnabled) return { kind: 'mcp_disabled' };
+	if (state.enabledServers === 0) return { kind: 'no_server' };
+	if (state.toolsError) return { kind: 'load_failed' };
+	const tool = tools.find((entry) => entry.name === IMAGE_FETCH_TOOL);
+	if (!tool) return { kind: 'missing' };
+	// A confirmation-listed tool cannot run automatically, so previews never
+	// load; report the real cause instead of "ready".
+	if (isToolOnConfirmList(IMAGE_FETCH_TOOL, confirmList)) return { kind: 'blocked', tool };
+	return { kind: 'ready', tool };
+}
+
+/**
+ * Last-resort subject for a picture request when the model and the recovery
+ * call both failed to produce a query. Keeps the user's own words, minus the
+ * request scaffolding ("show me pictures of ...").
+ */
+export function imageQueryFromMessage(text: string): string {
+	return text
+		.replace(/\b(?:please\s+)?(?:show|zeig(?:e)?|schick|send|find|such)\s+(?:me|mir)\b/gi, ' ')
+		.replace(/\b(?:some|a few|ein paar|bitte)\b/gi, ' ')
+		.replace(/\b(?:pictures?|images?|photos?|bilder?|fotos?)\b\s*(?:of|von|über|about)?/gi, ' ')
+		.replace(/\s+/g, ' ')
+		.replace(/^[\s,;:–-]+|[\s,;:.!?–-]+$/g, '')
+		.trim();
+}
+
+/** True when a text names pictures (user request or model reply). */
+export function mentionsPictures(text: string): boolean {
+	return /\b(pictures?|images?|photos?|bilder?|fotos?)\b/i.test(text);
+}
+
 /** True when the user clearly asks to close the picture popup. */
 export function isCloseImagesRequest(text: string): boolean {
 	const value = text.toLowerCase();
 	const close = /\b(close|hide|dismiss|schlie(?:ß|ss)|mach.*zu|zumachen|beende|ausblenden)/.test(value);
-	const target = /\b(pictures?|images?|photos?|bilder?|fotos?|popup|fenster)/.test(value);
+	// "Fenster" alone is too broad: "close the window" may mean the browser
+	// window or a dialog. Only picture words and the popup name count.
+	const target = /\b(pictures?|images?|photos?|bilder?|fotos?|popup)/.test(value);
 	return close && target;
 }
 
@@ -356,4 +564,65 @@ export function isImageRequest(text: string): boolean {
 	// "show me / zeig mir ..." covers requests like "Zeig mir süße Hunde"
 	// without treating ordinary "I see..." or "send it" as picture intent.
 	return /\b(?:show|zeig(?:e)?|schick|send|find|such)\s+(?:me|mir)\b/i.test(text);
+}
+
+/**
+ * Narrower than `isImageRequest`: the user names pictures explicitly. Used to
+ * decide whether a missing tool or an empty query deserves a visible error,
+ * so ambiguous "show me the code" stays silent.
+ */
+export function isExplicitImageRequest(text: string): boolean {
+	return mentionsPictures(text);
+}
+
+export interface ImageSearchErrorCopy {
+	message: string;
+	/** True when the fix lives under Settings > MCP. */
+	settings: boolean;
+}
+
+/** Plain-language copy for the popup; the raw detail stays in the console. */
+export function imageSearchErrorCopy(
+	code: ImageSearchErrorCode,
+	query = ''
+): ImageSearchErrorCopy {
+	switch (code) {
+		case 'no_tool':
+			return {
+				message: 'No picture search tool is configured yet. Choose one under Settings > MCP.',
+				settings: true
+			};
+		case 'tool_unavailable':
+			return {
+				message: 'The selected picture search tool is unavailable. Check Settings > MCP.',
+				settings: true
+			};
+		case 'empty_query':
+			return {
+				message: 'That picture request had no subject. Ask for something specific, like "cute cats".',
+				settings: false
+			};
+		case 'no_paging':
+			return {
+				message: 'This picture tool cannot load more results. Try a different subject.',
+				settings: false
+			};
+		case 'confirm_required':
+			return {
+				message:
+					'This picture tool requires manual confirmation and cannot run automatically. Remove it from PUBLIC_MCP_CONFIRM_TOOLS or choose another tool.',
+				settings: true
+			};
+		case 'empty_results':
+			return {
+				message: query
+					? `No pictures found for "${query}". Try a different subject.`
+					: 'No pictures found. Try a different subject.',
+				settings: false
+			};
+		case 'cancelled':
+			return { message: 'Picture search cancelled.', settings: false };
+		default:
+			return { message: 'The picture search failed. Try again in a moment.', settings: false };
+	}
 }

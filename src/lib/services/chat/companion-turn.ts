@@ -27,8 +27,8 @@ export interface CompanionTurnInput {
 	// specific side effects like sentiment analysis, baseline stat updates,
 	// streak/interaction counting and fact extraction from the trigger text.
 	systemEvent?: boolean;
-	// DEV-only console logging of the raw/parsed model output.
-	debug?: boolean;
+	// Adds query-only picture fields to the generic extraction fallback.
+	showImagesEnabled?: boolean;
 }
 
 export interface CompanionTurnResult {
@@ -36,8 +36,18 @@ export interface CompanionTurnResult {
 	dialogue: string;
 	// Memory the model produced this turn, if any (the app attaches it to kept photos).
 	newMemory?: string;
+	// Search query for pictures she wants to show this turn (app resolves it).
+	imageSearch?: string;
+	// 1-based page for "show me more".
+	imagePage?: number;
+	// True when she is closing the image popup this turn.
+	closeImages?: boolean;
 	// An event that should be shown after this turn, if one triggered.
 	triggeredEvent: EventDefinition | null;
+}
+
+function buildExtractionUser(userMessage: string, dialogue: string): string {
+	return [`User: ${userMessage}`, `Companion: ${dialogue}`, 'Return the JSON.'].join('\n\n');
 }
 
 // Runs the full companion turn: parse the model output (with a forced-JSON
@@ -48,7 +58,7 @@ export interface CompanionTurnResult {
 // extraction fallback). Page-specific side effects — showing the event modal,
 // keeping photos — stay in the pages via the return value.
 export async function processCompanionTurn(input: CompanionTurnInput): Promise<CompanionTurnResult> {
-	const { userMessage, companionResponse, llm, systemEvent = false, debug = false } = input;
+	const { userMessage, companionResponse, llm, systemEvent = false, showImagesEnabled = false } = input;
 
 	const state = characterStore.state;
 	// applyUpdates stamps lastInteraction with now, so absence-based events need
@@ -76,31 +86,36 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 	const parsed = parseResponse(reminderCleaned, state.name);
 	const dialogue = parsed.dialogue;
 	let llmUpdates = parsed.stateUpdates;
+	let imageSearch = parsed.imageSearch;
+	let imagePage = parsed.imagePage;
+	let closeImages = parsed.closeImages;
 
-	if (debug) {
-		console.log('%c[LLM raw response]', 'color:#00b2ff;font-weight:bold', companionResponse);
-		console.log('%c[LLM parsed]', 'color:#22c55e;font-weight:bold', {
-			stateUpdates: llmUpdates,
-			new_memory: llmUpdates?.newMemory ?? null
-		});
-	}
-
-	// Decoupled fallback: the model skipped the inline JSON, so ask a dedicated
-	// forced-JSON call to extract mood + memory from the exchange.
+	// Generic state recovery only. Picture fields may come from the same
+	// extraction, but only as query intents — never URLs or tool results.
 	if (!llmUpdates) {
 		const extracted = await completeJson({
 			...llm,
-			system: buildExtractionSystemPrompt(llm.hasImages, toPromptActions(animationLibraryStore.enabledForLlm)),
-			user: `User: ${userMessage}\nCompanion: ${dialogue}\n\nReturn the JSON.`,
-			maxTokens: 400
+			system: buildExtractionSystemPrompt(
+				llm.hasImages,
+				toPromptActions(animationLibraryStore.enabledForLlm),
+				showImagesEnabled
+			),
+			user: buildExtractionUser(userMessage, dialogue),
+			maxTokens: 500
 		});
 		if (extracted) {
 			// parseResponse handles both bare JSON (OpenAI json_object) and a
 			// model-added ```json fence (Anthropic). Don't re-wrap.
-			llmUpdates = parseResponse(extracted).stateUpdates;
-			if (debug) {
-				console.log('%c[extraction fallback]', 'color:#f59e0b;font-weight:bold', extracted, '->', llmUpdates);
+			const fallbackParsed = parseResponse(extracted);
+			// This recovery run only happens when the inline state was missing,
+			// so mood/memory cannot be applied twice.
+			llmUpdates = fallbackParsed.stateUpdates;
+			// Query-only picture recovery: never URLs or tool-result harvesting.
+			if (!imageSearch) {
+				imageSearch = fallbackParsed.imageSearch;
+				imagePage = fallbackParsed.imagePage;
 			}
+			if (fallbackParsed.closeImages) closeImages = true;
 		}
 	}
 
@@ -204,5 +219,12 @@ export async function processCompanionTurn(input: CompanionTurnInput): Promise<C
 		}
 	}
 
-	return { dialogue, newMemory: finalUpdates.newMemory || undefined, triggeredEvent };
+	return {
+		dialogue,
+		newMemory: finalUpdates.newMemory || undefined,
+		imageSearch: imageSearch || undefined,
+		imagePage: imagePage || undefined,
+		closeImages: closeImages || undefined,
+		triggeredEvent
+	};
 }

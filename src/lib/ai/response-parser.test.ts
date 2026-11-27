@@ -369,3 +369,62 @@ test('a new_memory that is only tags is dropped', () => {
 	const raw = ['Hi.', '```json', '{ "new_memory": "<>" }', '```'].join('\n');
 	assert.equal(parseResponse(raw).stateUpdates?.newMemory, undefined);
 });
+
+test('reads image_search and close_images from the state block', () => {
+	const raw = [
+		'Here are some cats for you.',
+		'```json',
+		'{ "image_search": "cute cats", "image_page": 2, "close_images": true }',
+		'```'
+	].join('\n');
+	const parsed = parseResponse(raw);
+	assert.equal(parsed.imageSearch, 'cute cats');
+	assert.equal(parsed.imagePage, 2);
+	assert.equal(parsed.closeImages, true);
+	assert.equal(parsed.dialogue, 'Here are some cats for you.');
+});
+
+test('show_images is no longer part of the state contract', () => {
+	const parsed = parseResponse('Look! {"show_images":["https://x/a.png"]}');
+	assert.equal(parsed.imageSearch, undefined);
+	assert.equal(parsed.closeImages, undefined);
+});
+
+test('image_page is clamped to a sane page and page one is omitted', () => {
+	assert.equal(parseResponse('Hi.\n```json\n{"image_search":"cats","image_page":1}\n```').imagePage, undefined);
+	assert.equal(parseResponse('Hi.\n```json\n{"image_search":"cats","image_page":99}\n```').imagePage, 10);
+	assert.equal(parseResponse('Hi.\n```json\n{"image_search":"cats","image_page":-2}\n```').imagePage, undefined);
+	assert.equal(parseResponse('Hi.\n```json\n{"image_search":"cats","image_page":"2"}\n```').imagePage, undefined);
+});
+
+test('close_images is only true when strictly true; absent means undefined', () => {
+	assert.equal(parseResponse('Hi.\n```json\n{"close_images":false}\n```').closeImages, undefined);
+	assert.equal(parseResponse('Hi.\n```json\n{"close_images":"yes"}\n```').closeImages, undefined);
+	assert.equal(parseResponse('Hi.\n```json\n{"mood_change":{"emotion":"happy"}}\n```').closeImages, undefined);
+	assert.equal(
+		parseResponse('Hi.\n```json\n{"close_images":true}\n```').closeImages,
+		true
+	);
+});
+
+test('image intent is read from a bare (unfenced) state block too', () => {
+	const parsed = parseResponse('Look at this! { "image_search": "red pandas" }');
+	assert.equal(parsed.imageSearch, 'red pandas');
+});
+
+test('reads image_search (a query) from the state block', () => {
+	const parsed = parseResponse('Here you go.\n```json\n{"image_search":"cute cats"}\n```');
+	assert.equal(parsed.imageSearch, 'cute cats');
+});
+
+test('image_search is trimmed and an empty value is dropped', () => {
+	assert.equal(parseResponse('Hi.\n```json\n{"image_search":"  "}\n```').imageSearch, undefined);
+	assert.equal(parseResponse('Hi.\n```json\n{"image_search":null}\n```').imageSearch, undefined);
+	assert.equal(parseResponse('Hi.\n```json\n{"image_search":"  red pandas "}\n```').imageSearch, 'red pandas');
+});
+
+test('a verbatim doubled reply is collapsed to one copy', () => {
+	const sentence = '¡Claro, volvemos a lo clásico! Dann hole ich dir jetzt die süßen gatitos zurück – die gehen ja immer.';
+	const parsed = parseResponse(`${sentence} ${sentence}\n\`\`\`json\n{"mood_change":{"emotion":"happy"}}\n\`\`\``);
+	assert.equal(parsed.dialogue, sentence);
+});

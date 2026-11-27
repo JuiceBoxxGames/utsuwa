@@ -2,16 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+	describeImageFetch,
+	describePictureSearch,
 	extractHostname,
 	extractImageUrls,
 	chooseImageSearchTool,
+	canLoadMoreImages,
+	countForPage,
+	imagePaging,
 	isPictureSearchTool,
 	isCloseImagesRequest,
 	isImageRequest,
 	isMoreImagesRequest,
+	imageOpenLabel,
+	imageQueryFromMessage,
+	imageSearchErrorCopy,
+	isDedicatedPictureTool,
+	isDirectImageUrl,
+	isExplicitImageRequest,
+	isToolOnConfirmList,
 	parseImageResults,
 	pickSearchTool,
 	queryArgKey,
+	supportsImagePaging,
 	toDataUrl
 } from './image-search.ts';
 import { isRasterImageDataUrl, isRasterImageMimeType } from './image-mime.ts';
@@ -67,6 +80,21 @@ test('parseImageResults caps the popup list at 12 entries', () => {
 		}))
 	}));
 	assert.equal(results.length, 12);
+});
+
+test('parseImageResults accepts a larger limit for count-based paging', () => {
+	const results = parseImageResults(
+		JSON.stringify({
+			results: Array.from({ length: 30 }, (_, i) => ({
+				url: `https://page.example/${i}`,
+				img_src: `https://cdn.example/${i}.jpg`
+			}))
+		}),
+		[],
+		24
+	);
+	assert.equal(results.length, 24);
+	assert.equal(results[23].url, 'https://page.example/23');
 });
 
 test('parseImageResults returns nothing for empty content', () => {
@@ -199,7 +227,9 @@ test('isImageRequest finds picture nouns and ignores time questions', () => {
 test('isCloseImagesRequest recognizes close phrases in both languages', () => {
 	assert.equal(isCloseImagesRequest('Schließ die Bilder.'), true);
 	assert.equal(isCloseImagesRequest('Close the pictures, please.'), true);
-	assert.equal(isCloseImagesRequest('Mach das Fenster zu'), true);
+	assert.equal(isCloseImagesRequest('Mach das Popup zu'), true);
+	// "Fenster" alone may mean the browser window or a dialog, not the panel.
+	assert.equal(isCloseImagesRequest('Mach das Fenster zu'), false);
 	assert.equal(isCloseImagesRequest('Zeig mir noch mehr Bilder'), false);
 	assert.equal(isCloseImagesRequest('Wie spät ist es?'), false);
 });
@@ -266,4 +296,271 @@ test('raster MIME helpers reject SVG and non-image payloads', () => {
 	assert.equal(isRasterImageMimeType('image/svg+xml'), false);
 	assert.equal(isRasterImageDataUrl('data:image/png;base64,AAAA'), true);
 	assert.equal(isRasterImageDataUrl('data:image/svg+xml;base64,AAAA'), false);
+});
+
+test('error copy turns search codes into plain language', () => {
+	const noTool = imageSearchErrorCopy('no_tool');
+	assert.equal(noTool.settings, true);
+	assert.match(noTool.message, /No picture search tool/);
+
+	const unavailable = imageSearchErrorCopy('tool_unavailable');
+	assert.equal(unavailable.settings, true);
+
+	const empty = imageSearchErrorCopy('empty_results', 'cats');
+	assert.match(empty.message, /cats/);
+	assert.equal(empty.settings, false);
+
+	const noQuery = imageSearchErrorCopy('empty_query');
+	assert.match(noQuery.message, /no subject/);
+
+	const failed = imageSearchErrorCopy('search_failed');
+	assert.match(failed.message, /failed/i);
+	assert.equal(failed.settings, false);
+});
+
+test('Pexafy search_photos is a query tool with its own argument name', () => {
+	const tool = {
+		name: 'search_photos',
+		description: 'Search free stock photographs',
+		inputSchema: {
+			type: 'object',
+			properties: { english_search_sentence: { type: 'string' } }
+		}
+	};
+	assert.equal(queryArgKey(tool), 'english_search_sentence');
+	assert.equal(isPictureSearchTool(tool), true);
+});
+
+test('parseImageResults reads Pexafy search_photos output', () => {
+	const content = JSON.stringify({
+		success: true,
+		data: [
+			{
+				urls: { regular: 'https://cdn.pixabay.com/photo/nature_1280.jpg' },
+				preview_url: 'https://thumb.pexafy.com/abc/480w.jpg',
+				source_image_url: 'https://pixabay.com/photos/nature-6810212/',
+				alt_description: 'Foggy mountain landscape with autumn trees',
+				source: 'Pixabay',
+				license_type: 'free',
+				attribution: { plain: 'Photo by johnNaturePhotos on Pixabay' }
+			}
+		]
+	});
+	const results = parseImageResults(content, []);
+	assert.equal(results.length, 1);
+	assert.equal(results[0].thumbnail, 'https://thumb.pexafy.com/abc/480w.jpg');
+	assert.equal(results[0].url, 'https://pixabay.com/photos/nature-6810212/');
+	assert.equal(results[0].title, 'Foggy mountain landscape with autumn trees');
+	assert.equal(results[0].license, 'free');
+	assert.equal(results[0].attribution, 'Photo by johnNaturePhotos on Pixabay');
+});
+
+test('reverse image search tools are not picture-search candidates', () => {
+	const byImage = {
+		name: 'search_photos_by_image',
+		description: 'Find similar photographs from a reference picture',
+		inputSchema: {
+			type: 'object',
+			properties: { image_url: { type: 'string' }, english_search_sentence: { type: 'string' } }
+		}
+	};
+	const byText = {
+		name: 'search_photos',
+		description: 'Search free stock photographs',
+		inputSchema: {
+			type: 'object',
+			properties: { english_search_sentence: { type: 'string' } },
+			required: ['english_search_sentence']
+		}
+	};
+	assert.equal(isPictureSearchTool(byImage), false);
+	assert.equal(pickSearchTool([byImage, byText])?.name, 'search_photos');
+});
+
+const pictureTool = (name: string, properties: Record<string, unknown>, serverId = 's1') => ({
+	name,
+	serverId,
+	serverName: 'Search',
+	inputSchema: { type: 'object', properties }
+});
+
+const readyState = { loading: false, mcpEnabled: true, enabledServers: 1, toolsError: false };
+
+test('describePictureSearch reports automatic, selected and loading states', () => {
+	const image = pictureTool('image_search', { query: {} });
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+
+	assert.deepEqual(describePictureSearch([fetch, image], null, readyState), {
+		kind: 'automatic',
+		tool: image
+	});
+	assert.deepEqual(
+		describePictureSearch([image], { serverId: 's1', toolName: 'image_search' }, readyState),
+		{ kind: 'selected', tool: image }
+	);
+	assert.deepEqual(describePictureSearch([], null, { ...readyState, loading: true }), {
+		kind: 'checking'
+	});
+});
+
+test('describePictureSearch flags an unavailable or unsuitable explicit choice', () => {
+	const reverse = pictureTool('search_photos_by_image', {
+		image_url: {},
+		english_search_sentence: {}
+	});
+	const selection = { serverId: 's1', toolName: 'search_photos_by_image' };
+	assert.deepEqual(describePictureSearch([reverse], selection, readyState), {
+		kind: 'selection_unsupported',
+		selection
+	});
+	assert.deepEqual(
+		describePictureSearch([], { serverId: 's1', toolName: 'gone' }, readyState),
+		{ kind: 'selection_missing', selection: { serverId: 's1', toolName: 'gone' } }
+	);
+});
+
+test('describePictureSearch separates missing server, disabled MCP and load errors', () => {
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+	assert.equal(
+		describePictureSearch([], null, { ...readyState, enabledServers: 0 }).kind,
+		'no_server'
+	);
+	assert.equal(
+		describePictureSearch([], null, { ...readyState, mcpEnabled: false }).kind,
+		'mcp_disabled'
+	);
+	assert.equal(
+		describePictureSearch([], null, { ...readyState, toolsError: true }).kind,
+		'load_failed'
+	);
+	assert.equal(describePictureSearch([fetch], null, readyState).kind, 'no_tool');
+});
+
+test('describeImageFetch reports the file-fetch tool or its absence', () => {
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+	assert.deepEqual(describeImageFetch([fetch], readyState), { kind: 'ready', tool: fetch });
+	assert.equal(describeImageFetch([], readyState).kind, 'missing');
+	assert.equal(
+		describeImageFetch([], { ...readyState, loading: true }).kind,
+		'checking'
+	);
+});
+
+test('describeImageFetch reports a confirmation-listed fetch tool as blocked', () => {
+	const fetch = pictureTool('fetch_file_from_url', { url: {} });
+	assert.deepEqual(describeImageFetch([fetch], readyState, 'fetch_file_from_url'), {
+		kind: 'blocked',
+		tool: fetch
+	});
+	assert.equal(describeImageFetch([fetch], readyState, 'other_tool').kind, 'ready');
+});
+
+test('canLoadMoreImages respects the declared count maximum', () => {
+	const count = (maximum: number) => ({
+		inputSchema: { properties: { query: {}, count: { maximum } } }
+	});
+	// A maximum of one page has no headroom: the button must not be offered.
+	assert.equal(canLoadMoreImages(count(12), 1), false);
+	assert.equal(canLoadMoreImages(count(24), 1), true);
+	assert.equal(canLoadMoreImages(count(24), 2), false);
+	// Page-based tools can page until the shared cap.
+	const page = { inputSchema: { properties: { query: {}, pageno: {} } } };
+	assert.equal(canLoadMoreImages(page, 1), true);
+	assert.equal(canLoadMoreImages(page, 9), true);
+	assert.equal(canLoadMoreImages(page, 10), false);
+	assert.equal(canLoadMoreImages({ inputSchema: { properties: { query: {} } } }, 1), false);
+});
+
+test('imageQueryFromMessage keeps the subject and drops the request scaffolding', () => {
+	assert.equal(imageQueryFromMessage('zeig mir herbstliche Berglandschaften im Morgennebel'), 'herbstliche Berglandschaften im Morgennebel');
+	assert.equal(imageQueryFromMessage('Zeig mir Bilder von süßen Katzen!'), 'süßen Katzen');
+	assert.equal(imageQueryFromMessage('show me some cute cats'), 'cute cats');
+	assert.equal(imageQueryFromMessage('bitte ein paar Fotos von Bergen'), 'Bergen');
+});
+
+test('isDirectImageUrl and imageOpenLabel never promise a picture for a source page', () => {
+	assert.equal(isDirectImageUrl('data:image/png;base64,AA'), true);
+	assert.equal(isDirectImageUrl('https://cdn.example.com/a.JPG?x=1'), true);
+	assert.equal(isDirectImageUrl('https://example.com/article/123'), false);
+	assert.equal(isDirectImageUrl('javascript:alert(1)'), false);
+	assert.equal(imageOpenLabel('https://cdn.example.com/a.webp'), 'Open picture');
+	assert.equal(imageOpenLabel('https://example.com/article/123'), 'Open source');
+});
+
+test('supportsImagePaging accepts page and count tools only', () => {
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, pageno: {} } } }), true);
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, page: {} } } }), true);
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {}, count: {} } } }), true);
+	assert.equal(supportsImagePaging({ inputSchema: { properties: { query: {} } } }), false);
+	assert.equal(supportsImagePaging(null), false);
+});
+
+test('imagePaging prefers a page argument and reads the declared count maximum', () => {
+	assert.deepEqual(imagePaging({ inputSchema: { properties: { pageno: {}, count: {} } } }), {
+		kind: 'page',
+		arg: 'pageno'
+	});
+	assert.deepEqual(
+		imagePaging({ inputSchema: { properties: { query: {}, count: { maximum: 200 } } } }),
+		{ kind: 'count', arg: 'count', max: 200 }
+	);
+	assert.deepEqual(imagePaging({ inputSchema: { properties: { query: {}, limit: {} } } }), {
+		kind: 'count',
+		arg: 'limit',
+		max: 50
+	});
+	assert.equal(imagePaging({ inputSchema: { properties: { query: {} } } }), null);
+});
+
+test('countForPage grows by the page size and stops at the declared maximum', () => {
+	const paging = { kind: 'count' as const, arg: 'count' as const, max: 200 };
+	assert.equal(countForPage(paging, 1), 12);
+	assert.equal(countForPage(paging, 2), 24);
+	assert.equal(countForPage(paging, 10), 120);
+	assert.equal(countForPage({ ...paging, max: 50 }, 5), 50);
+});
+
+test('explicit image requests stay narrower than the recovery heuristic', () => {
+	assert.equal(isExplicitImageRequest('Show me the code'), false);
+	assert.equal(isExplicitImageRequest('send me the link'), false);
+	assert.equal(isExplicitImageRequest('Zeig mir Bilder von Katzen'), true);
+	assert.equal(isExplicitImageRequest('show me cute cats'), false);
+});
+
+test('only dedicated picture tools are hidden from the model', () => {
+	assert.equal(
+		isDedicatedPictureTool({ name: 'searxng_image_search', inputSchema: { properties: { query: {} } } }),
+		true
+	);
+	assert.equal(
+		isDedicatedPictureTool({ name: 'search_photos', inputSchema: { properties: { query: {} } } }),
+		true
+	);
+	assert.equal(
+		isDedicatedPictureTool({ name: 'searxng_web_search', inputSchema: { properties: { query: {} } } }),
+		false
+	);
+	assert.equal(
+		isDedicatedPictureTool({ name: 'unsplash_search', inputSchema: { properties: { query: {} } } }),
+		true
+	);
+});
+
+test('no_paging copy explains the tool limit without sending users to settings', () => {
+	assert.deepEqual(imageSearchErrorCopy('no_paging'), {
+		message: 'This picture tool cannot load more results. Try a different subject.',
+		settings: false
+	});
+});
+
+test('isToolOnConfirmList matches exact names only', () => {
+	assert.equal(isToolOnConfirmList('search_photos', 'other, search_photos'), true);
+	assert.equal(isToolOnConfirmList('search_photos', 'search_photos_by_image'), false);
+	assert.equal(isToolOnConfirmList('search_photos', undefined), false);
+});
+
+test('confirm_required copy points to the MCP settings', () => {
+	const copy = imageSearchErrorCopy('confirm_required');
+	assert.equal(copy.settings, true);
+	assert.match(copy.message, /PUBLIC_MCP_CONFIRM_TOOLS/);
 });

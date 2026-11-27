@@ -11,7 +11,10 @@ export type ImageSearchErrorCode =
 	| 'tool_unavailable'
 	| 'search_failed'
 	| 'empty_results'
-	| 'cancelled';
+	| 'cancelled'
+	| 'empty_query'
+	| 'no_paging'
+	| 'confirm_required';
 
 export interface ImageSearchToolInfo {
 	serverId: string;
@@ -44,6 +47,12 @@ export type ImageShowEvent =
 			requestId: string;
 			query: string;
 			code: ImageSearchErrorCode;
+			message: string;
+	  })
+	| (ImageEventBase & {
+			/** Explain a limit next to the pictures instead of replacing them. */
+			type: 'notice';
+			requestId: string;
 			message: string;
 	  })
 	| (ImageEventBase & { type: 'close'; requestId?: string });

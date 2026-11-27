@@ -6,7 +6,8 @@ import {
 	createImageSearchState,
 	focusImageSearch,
 	loadingImageSearch,
-	readyImageSearch
+	readyImageSearch,
+	type ImageSearchState
 } from './image-search-store-logic.ts';
 
 const picture = { title: 'A', url: 'https://x/a.jpg', thumbnail: 'https://x/a-thumb.jpg', source: 'x' };
@@ -24,10 +25,20 @@ test('applies loading and results for the active request', () => {
 	assert.equal(state.status, 'ready');
 	assert.equal(state.isOpen, true);
 	assert.equal(state.results.length, 1);
+	assert.equal(state.tool?.serverName, 'S');
+});
+
+test('closing clears the provider label with the rest of the state', () => {
+	let state = applyImageEventToState(loadingImageSearch(createImageSearchState(), 'cats', 1, 'r1'), {
+		id: '2', at: 2, type: 'results', requestId: 'r1', query: 'cats', page: 1,
+		results: [picture], tool: { serverId: 's', serverName: 'S', toolName: 't' }
+	});
+	state = closeImageSearch();
+	assert.equal(state.tool, null);
 });
 
 test('drops late results after close and results from an older request', () => {
-	let state = loadingImageSearch('cats', 1, 'r1');
+	let state = loadingImageSearch(createImageSearchState(), 'cats', 1, 'r1');
 	state = applyImageEventToState(state, { id: 'close', at: 2, type: 'close' });
 	state = applyImageEventToState(state, {
 		id: 'late', at: 3, type: 'results', requestId: 'r1', query: 'cats', page: 1,
@@ -36,7 +47,7 @@ test('drops late results after close and results from an older request', () => {
 	assert.equal(state.isOpen, false);
 	assert.equal(state.status, 'idle');
 
-	let newer = loadingImageSearch('cats', 2, 'r2');
+	let newer = loadingImageSearch(createImageSearchState(), 'cats', 2, 'r2');
 	newer = applyImageEventToState(newer, {
 		id: 'old', at: 4, type: 'results', requestId: 'r1', query: 'cats', page: 1,
 		results: [picture], tool: { serverId: 's', serverName: 'S', toolName: 't' }
@@ -45,18 +56,79 @@ test('drops late results after close and results from an older request', () => {
 	assert.equal(newer.page, 2);
 });
 
-test('closing clears the active request and focusing clears the old description', () => {
+test('a notice explains a limit without touching the shown pictures', () => {
+	let state: ImageSearchState = applyImageEventToState(loadingImageSearch(createImageSearchState(), 'cats', 1, 'r1'), {
+		id: '2', at: 2, type: 'results', requestId: 'r1', query: 'cats', page: 1,
+		results: [picture], tool: { serverId: 's', serverName: 'S', toolName: 't' }
+	});
+	state = applyImageEventToState(state, {
+		id: '3', at: 3, type: 'notice', requestId: 'r1',
+		message: 'This picture tool cannot load more results. Try a different subject.'
+	});
+	assert.equal(state.status, 'ready');
+	assert.equal(state.isOpen, true);
+	assert.equal(state.results.length, 1);
+	assert.equal(state.notice, 'This picture tool cannot load more results. Try a different subject.');
+});
+
+test('a notice resolves the request it belongs to and never opens the panel', () => {
+	const idle = createImageSearchState();
+	assert.equal(
+		applyImageEventToState(idle, { id: 'n1', at: 1, type: 'notice', requestId: 'r1', message: 'limit' }),
+		idle
+	);
+	// A paging request that yields no new page must leave "loading" and keep
+	// the pictures on screen (regression: the panel stayed on "Loading…").
+	const ready = readyImageSearch([picture], 'cats', 1, 'r1');
+	const loading = loadingImageSearch(ready, 'cats', 2, 'r2');
+	const noticed = applyImageEventToState(loading, {
+		id: 'n2', at: 2, type: 'notice', requestId: 'r2', message: 'limit'
+	});
+	assert.equal(noticed.status, 'ready');
+	assert.equal(noticed.notice, 'limit');
+	assert.equal(noticed.results.length, 1);
+	// A notice from an older request must not comment on the current search.
+	assert.equal(
+		applyImageEventToState(loading, { id: 'n3', at: 3, type: 'notice', requestId: 'r1', message: 'stale' }),
+		loading
+	);
+	const closed = applyImageEventToState(loading, { id: 'close', at: 4, type: 'close' });
+	assert.equal(
+		applyImageEventToState(closed, { id: 'n4', at: 5, type: 'notice', requestId: 'r2', message: 'limit' }),
+		closed
+	);
+});
+
+test('new results clear an old notice', () => {
+	let state: ImageSearchState = {
+		...readyImageSearch([picture], 'cats', 1, 'r1'),
+		notice: 'old limit'
+	};
+	state = applyImageEventToState(state, {
+		id: 'n', at: 1, type: 'notice', requestId: 'r1', message: 'limit'
+	});
+	assert.equal(state.notice, 'limit');
+	state = applyImageEventToState(state, {
+		id: '2', at: 2, type: 'loading', requestId: 'r2', query: 'dogs', page: 1
+	});
+	state = applyImageEventToState(state, {
+		id: '3', at: 3, type: 'results', requestId: 'r2', query: 'dogs', page: 1,
+		results: [{ ...picture, url: 'https://x/dog.jpg' }], tool: { serverId: 's', serverName: 'S', toolName: 't' }
+	});
+	assert.equal(state.notice, null);
+});
+
+test('closing clears the active request and focusing moves the index', () => {
 	const closed = closeImageSearch();
 	assert.equal(closed.activeRequestId, null);
 	assert.equal(closed.results.length, 0);
-	const focused = focusImageSearch({ ...loadingImageSearch('cats', 1, 'r'), results: [picture, { ...picture, url: 'https://x/b.jpg' }], description: 'old' }, 1);
+	const focused = focusImageSearch({ ...loadingImageSearch(createImageSearchState(), 'cats', 1, 'r'), results: [picture, { ...picture, url: 'https://x/b.jpg' }] }, 1);
 	assert.equal(focused.focusedIndex, 1);
-	assert.equal(focused.description, null);
 });
 
 test('focusImageSearch ignores negative and out-of-range indices', () => {
 	const state = {
-		...loadingImageSearch('cats', 1, 'r1'),
+		...loadingImageSearch(createImageSearchState(), 'cats', 1, 'r1'),
 		results: [picture]
 	};
 	assert.equal(focusImageSearch(state, -1), state);
@@ -72,7 +144,7 @@ test('readyImageSearch without results reports an empty-results error', () => {
 
 
 test('a cancelled confirmation returns to idle instead of an error panel', () => {
-	const state = applyImageEventToState(loadingImageSearch('cats', 1, 'r'), {
+	const state = applyImageEventToState(loadingImageSearch(createImageSearchState(), 'cats', 1, 'r'), {
 		id: 'cancel', at: 2, type: 'error', requestId: 'r', query: 'cats', code: 'cancelled', message: 'Picture search cancelled'
 	});
 	assert.equal(state.status, 'idle');
@@ -81,10 +153,39 @@ test('a cancelled confirmation returns to idle instead of an error panel', () =>
 
 
 test('a stale cancelled event does not close a newer search', () => {
-	const state = applyImageEventToState(loadingImageSearch('cats', 2, 'r2'), {
+	const state = applyImageEventToState(loadingImageSearch(createImageSearchState(), 'cats', 2, 'r2'), {
 		id: 'stale-cancel', at: 3, type: 'error', requestId: 'r1', query: 'cats', code: 'cancelled', message: 'Picture search cancelled'
 	});
 	assert.equal(state.status, 'loading');
 	assert.equal(state.isOpen, true);
 	assert.equal(state.activeRequestId, 'r2');
+});
+
+test('loading the next page keeps the shown pictures on screen', () => {
+	const ready = { ...readyImageSearch([picture], 'cats', 1, 'r1'), notice: 'old limit' };
+	const state = applyImageEventToState(ready, {
+		id: '2', at: 2, type: 'loading', requestId: 'r2', query: 'cats', page: 2
+	});
+	assert.equal(state.status, 'loading');
+	assert.equal(state.results.length, 1);
+	assert.equal(state.page, 2);
+	assert.equal(state.activeRequestId, 'r2');
+	assert.equal(state.notice, null);
+});
+
+test('loading a different subject starts with an empty gallery', () => {
+	const ready = readyImageSearch([picture], 'cats', 1, 'r1');
+	const state = applyImageEventToState(ready, {
+		id: '2', at: 2, type: 'loading', requestId: 'r2', query: 'dogs', page: 1
+	});
+	assert.equal(state.status, 'loading');
+	assert.equal(state.results.length, 0);
+	assert.equal(state.query, 'dogs');
+});
+
+test('loading while the panel is closed does not resurrect old pictures', () => {
+	const state = loadingImageSearch(closeImageSearch(), 'cats', 1, 'r1');
+	assert.equal(state.results.length, 0);
+	assert.equal(state.isOpen, true);
+	assert.equal(state.status, 'loading');
 });

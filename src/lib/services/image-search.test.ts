@@ -37,7 +37,11 @@ function searchStore(overrides: Record<string, unknown> = {}): Record<string, un
 
 /** Boot one Vite server with a fake MCP store/client for the search core. */
 async function withSearchCore(
-	fixture: { store: Record<string, unknown>; call: (...args: unknown[]) => Promise<unknown> },
+	fixture: {
+		store: Record<string, unknown>;
+		call: (...args: unknown[]) => Promise<unknown>;
+		publicEnv?: Record<string, string>;
+	},
 	fn: (mod: Record<string, any>) => Promise<void>
 ): Promise<void> {
 	const root = fileURLToPath(new URL('../../../', import.meta.url)).replace(/\/$/, '');
@@ -45,7 +49,8 @@ async function withSearchCore(
 	globals.__imageSearchFixture = fixture;
 	const replacements: Record<string, string> = {
 		'src/lib/stores/mcp.svelte': 'export const mcpStore = globalThis.__imageSearchFixture.store;',
-		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);'
+		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);',
+		'$env/dynamic/public': 'export const env = globalThis.__imageSearchFixture.publicEnv ?? {};'
 	};
 	const vite = await createServer({
 		root,
@@ -132,7 +137,8 @@ test('searchImages turns the selected MCP result into loading/results events', a
 	globals.__imageSearchFixture = fixture;
 	const replacements: Record<string, string> = {
 		'src/lib/stores/mcp.svelte': 'export const mcpStore = globalThis.__imageSearchFixture.store;',
-		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);'
+		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);',
+		'$env/dynamic/public': 'export const env = globalThis.__imageSearchFixture.publicEnv ?? {};'
 	};
 	const vite = await createServer({
 		root,
@@ -206,7 +212,8 @@ test('searchImages emits a visible no_tool error instead of returning silently',
 	globals.__imageSearchFixture = { store, call: async () => { throw new Error('should not run'); } };
 	const replacements: Record<string, string> = {
 		'src/lib/stores/mcp.svelte': 'export const mcpStore = globalThis.__imageSearchFixture.store;',
-		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);'
+		'src/lib/services/mcp/capability': 'export const callTool = (...args) => globalThis.__imageSearchFixture.call(...args);',
+		'$env/dynamic/public': 'export const env = globalThis.__imageSearchFixture.publicEnv ?? {};'
 	};
 	const vite = await createServer({
 		root,
@@ -271,7 +278,7 @@ async function searchEvents(
 	return events;
 }
 
-test('searchImages publishes nothing for an empty query', async () => {
+test('searchImages explains an empty query instead of doing nothing', async () => {
 	await withSearchCore(
 		{ store: searchStore(), call: async () => { throw new Error('should not run'); } },
 		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
@@ -279,7 +286,226 @@ test('searchImages publishes nothing for an empty query', async () => {
 			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
 			try {
 				assert.deepEqual(await searchImages('   '), []);
-				assert.deepEqual(events, []);
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
+				assert.equal(events[1].code, 'empty_query');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('searchImages explains a missing page instead of repeating page one', async () => {
+	const noPageTool = {
+		...pictureTool,
+		name: 'search_photos',
+		description: 'Search stock photos',
+		inputSchema: { type: 'object', properties: { query: {} } }
+	};
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [noPageTool],
+				imageSearchTool: { serverId: 'search', toolName: 'search_photos' }
+			}),
+			call: async () => {
+				calls++;
+				return { content: '[]' };
+			}
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats', 2), []);
+				assert.equal(calls, 0, 'the tool is not asked for the same page again');
+				// The notice resolves the loading event it belongs to, so the
+				// panel leaves "Loading…" and keeps the pictures on screen.
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events[1].requestId, events[0].requestId);
+				assert.equal(
+					events[1].message,
+					'This picture tool cannot load more results. Try a different subject.'
+				);
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('a count-based tool serves the next slice for page two', async () => {
+	const countTool = {
+		...pictureTool,
+		name: 'brave_image_search',
+		description: 'Search images',
+		inputSchema: { type: 'object', properties: { query: {}, count: { maximum: 200 } } }
+	};
+	let args: Record<string, unknown> = {};
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [countTool],
+				imageSearchTool: { serverId: 'search', toolName: 'brave_image_search' }
+			}),
+			call: async (_server, _name, next) => {
+				args = next as Record<string, unknown>;
+				return {
+					content: JSON.stringify({
+						results: Array.from({ length: 36 }, (_, i) => ({
+							url: `https://page.example/${i}`,
+							properties: { url: `https://cdn.example/${i}.jpg` }
+						}))
+					})
+				};
+			}
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				const images = await searchImages('cats', 2);
+				assert.equal(args.count, 24, 'the batch grows by one page');
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'results']);
+				assert.equal(events[1].page, 2);
+				assert.equal(images.length, 12, 'only the new slice is shown');
+				assert.equal(images[0].url, 'https://page.example/12');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('a count-based tool that cannot grow any further shows a notice', async () => {
+	const countTool = {
+		...pictureTool,
+		name: 'search_photos',
+		description: 'Search stock photos',
+		inputSchema: { type: 'object', properties: { query: {}, count: { maximum: 24 } } }
+	};
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [countTool],
+				imageSearchTool: { serverId: 'search', toolName: 'search_photos' }
+			}),
+			call: async () => {
+				calls++;
+				return { content: '[]' };
+			}
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats', 3), []);
+				assert.equal(calls, 0, 'a batch that cannot grow is not requested again');
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events[1].requestId, events[0].requestId);
+				assert.equal(
+					events[1].message,
+					'This picture tool cannot load more results. Try a different subject.'
+				);
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('an empty follow-up page keeps the gallery and resolves the loading state', async () => {
+	const countTool = {
+		...pictureTool,
+		name: 'brave_image_search',
+		description: 'Search images',
+		inputSchema: { type: 'object', properties: { query: {}, count: { maximum: 50 } } }
+	};
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [countTool],
+				imageSearchTool: { serverId: 'search', toolName: 'brave_image_search' }
+			}),
+			call: async () => ({
+				content: JSON.stringify({
+					results: Array.from({ length: 10 }, (_, i) => ({
+						url: `https://page.example/${i}`,
+						properties: { url: `https://cdn.example/${i}.jpg` }
+					}))
+				})
+			})
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				// Page two asks for 24, the tool returns only 10: the slice after
+				// the first 12 is empty. The notice must resolve the loading state
+				// (regression: the panel stayed on "Loading pictures…" forever).
+				assert.deepEqual(await searchImages('cats', 2), []);
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events[1].requestId, events[0].requestId);
+				assert.equal(
+					events[1].message,
+					'This picture tool cannot load more results. Try a different subject.'
+				);
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('an empty page of a page-based tool keeps the gallery', async () => {
+	await withSearchCore(
+		{
+			store: searchStore(),
+			call: async () => ({ content: '[]' })
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats', 2), []);
+				// A page tool that runs out of results is a limit, not a failure:
+				// no error panel, no cleared gallery.
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'notice']);
+				assert.equal(events.some((event) => event.type === 'error'), false);
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('searchImages refuses a confirmation-listed tool', async () => {
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore(),
+			call: async () => {
+				calls++;
+				return { content: '[]' };
+			},
+			publicEnv: { PUBLIC_MCP_CONFIRM_TOOLS: 'searxng_image_search' }
+		},
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats'), []);
+				assert.equal(calls, 0, 'the listed tool is not called');
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
+				assert.equal(events[1].code, 'confirm_required');
 			} finally {
 				stop();
 				closeImageChannel();
@@ -329,13 +555,22 @@ test('searchImages reports a tool error result as search_failed', async () => {
 	assert.equal(events[1].code, 'search_failed');
 });
 
-test('searchImages reports an image-less result as empty_results', async () => {
-	const events = await searchEvents({
-		store: searchStore(),
-		call: async () => ({ toolName: 'searxng_image_search', isError: false, content: 'nothing here' })
-	});
-	assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
-	assert.equal(events[1].code, 'empty_results');
+test('searchImages reports an image-less first page as empty_results', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => ({ toolName: 'searxng_image_search', isError: false, content: 'nothing here' }) },
+		async ({ searchImages, onImageShowEvent, closeImageChannel }) => {
+			const events: Array<Record<string, any>> = [];
+			const stop = onImageShowEvent((event: Record<string, any>) => events.push(event));
+			try {
+				assert.deepEqual(await searchImages('cats'), []);
+				assert.deepEqual(events.map((event) => event.type), ['loading', 'error']);
+				assert.equal(events[1].code, 'empty_results');
+			} finally {
+				stop();
+				closeImageChannel();
+			}
+		}
+	);
 });
 
 test('buildSearchArgs sends only declared options and paging above page one', async () => {
@@ -370,6 +605,31 @@ test('buildSearchArgs sends only declared options and paging above page one', as
 			assert.deepEqual(
 				buildSearchArgs({ name: 'x', inputSchema: { properties: { q: {}, format: {} } } }, 'q', 1),
 				{ q: 'q', format: 'json' }
+			);
+			// Count-based tools keep their default on page one and grow the batch.
+			assert.deepEqual(
+				buildSearchArgs(
+					{ name: 'x', inputSchema: { properties: { query: {}, count: { maximum: 200 } } } },
+					'q',
+					1
+				),
+				{ query: 'q' }
+			);
+			assert.deepEqual(
+				buildSearchArgs(
+					{ name: 'x', inputSchema: { properties: { query: {}, count: { maximum: 200 } } } },
+					'q',
+					2
+				),
+				{ query: 'q', count: 24 }
+			);
+			assert.deepEqual(
+				buildSearchArgs(
+					{ name: 'x', inputSchema: { properties: { query: {}, count: { maximum: 40 } } } },
+					'q',
+					5
+				),
+				{ query: 'q', count: 40 }
 			);
 		}
 	);
@@ -434,6 +694,38 @@ test('fetchImage returns the first image block from the fetch tool', async () =>
 					'data:image/png;base64,AAAA'
 				);
 				assert.equal(await fetchImage(''), null);
+			} finally {
+				closeImageChannel();
+			}
+		}
+	);
+});
+
+test('fetchImage without confirm never calls the tool when the server asks first', async () => {
+	let asked = 0;
+	let called = false;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [fetchTool],
+				servers: [{ id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true, askBeforeRun: true }],
+				enabledServers: [{ id: 'files', enabled: true }],
+				imageSearchTool: null,
+				confirmToolCall: async () => {
+					asked++;
+					return true;
+				}
+			}),
+			call: async () => {
+				called = true;
+				throw new Error('should not run');
+			}
+		},
+		async ({ fetchImage, closeImageChannel }) => {
+			try {
+				assert.equal(await fetchImage('https://cdn.example/a.jpg'), null);
+				assert.equal(asked, 0);
+				assert.equal(called, false);
 			} finally {
 				closeImageChannel();
 			}
@@ -615,4 +907,134 @@ test('fetchImage aborts with ImageFetchCancelled when the user declines', async 
 	);
 	assert.equal(asked, 1);
 	assert.equal(called, false);
+});
+
+test('fetchImage skips a confirmation-listed file fetcher', async () => {
+	let calls = 0;
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [fetchTool],
+				servers: [{ id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true, askBeforeRun: false }],
+				enabledServers: [{ id: 'files', enabled: true }],
+				imageSearchTool: null
+			}),
+			call: async () => {
+				calls++;
+				return { images: [{ mimeType: 'image/png', data: 'AA' }] };
+			},
+			publicEnv: { PUBLIC_MCP_CONFIRM_TOOLS: 'fetch_file_from_url' }
+		},
+		async ({ fetchImage }) => {
+			assert.equal(await fetchImage('https://example.com/a.png'), null);
+			assert.equal(calls, 0, 'the listed file fetcher is not called');
+		}
+	);
+});
+
+test('openImageResult opens a source page directly with noopener', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			const popup = { opener: 'x' as unknown, location: { href: '' }, close() {} };
+			const opened: string[] = [];
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: (url: string) => { opened.push(url); return popup; } };
+			try {
+				assert.equal(await openImageResult('https://example.com/article'), 'opened');
+				assert.deepEqual(opened, ['https://example.com/article']);
+				assert.equal(popup.opener, null);
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult reports a blocked popup instead of a generic failure', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => null };
+			try {
+				assert.equal(await openImageResult('https://example.com/article'), 'blocked');
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult rejects non-raster data URLs without opening a tab', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			let opened = 0;
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => { opened++; return { opener: null, location: { href: '' }, close() {} }; } };
+			try {
+				assert.equal(await openImageResult('data:image/svg+xml;base64,AA'), 'failed');
+				assert.equal(opened, 0);
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult renders a raster data URL through a blob', async () => {
+	await withSearchCore(
+		{ store: searchStore(), call: async () => { throw new Error('should not fetch'); } },
+		async ({ openImageResult }) => {
+			const popup = { opener: null as unknown, location: { href: '' }, close() {} };
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => popup };
+			const urlApi = URL as unknown as { createObjectURL: (blob: Blob) => string; revokeObjectURL: (url: string) => void };
+			const previousCreate = urlApi.createObjectURL;
+			const previousRevoke = urlApi.revokeObjectURL;
+			urlApi.createObjectURL = () => 'blob:test';
+			urlApi.revokeObjectURL = () => {};
+			try {
+				assert.equal(await openImageResult('data:image/png;base64,AAAA'), 'opened');
+				assert.equal(popup.location.href, 'blob:test');
+			} finally {
+				urlApi.createObjectURL = previousCreate;
+				urlApi.revokeObjectURL = previousRevoke;
+				globals.window = previous;
+			}
+		}
+	);
+});
+
+test('openImageResult reports a cancelled confirmation', async () => {
+	await withSearchCore(
+		{
+			store: searchStore({
+				tools: [fetchTool],
+				servers: [{ id: 'files', name: 'Files', transport: 'http', url: 'http://files.local/mcp', enabled: true, askBeforeRun: true }],
+				enabledServers: [{ id: 'files', enabled: true }],
+				imageSearchTool: null,
+				confirmToolCall: async () => false
+			}),
+			call: async () => { throw new Error('should not call'); }
+		},
+		async ({ openImageResult }) => {
+			let closed = false;
+			const popup = { opener: null, location: { href: '' }, close: () => { closed = true; } };
+			const globals = globalThis as unknown as { window?: unknown };
+			const previous = globals.window;
+			globals.window = { open: () => popup };
+			try {
+				assert.equal(await openImageResult('https://cdn.example.com/a.png'), 'cancelled');
+				assert.equal(closed, true);
+			} finally {
+				globals.window = previous;
+			}
+		}
+	);
 });

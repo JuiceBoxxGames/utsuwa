@@ -27,6 +27,15 @@ test('plain providers show the raw text assembled across rounds', () => {
 	assert.equal(stream.content, 'Let me check.\nIt is warm.' + fence);
 });
 
+test('plain providers never show the state fence while streaming', () => {
+	const { shown, sinks: s } = sinks();
+	const stream = new TurnStream(false, s);
+	stream.startRound();
+	stream.delta('Hello there.');
+	stream.delta('Hello there.\n```json\n{"image_search":"cats"}');
+	assert.equal(shown.at(-1), 'Hello there.\n');
+});
+
 test('OmniVoice shows cleaned text, caps the display at the state fence and speaks each part once', () => {
 	const { shown, spoken, sinks: s } = sinks();
 	const stream = new TurnStream(true, s);

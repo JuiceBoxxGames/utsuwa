@@ -100,7 +100,7 @@ export interface ITTSProvider {
 let sharedAudioContext: AudioContext | null = null;
 
 export function getSharedAudioContext(): AudioContext {
-	if (!sharedAudioContext) {
+	if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
 		sharedAudioContext = new AudioContext();
 	}
 	return sharedAudioContext;

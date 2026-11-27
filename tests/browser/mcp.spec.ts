@@ -59,3 +59,41 @@ test('switching from bearer HTTP to stdio does not require a hidden token', asyn
 	expect(saved[0]).toMatchObject({ transport: 'stdio', command: 'npx', args: ['-y', 'example-mcp'] });
 	expect(saved[0].auth).toBeUndefined();
 });
+
+test('the picture-search tool choice persists', async ({ page }) => {
+	await page.route('**/api/mcp/tools', (route) =>
+		route.fulfill({
+			json: {
+				tools: [{
+					serverId: 'search-1',
+					serverName: 'Search',
+					name: 'searxng_image_search',
+					description: 'Search pictures',
+					inputSchema: { type: 'object', properties: { query: {} } }
+				}, {
+					serverId: 'search-1',
+					serverName: 'Search',
+					name: 'searxng_search_suggestions',
+					description: 'Autocomplete suggestions',
+					inputSchema: { type: 'object', properties: { query: {} } }
+				}],
+				errors: []
+			}
+		})
+	);
+	await page.goto('/app/settings/mcp');
+	await page.evaluate(() => {
+		localStorage.setItem('utsuwa-mcp-v1', JSON.stringify([{
+			id: 'search-1', name: 'Search', transport: 'http', url: 'http://search.local/mcp', enabled: true
+		}]));
+	});
+	await page.reload();
+	await waitForHydration(page);
+	const options = await page.locator('#image-search-tool option').allTextContents();
+	expect(options.some((label) => label.includes('suggestions'))).toBe(false);
+	await page.selectOption('#image-search-tool', 'search-1::searxng_image_search');
+	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('utsuwa-image-search-tool-v1')!));
+	expect(saved).toEqual({ serverId: 'search-1', toolName: 'searxng_image_search' });
+	await page.reload();
+	await expect(page.locator('#image-search-tool')).toHaveValue('search-1::searxng_image_search');
+});

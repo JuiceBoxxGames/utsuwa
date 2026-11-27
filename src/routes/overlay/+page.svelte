@@ -15,13 +15,15 @@
 	import CameraSettingsPanel from '$lib/components/ui/CameraSettingsPanel.svelte';
 	import FloatingStatIndicators from '$lib/components/ui/FloatingStatIndicators.svelte';
 	import { EventScene } from '$lib/components/events';
-	import { Icon } from '$lib/components/ui';
+	import { Icon, ImageSearchModal } from '$lib/components/ui';
 	import Toasts from '$lib/components/ui/Toasts.svelte';
 	import { vrmStore } from '$lib/stores/vrm.svelte';
 	import { chatStore } from '$lib/stores/chat.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { modulesStore } from '$lib/stores/modules.svelte';
 	import { ttsStore } from '$lib/stores/tts.svelte';
+	import { imageSearchStore } from '$lib/stores/image-search.svelte';
+	import { onImageShowEvent } from '$lib/services/image-search/events';
 	import { personaStore } from '$lib/stores/persona.svelte';
 	import { overlayStore } from '$lib/stores/overlay.svelte';
 	import { isTauri, startDragging } from '$lib/services/platform';
@@ -136,12 +138,17 @@
 		}
 	}
 
-	onMount(() =>
-		startCompanionSession({
+	onMount(() => {
+		const stopSession = startCompanionSession({
 			send: (content, options) => handleSend(content, [], options),
 			onEvent: events.open
-		})
-	);
+		});
+		const stopImages = onImageShowEvent((event) => imageSearchStore.applyImageEvent(event));
+		return () => {
+			stopSession();
+			stopImages();
+		};
+	});
 
 	// Handle drag for Tauri window
 	function handleDragStart(e: MouseEvent) {
@@ -298,6 +305,9 @@
 
 	{#if windowError}<div class="window-error" role="alert"><span>{windowError}</span><button class="btn btn-ghost btn-sm" aria-label="Dismiss window error" onclick={() => windowError = ''}><Icon name="x" size={14} /></button></div>{/if}
 	<Toasts placement="bottom" />
+
+	<!-- Picture panel: the compact sheet keeps the companion visible -->
+	<ImageSearchModal />
 
 	<!-- Event Scene Overlay -->
 	{#if events.activeEvent?.scene}

@@ -439,3 +439,9 @@ test('live display drops an incomplete markup tail before the fence', () => {
 	// parser replace restores the correct message afterwards.
 	assert.equal(display, 'Hola!');
 });
+
+test('cleanSpeechMarkers collapses native speech text repeated as plain text', () => {
+	const sentence = '¡Claro, volvemos a lo clásico! Dann hole ich dir jetzt die süßen gatitos zurück – die gehen ja immer.';
+	const result = cleanSpeechMarkers(`speak({"text":${JSON.stringify(sentence)}}) ${sentence}`);
+	assert.equal(result, sentence);
+});
