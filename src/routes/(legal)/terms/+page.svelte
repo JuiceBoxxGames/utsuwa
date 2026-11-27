@@ -144,7 +144,7 @@
 
 	.legal-header h1 {
 		font-size: clamp(2.25rem, 5vw, 3rem);
-		font-weight: 700;
+		font-weight: 500;
 		line-height: 1.1;
 		letter-spacing: -0.02em;
 		color: var(--text-primary);

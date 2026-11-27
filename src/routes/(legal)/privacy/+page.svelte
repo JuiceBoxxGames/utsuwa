@@ -163,7 +163,7 @@
 
 	.legal-header h1 {
 		font-size: clamp(2.25rem, 5vw, 3rem);
-		font-weight: 700;
+		font-weight: 500;
 		line-height: 1.1;
 		letter-spacing: -0.02em;
 		color: var(--text-primary);
@@ -178,9 +178,8 @@
 	}
 
 	.legal-summary {
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-xl);
+		background: var(--bg-primary);
+		border-radius: var(--radius-panel);
 		padding: 1.5rem 1.75rem;
 		margin: 0 0 3rem;
 	}
