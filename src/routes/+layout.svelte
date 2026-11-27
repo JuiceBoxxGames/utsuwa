@@ -3,7 +3,7 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { applyColorMode, getColorMode } from '$lib/utils/color-mode';
-	import { isLightOnlyRoute } from '$lib/utils/light-only';
+	import { isMarketingRoute } from '$lib/utils/marketing-routes';
 	import { isTauri } from '$lib/services/platform';
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
@@ -29,22 +29,15 @@
 	// app as a safety net, using the build-time flag so it can't race.
 	const redirecting = $derived(browser && isDesktopBuild() && isWebOnly(page.url.pathname));
 
-	// Marketing pages are pinned to light; everywhere else follows the saved mode.
-	function syncTheme(hostname: string, pathname: string) {
-		if (isLightOnlyRoute(hostname, pathname)) {
-			document.documentElement.classList.remove('dark');
-		} else {
-			applyColorMode(getColorMode());
-		}
-	}
+	// Every page, marketing included, follows the saved color mode.
+	const syncTheme = () => applyColorMode(getColorMode());
 
-	// Marketing pages morph into each other (the hero card carries over from
-	// the landing page to the download page). The app never gets this.
+	// Marketing pages crossfade into each other. The app never gets this.
 	onNavigate((navigation) => {
 		const from = navigation.from?.url;
 		const to = navigation.to?.url;
 		if (!document.startViewTransition || !from || !to) return;
-		if (!isLightOnlyRoute(from.hostname, from.pathname) || !isLightOnlyRoute(to.hostname, to.pathname)) return;
+		if (!isMarketingRoute(from.hostname, from.pathname) || !isMarketingRoute(to.hostname, to.pathname)) return;
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 		return new Promise((resolve) => {
 			document.startViewTransition(async () => {
@@ -52,12 +45,6 @@
 				await navigation.complete;
 			});
 		});
-	});
-
-	// Client-side navigation between the app and the site keeps <html>, so
-	// re-apply on every route change.
-	$effect(() => {
-		if (browser) syncTheme(page.url.hostname, page.url.pathname);
 	});
 
 	if (browser) {
@@ -69,7 +56,7 @@
 		// React to system theme changes in real-time when using "system" mode
 		window
 			.matchMedia('(prefers-color-scheme: dark)')
-			.addEventListener('change', () => syncTheme(location.hostname, location.pathname));
+			.addEventListener('change', syncTheme);
 
 		// In the desktop app, marketing/docs/blog links open in the system
 		// browser instead of navigating the webview.
@@ -89,7 +76,7 @@
 	}
 
 	onMount(() => {
-		const onStorage = (event: StorageEvent) => { if (event.key === 'colorMode' || event.key === null) syncTheme(location.hostname, location.pathname); };
+		const onStorage = (event: StorageEvent) => { if (event.key === 'colorMode' || event.key === null) syncTheme(); };
 		window.addEventListener('storage', onStorage);
 		let disposed = false;
 		let unlisten: (() => void) | undefined;

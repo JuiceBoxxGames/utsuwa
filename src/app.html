@@ -8,13 +8,6 @@
 		<link rel="icon" href="/favicon-dark.png" type="image/png" media="(prefers-color-scheme: dark)" />
 		<script>
 			(function() {
-				// Marketing pages are light only. Mirrors isLightOnlyRoute in
-				// src/lib/utils/light-only.ts; keep them in sync.
-				const host = location.hostname;
-				const path = location.pathname;
-				if (!/^(docs|app)\./.test(host) && (path === '/' || /^\/(ja|blog|download|privacy|terms)(\/|$)/.test(path))) {
-					return;
-				}
 				const colorMode = localStorage.getItem('colorMode') || 'system';
 				let shouldBeDark;
 				if (colorMode === 'system') {
