@@ -1,8 +1,8 @@
 # Utsuwa app UI
 
-The app uses layered neutral fills, compact controls, and a single blue accent. Shape and hierarchy come from background color, spacing, and rounded corners. Resting controls and panels do not need visible strokes.
+The app uses layered neutral fills, compact controls, and a single ink accent. Shape and hierarchy come from background color, spacing, and rounded corners. Resting controls and panels do not need visible strokes.
 
-These rules cover the main app, settings, desktop overlay, documentation, and their portaled menus and dialogs. The docs share the app tokens and components; the marketing site, blog, and legal pages keep their own stylesheet and layout.
+These rules cover every surface outside the 3D scene: the main app, settings, desktop overlay, documentation, the marketing site (landing, `/ja`, download), the blog, the legal pages, and their portaled menus and dialogs. They all share one set of tokens and components.
 
 ## Shared styles
 
@@ -10,9 +10,10 @@ These rules cover the main app, settings, desktop overlay, documentation, and th
 - `src/lib/styles/app-theme.css` owns the app palette, typography, radius scale, the `.btn` family, and focus defaults.
 - `src/lib/styles/app-controls.css` owns fields and their layout helpers, selects, dropdowns, sliders, native checkboxes and radios, badges, floating panels, and dialogs.
 - `src/routes/app/settings/settings-page.css` owns the settings column, page header, section panel, and the one `setting-row` family.
-- `src/lib/styles/site.css` owns the marketing site, blog, and legal pages: their palette, radius and shadow scale, pill and hero buttons, grain, Japanese typography, view transitions, and blog and legal prose. The landing, download, blog, and legal routes import it.
+- `src/lib/styles/marketing.css` adds what only the marketing pages need on top of the shared system: the `.site-shell` root, the larger type scale (`.site-h1`, `.site-h2`, `.site-lede`, `.site-eyebrow`), the 1200px container, section spacing, `.site-panel` media panels, and the `.btn-pill` modifier for the `.btn` family. The landing, download, blog, and legal routes import it.
 - `src/lib/styles/prose.css` owns the docs prose (`.docs-site .prose`) and the Shiki code colors.
-- The `html:has(.app, .overlay-app, .docs-site)` scope includes content portaled to the document body and stops applying outside the app and docs.
+- The `html:has(.app, .overlay-app, .docs-site)` scope includes content portaled to the document body. `.docs-site` is the theme root for both the docs and the marketing pages: marketing layouts render `<div class="docs-site site-shell">`, which also gives the blog and legal pages the docs prose.
+- One header (`SiteNav`) serves the marketing pages and the docs; one footer (`SiteFooter`) carries the light, dark, and system toggle (`ThemeToggle`, shared with the docs sidebar). Every page follows the saved color mode; each domain keeps its own choice.
 - Components consume tokens. Do not add per-component hex colors or duplicate shared control styling. Keep semantic status colors, graph categories, and authored media separate from interface colors.
 
 ## Palette
@@ -30,9 +31,9 @@ These rules cover the main app, settings, desktop overlay, documentation, and th
 | Elevated menu or dialog | `#FFFFFF` | `#232323` |
 | Primary text, `--text-primary` | `#27272A` | `#F5F5F5` |
 | Secondary text, `--text-secondary` | `#63636D` | `#909090` |
-| Primary blue, `--accent` | `#04B2FD` | `#04B2FD` |
-| Text and icons on blue, `--accent-contrast` | `#0A0A0A` | `#0A0A0A` |
-| Blue text on neutral fills, `--accent-text` | `#006BA1` | `#04B2FD` |
+| Primary ink, `--accent` | `#18181B` | `#F4F4F5` |
+| Text and icons on ink, `--accent-contrast` | `#FFFFFF` | `#0A0A0A` |
+| Accent text, `--accent-text` | same as primary text | same as primary text |
 | Error surface, `--color-error-bg` | `#FCEBEC` | `#301214` |
 | Error text on that surface, `--color-error-text` | `#C10007` | `#FF6467` |
 | Filled error badge, `--color-error-fill` | `#E7000B` | `#E7000B` |
@@ -40,7 +41,7 @@ These rules cover the main app, settings, desktop overlay, documentation, and th
 
 `--text-tertiary` is an alias of `--text-secondary`; there is no third text strength. Secondary text passes 4.5:1 on the canvas, panel, sidebar, nested panel, and control fills in both themes.
 
-Use the same blue in both themes. White reaches only 2.39:1 on it, short of both the 4.5:1 text and 3:1 graphics minimums, so everything drawn on the blue uses `--accent-contrast`: primary button text and icons, the thumb of an active switch, checkbox marks, and radio dots. Use `--accent` for fills, rings, sliders, and switches and `--accent-text` for blue text and links. Derive hover colors and muted focus washes from the accent. Error messages sit on `--color-error-bg` with `--color-error-text`; filled badges and destructive buttons use `--color-error-fill` with white.
+Ink flips with the theme: near black in light, near white in dark. Everything drawn on it uses `--accent-contrast`: primary button text and icons, the thumb of an active switch, checkbox marks, and radio dots. Use `--accent` for fills, rings, sliders, switches, and focus outlines. Hover lightens the ink in light mode and darkens it in dark mode, and muted focus washes derive from it. There is no second brand color: `--accent-text` is the primary text color, so links in prose are marked with an underline rather than a color. Data and status colors (info, the energy stat, the acquaintance tier, the affectionate mood, and the memory graph) keep their own cyan from `src/app.css` and never alias `--accent`. Error messages sit on `--color-error-bg` with `--color-error-text`; filled badges and destructive buttons use `--color-error-fill` with white.
 
 Support light, dark, and system preferences. Theme changes must apply to open menus and synchronize between the main and overlay windows.
 
@@ -58,7 +59,7 @@ Panels use neutral fills. Resting border tokens are transparent. Use shadows to 
 
 Use `Button.svelte` or the shared `.btn` classes:
 
-- Primary actions use the blue fill with dark text and icons.
+- Primary actions use the ink fill with `--accent-contrast` text and icons.
 - Secondary actions use a neutral fill, with distinct hover and pressed fills.
 - Ghost actions start transparent and gain a neutral fill on hover.
 - Destructive actions use the error fill with white text and require the existing confirmation behavior.
@@ -112,4 +113,4 @@ Honor reduced motion. Preserve status announcements, disabled states, touch targ
 
 Check both themes at desktop and mobile widths. Include focused fields, disabled controls, active switches, selected tabs, dropdown search, long messages, empty states, dialogs, and overlay controls. Inspect screenshots as well as interaction tests.
 
-Implementation notes and review coverage are in [docs/design/ui-review.md](docs/design/ui-review.md). Third-party license notices are maintained separately in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Third-party license notices are maintained separately in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

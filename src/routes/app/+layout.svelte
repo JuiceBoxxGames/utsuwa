@@ -40,9 +40,9 @@
 	<meta property="og:type" content="website" />
 	<meta property="og:title" content="Utsuwa" />
 	<meta property="og:description" content="Open-source AI companion with 3D VRM avatars, voice chat, and memory." />
-	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 </svelte:head>
 
 <div class="app" style:height={viewportHeight ? `${viewportHeight}px` : undefined}>

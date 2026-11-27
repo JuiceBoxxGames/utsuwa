@@ -68,7 +68,7 @@ Your companion fills the screen. Controls sit in the corners and along the botto
 | Info | App version, links to GitHub and these docs, and checks for speech recognition, 3D graphics, and local storage. |
 | Controls (sliders) | Opens four more buttons: **Settings** (gear), **Camera** (video icon), the **theme** button, and **AR** (cube). |
 
-The desktop app adds a blue overlay button here. See the [Desktop Guide](/docs/guides/desktop-guide#main-window-and-overlay).
+The desktop app adds a filled overlay button here. See the [Desktop Guide](/docs/guides/desktop-guide#main-window-and-overlay).
 
 ### The chat bar
 
@@ -85,7 +85,7 @@ While she works on a reply, a label shows what she is doing: **Remembering...**,
 
 Settings > Display > **Conversation layout** has two options.
 
-- **Immersive** (the default): her reply appears in a speech bubble that follows her head. Click the bubble to dismiss it. The input bar floats at the bottom, aligned left, center, or right.
+- **Immersive** (the default): her reply appears in a speech bubble that follows her head. Click the bubble to dismiss it. On a phone, the bubble sits just above the input bar instead, so it never covers her face. The input bar floats at the bottom, aligned left, center, or right.
 - **Chat window**: a docked **Conversation** panel shows the messages of this session, each with a copy button. The input moves into the panel. The trash button clears the visible history after you confirm. The panel sits beside her on wide screens and below her on small ones, on the side you choose.
 
 The visible chat history lasts until you reload. Her memory of your conversations stays. Settings > Display also sets the text reveal speed, the typing indicator delay, and an optional wait tone. See the [Settings Reference](/docs/guides/settings-reference#display).

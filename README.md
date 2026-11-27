@@ -2,7 +2,10 @@
 > Utsuwa and Juice Boxx Games have not minted, launched, endorsed, or authorized any cryptocurrency, token, coin, NFT, or blockchain project. We never will. If you see crypto associated with Utsuwa or The Lab, it is a scam. This repository is the only authentic Utsuwa project repository.
 
 <p align="center">
-  <img alt="Utsuwa, an open-source AI companion you can see and talk to" src="static/brand-assets/banner-light.avif" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="static/brand-assets/banner-dark.avif">
+    <img alt="Utsuwa, an open-source AI companion you can see and talk to" src="static/brand-assets/banner-light.avif" width="100%">
+  </picture>
 </p>
 
 <p align="center">
@@ -18,10 +21,10 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
-  <a href="https://github.com/JuiceBoxxGames/utsuwa/releases"><img src="https://img.shields.io/github/v/release/JuiceBoxxGames/utsuwa?label=Release&color=00b2ff" alt="Latest release"></a>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-22+-green.svg" alt="Node.js 22+"></a>
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-3f3f46.svg" alt="License: AGPL-3.0"></a>
+  <a href="https://github.com/JuiceBoxxGames/utsuwa/releases"><img src="https://img.shields.io/github/v/release/JuiceBoxxGames/utsuwa?label=Release&color=3f3f46" alt="Latest release"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-22+-3f3f46.svg" alt="Node.js 22+"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-3f3f46.svg" alt="PRs welcome"></a>
 </p>
 
 <p align="center">
@@ -30,13 +33,22 @@
 
 <p align="center">
   <a href="https://github.com/JuiceBoxxGames/utsuwa/releases/latest">
-    <img alt="Download for macOS" src="static/brand-assets/download-buttons/macos-light.avif" width="31%">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="static/brand-assets/download-buttons/macos-dark.avif">
+      <img alt="Download for macOS" src="static/brand-assets/download-buttons/macos-light.avif" width="31%">
+    </picture>
   </a>
   <a href="https://github.com/JuiceBoxxGames/utsuwa/releases/latest">
-    <img alt="Download for Windows" src="static/brand-assets/download-buttons/windows-light.avif" width="31%">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="static/brand-assets/download-buttons/windows-dark.avif">
+      <img alt="Download for Windows" src="static/brand-assets/download-buttons/windows-light.avif" width="31%">
+    </picture>
   </a>
   <a href="https://github.com/JuiceBoxxGames/utsuwa/releases/latest">
-    <img alt="Download for Linux" src="static/brand-assets/download-buttons/linux-light.avif" width="31%">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="static/brand-assets/download-buttons/linux-dark.avif">
+      <img alt="Download for Linux" src="static/brand-assets/download-buttons/linux-light.avif" width="31%">
+    </picture>
   </a>
 </p>
 
@@ -51,32 +63,35 @@
 "Utsuwa" means "vessel" in Japanese. A container for AI to inhabit visually.
 
 <p align="center">
-  <img alt="The Utsuwa app: a 3D VRM companion with chat, mood, and voice" src="static/marketing/companion-light.webp" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="static/marketing/companion-dark.webp">
+    <img alt="The Utsuwa app: a 3D VRM companion with chat, mood, and voice" src="static/marketing/companion-light.webp" width="100%">
+  </picture>
 </p>
 
 ## Features
 
 - **VRM Model Viewer**: Load and display VRM 3D avatar models with orbit controls, automatic camera framing per model, and live camera settings (zoom, height, horizontal pan, field of view)
 - **Developer Tools**: Test VRM facial expressions and animations, or upload a temporary `.vrm` file for a non-persistent preview that reverts when you leave the page
-- **AR Mode**: On WebXR-capable devices (Android Chrome, headset browsers), place your companion on your real floor, drag her around, and pinch to resize
-- **Photo Mode**: Pose her from a pose library, set her expression, pick a background, add a color filter, vignette, or frame, drop draggable stickers on the shot, and capture in high resolution with a quick snap or self-timer. Head tracking keeps her eyes on your camera while she holds the pose
-- **Touch Reactions**: Tap her and she reacts with an expression and a physics ripple through hair and clothes. Reactions depend on where you tap and how close the two of you are
-- **Mood Expressions**: Her face follows her tracked mood, from a soft smile when she's content to a frown when she's frustrated, scaled by how strongly she feels it, and she can flash a brief reaction when a moment calls for it, like smiling when you ask her to. Toggle in Settings > Display
-- **Animation Library**: Upload your own `.vrma` motions, describe them, and let her use them. She can trigger one gesture per reply when it fits, and the built-in emotes come described out of the box. Pick which idle motions she cycles through and give her a thinking motion for the wait before a reply
-- **Scene Backgrounds**: Swap the backdrop behind her for pastel gradients or cute patterns (dots, hearts, sparkles, stripes, gingham), or upload your own image, right from the Controls panel; your pick persists
-- **Physics Intensity**: A Movement slider from Subtle to Lively scales how much her hair and outfit respond to motion, respecting each model's own rig tuning
+- **AR Mode**: On WebXR-capable devices (Android Chrome, headset browsers), place your companion on your real floor, drag them around, and pinch to resize
+- **Photo Mode**: Pose them from a pose library, set their expression, pick a background, add a color filter, vignette, or frame, drop draggable stickers on the shot, and capture in high resolution with a quick snap or self-timer. Head tracking keeps their eyes on your camera while they hold the pose
+- **Touch Reactions**: Tap them and they react with an expression and a physics ripple through hair and clothes. Reactions depend on where you tap and how close the two of you are
+- **Mood Expressions**: Their face follows their tracked mood, from a soft smile when they're content to a frown when they're frustrated, scaled by how strongly they feel it, and they can flash a brief reaction when a moment calls for it, like smiling when you ask them to. Toggle in Settings > Display
+- **Animation Library**: Upload your own `.vrma` motions, describe them, and let them use them. They can trigger one gesture per reply when it fits, and the built-in emotes come described out of the box. Pick which idle motions they cycle through and give them a thinking motion for the wait before a reply
+- **Scene Backgrounds**: Swap the backdrop behind them for pastel gradients or cute patterns (dots, hearts, sparkles, stripes, gingham), or upload your own image, right from the Controls panel; your pick persists
+- **Physics Intensity**: A Movement slider from Subtle to Lively scales how much their hair and outfit respond to motion, respecting each model's own rig tuning
 - **Model-Centric UI**: Full-screen 3D model with unobtrusive overlay controls
-- **3D Speech Bubbles**: Chat responses appear as bubbles that track the model's head in 3D space, revealed word by word at a configurable speed
+- **3D Speech Bubbles**: Chat responses appear as bubbles that track the model's head in 3D space, revealed word by word at a configurable speed. On phones the bubble docks just above the chat bar instead
 - **Chat Window**: A docked panel with conversation history, message copying, and an input. It stays open in Chat window mode, beside the avatar on wide screens and below it on mobile. The full scene continues behind the panel. Choose Immersive for the standalone input bar in Settings > Display.
 - **Keep Screen Awake**: Opt in under Settings > Display to keep the screen on while Utsuwa is visible. The indicator reports the actual lock state; unsupported webviews show a clear unavailable state.
-- **Thinking Status**: A shimmer label narrates what she is actually doing (Remembering, Looking at your photo, Thinking), with a configurable delay and an optional soft audio ping
+- **Thinking Status**: A shimmer label narrates what they are actually doing (Remembering, Looking at your photo, Thinking), with a configurable delay and an optional soft audio ping
 - **Chat Interface**: Floating input bar (left, center, or right aligned) with streaming responses
 - **Voice Input**: Speech-to-text via a local Whisper server (Speaches, faster-whisper-server, whisper.cpp), Groq (Whisper), or the browser's Web Speech API, with real-time audio visualization
-- **Show Her Photos**: Show your companion an image via the attach (paperclip) button in the chat bar or drag-and-drop. Vision-capable models (GPT-4o, Claude, Gemini, or local ones like LLaVA) actually see it and can remember the moment, and kept photos live on a scrapbook-style board. Images stay on your device and only ever reach vision-capable models. A text-only chat model can still react to photos through an optional separate vision model (cloud or local) that describes them
+- **Show Them Photos**: Show your companion an image via the attach (paperclip) button in the chat bar or drag-and-drop. Vision-capable models (GPT-4o, Claude, Gemini, or local ones like LLaVA) actually see it and can remember the moment, and kept photos live on a scrapbook-style board. Images stay on your device and only ever reach vision-capable models. A text-only chat model can still react to photos through an optional separate vision model (cloud or local) that describes them
 - **LLM Integration**: Support for 8 LLM providers: OpenAI, Anthropic, Google, xAI, DeepSeek, Ollama, LM Studio, and any OpenAI-compatible endpoint (OpenRouter, Together, vLLM, ...)
 - **Local Model Discovery**: Ollama and LM Studio discover installed local models directly from your device
 - **MCP Tools**: Connect Model Context Protocol servers, such as Home Assistant's official MCP integration or web search via SearXNG, and let the companion call their tools during chat. Per-server HTTP/stdio transports, bearer-token authentication, and an `MCP_ENABLED=server` gate for self-hosted web deployments (see [MCP Servers](https://docs.utsuwa.ai/guides/mcp))
-- **Show You Pictures**: Ask her to show you something and Utsuwa searches through the picture tool you pick under Settings > MCP (SearXNG, Brave image search, Pexafy and similar), then shows structured results in a floating popup that closes on request. No model tool-calling is required. A non-blocking status pill covers the search; each card honestly says **Open picture** or **Open source**, the footer names the backend, and **More pictures** appears only when the tool supports paging. Thumbnails load through an MCP file-fetch tool (`fetch_file_from_url`) instead of hotlinking the source; without it the panel explains the missing preview instead of showing a broken image. (see [MCP Servers](https://docs.utsuwa.ai/guides/mcp#showing-pictures))
+- **Show You Pictures**: Ask them to show you something and Utsuwa searches through the picture tool you pick under Settings > MCP (SearXNG, Brave image search, Pexafy and similar), then shows structured results in a floating popup that closes on request. No model tool-calling is required. A non-blocking status pill covers the search; each card honestly says **Open picture** or **Open source**, the footer names the backend, and **More pictures** appears only when the tool supports paging. Thumbnails load through an MCP file-fetch tool (`fetch_file_from_url`) instead of hotlinking the source; without it the panel explains the missing preview instead of showing a broken image. (see [MCP Servers](https://docs.utsuwa.ai/guides/mcp#showing-pictures))
 - **Text-to-Speech**: Support for ElevenLabs, OpenAI TTS, and Fish Audio, local voices via any OpenAI-compatible server (Kokoro-FastAPI, openedai-speech), and local OmniVoice. OmniVoice streams: speech starts while the model is still writing, and foreign words can be spoken per word in their own language and voice. With OmniVoice + Alternative Voice, the model controls its spoken reply via native `speak_segment` / `pause_segment` / `gesture_segment` tool calls (when tool calling is enabled); otherwise the documented inline `speak()` / `pause()` / `gesture()` syntax is used
 - **Fully Local Option**: Run the whole stack offline: local LLM (Ollama/LM Studio), local TTS, and local Whisper STT, so nothing leaves your device
 - **Lip-sync**: Audio-driven mouth animation synced to TTS playback, with a Mouth movement slider in Settings > Display for models whose mouth opens too wide or too little
@@ -88,7 +103,7 @@
 - **Memory Inspector**: View, search, add, and delete facts in Settings > Memory. Inspect saved turns, session summaries, character state, and sample response parsing without changing engine behavior.
 - **Memory Graph**: Interactive visualization showing how memories connect semantically
 - **Data Export/Import**: Download your data as a save file, restore anytime
-- **Theming**: Light and dark mode support with system preference detection
+- **Theming**: Light, dark, or system color mode in a restrained ink palette shared by the app, docs, and website
 - **Desktop App** *(beta)*: Native desktop app for macOS, Windows, and Linux with transparent overlay mode, so your companion floats on your desktop
 
 ### Local-First Storage
@@ -105,8 +120,8 @@ Build a meaningful relationship with your AI companion through a dating sim-insp
 
 - **Multi-axis Relationships**: Track affection, trust, intimacy, comfort, and respect separately
 - **8 Relationship Stages**: Progress from Stranger → Acquaintance → Friend → Close Friend → Romantic Interest → Dating → Committed → Soulmate
-- **Dynamic Mood**: Real-time emotions with causality tracking (she remembers *why* she feels a certain way)
-- **Visual Novel Events**: Milestone moments, romantic scenes, and choices that matter - with custom dialogue and branching responses. With a chat provider configured, she writes each scene herself from what you have shared, in the language you write in; the built-in scenes are the fallback
+- **Dynamic Mood**: Real-time emotions with causality tracking (they remember *why* they feel a certain way)
+- **Visual Novel Events**: Milestone moments, romantic scenes, and choices that matter - with custom dialogue and branching responses. With a chat provider configured, they write each scene themselves from what you have shared, in the language you write in; the built-in scenes are the fallback
 - **Semantic Memory**: Facts are indexed with vector embeddings for meaning-based retrieval - "outdoor activities" finds memories about hiking. Runs locally using Transformers.js, no API calls
 - **Natural Progression**: Hybrid system combining app heuristics + LLM suggestions for believable relationship growth
 - **Time-Aware**: Your companion notices when you've been away and reacts accordingly
@@ -120,7 +135,7 @@ A native desktop app built with Tauri that includes all web features plus:
 
 - **Overlay Mode**: Your companion floats on your desktop with a transparent background
 - **Always-on-Top**: The overlay stays visible over all other windows
-- **Draggable Positioning**: Click and drag the character to reposition anywhere on screen, or lock her in place
+- **Draggable Positioning**: Click and drag the character to reposition anywhere on screen, or lock them in place
 - **Resizable Overlay**: Hover to reveal a soft frame and drag the corner tab to resize; your size is remembered
 - **Overlay Camera**: A separate camera profile (zoom, height, FOV) tuned independently from the main app
 - **Floating Chat**: Expandable chat input that appears when you click the chat icon, with replies in a readable docked bubble
@@ -181,7 +196,7 @@ Voice input is accessed via the microphone button in the chat bar. Selection is 
 ## Getting Started
 
 > [!NOTE]
-> Utsuwa is in its very early development stages. If you're using the app, **save your data often**. Early versions may not have backwards-compatible save states and could require manual reformatting.
+> Utsuwa is in beta. If you're using the app, **save your data often**. Early versions may not have backwards-compatible save states and could require manual reformatting.
 
 ### Try it Online
 
@@ -253,7 +268,7 @@ pnpm tauri dev
 
 #### Configuration
 
-1. Click the **Settings** (gear icon) in the sidebar
+1. Open the menu in the top-right corner and click **Settings** (gear icon)
 2. Navigate to **Settings > LLM Model** to configure your chat provider:
    - Enable Chat (LLM)
    - Select a cloud provider and enter your API key
@@ -376,7 +391,7 @@ pnpm tauri build  # Build desktop app installer
 
 - [ ] **File and Video Uploads** - Add support for attaching files and videos for multimodal LLM workflows and providers that can use richer context or web-aware tools (image support has shipped)
 - [ ] **Live2D Support** - Alternative to VRM for 2D animated avatars
-- [ ] **Hands-Free Voice Mode** - Full duplex conversation: speak naturally and she answers, no push-to-talk, with voice activity detection
+- [ ] **Hands-Free Voice Mode** - Full duplex conversation: speak naturally and they answer, no push-to-talk, with voice activity detection
 
 ## Contributing
 

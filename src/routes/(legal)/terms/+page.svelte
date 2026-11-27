@@ -17,11 +17,11 @@
 	/>
 	<meta property="og:url" content={`${SITE_URL}/terms`} />
 	<meta property="og:site_name" content="Utsuwa" />
-	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 </svelte:head>
 
 <header class="legal-header">
@@ -144,7 +144,7 @@
 
 	.legal-header h1 {
 		font-size: clamp(2.25rem, 5vw, 3rem);
-		font-weight: 700;
+		font-weight: 500;
 		line-height: 1.1;
 		letter-spacing: -0.02em;
 		color: var(--text-primary);

@@ -56,7 +56,7 @@ Updates are signed, and the app verifies them before installing. In-app updates 
 
 The **main window** is the full app, the same as the web version: chat, settings, photo mode, memory, and everything else.
 
-The blue **Launch overlay** button (monitor icon, top right) switches to the overlay. The main window hides and your companion appears in a transparent window that stays above other apps and stays out of the taskbar.
+The filled **Launch overlay** button (monitor icon, top right) switches to the overlay. The main window hides and your companion appears in a transparent window that stays above other apps and stays out of the taskbar.
 
 Both windows share your data: memories, relationship state, reminders, settings, and animations. The chat history on screen belongs to each window.
 

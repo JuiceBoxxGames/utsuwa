@@ -2,7 +2,7 @@
 @import './lib/styles/app-theme.css';
 @import './lib/styles/app-controls.css';
 
-/* Tokens shared by the site and the app. Palettes live in site.css and app-theme.css. */
+/* Tokens shared by the site and the app. The palette lives in app-theme.css. */
 :root {
 	--font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
@@ -35,7 +35,7 @@
 	--mood-content: var(--color-success);
 	--mood-frustrated: var(--color-error);
 	--mood-curious: #06b6d4;
-	--mood-affectionate: var(--accent);
+	--mood-affectionate: var(--color-info);
 	--mood-playful: #14b8a6;
 	--mood-melancholy: var(--text-tertiary);
 	--mood-neutral: var(--text-secondary);

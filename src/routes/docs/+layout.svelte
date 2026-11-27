@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import DocsHeader from '$lib/components/docs/DocsHeader.svelte';
+	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import DocsSidebar from '$lib/components/docs/DocsSidebar.svelte';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
@@ -74,10 +74,10 @@
 	});
 </script>
 
-<!-- .docs-site opts these pages into the app theme (app-theme.css). Blog and
-     legal pages use a plain .docs wrapper and keep the site styles. -->
+<!-- .docs-site opts these pages into the app theme (app-theme.css). The
+     marketing, blog, and legal pages render the same root. -->
 <div class="docs-site">
-	<DocsHeader onToggleSidebar={() => (sidebarOpen = !sidebarOpen)} {sidebarOpen} />
+	<SiteNav onToggleSidebar={() => (sidebarOpen = !sidebarOpen)} {sidebarOpen} />
 	<div class="docs-body">
 		{#if drawerOpen}
 			<!-- Pointer convenience only; keyboard users close with Escape or the toggle -->

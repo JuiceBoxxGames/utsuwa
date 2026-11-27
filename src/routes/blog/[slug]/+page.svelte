@@ -69,7 +69,7 @@
 	{#if data.metadata?.description}
 		<meta property="og:description" content={data.metadata.description} />
 	{/if}
-	<meta property="og:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`} />
+	<meta property="og:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail-ink.jpg`} />
 	<meta property="og:url" content={`${SITE_URL}/blog/${data.slug}`} />
 	<meta property="og:site_name" content="Utsuwa" />
 	<meta name="twitter:card" content="summary_large_image" />
@@ -77,14 +77,14 @@
 	{#if data.metadata?.description}
 		<meta name="twitter:description" content={data.metadata.description} />
 	{/if}
-	<meta name="twitter:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`} />
+	<meta name="twitter:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail-ink.jpg`} />
 	<link rel="canonical" href={`${SITE_URL}/blog/${data.slug}`} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'BlogPosting',
 		headline: data.metadata?.title,
 		description: data.metadata?.description,
-		image: data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`,
+		image: data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail-ink.jpg`,
 		datePublished: data.metadata?.date,
 		url: `${SITE_URL}/blog/${data.slug}`,
 		author: {
@@ -189,7 +189,7 @@
 		justify-content: center;
 		gap: 8px;
 		margin: 0 0 22px;
-		color: color-mix(in srgb, var(--text-primary) 45%, transparent);
+		color: var(--text-secondary);
 		font-size: 16px;
 		font-weight: 500;
 		letter-spacing: -0.02em;
@@ -202,29 +202,27 @@
 
 	.post-title {
 		margin: 0;
-		font-size: 64px;
-		font-weight: 700;
-		line-height: 0.98;
-		letter-spacing: -0.06em;
+		font-size: clamp(36px, 5vw, 56px);
+		font-weight: 500;
+		line-height: 1.08;
+		letter-spacing: -0.02em;
 		text-wrap: balance;
 	}
 
 	.post-lead {
 		max-width: 620px;
 		margin: 24px auto 0;
-		color: color-mix(in srgb, var(--text-primary) 80%, transparent);
-		font-size: 22px;
-		font-weight: 500;
-		line-height: 28px;
-		letter-spacing: -0.03em;
+		color: var(--text-secondary);
+		font-size: 20px;
+		line-height: 1.5;
 	}
 
 	.post-banner {
 		max-width: 960px;
 		margin: 0 auto 64px;
 		overflow: hidden;
-		border-radius: 48px;
-		background: var(--gradient-aurora-cool);
+		border-radius: 28px;
+		background: var(--bg-primary);
 	}
 
 	.post-banner img {
@@ -246,7 +244,7 @@
 	}
 
 	.post-page .blog-post {
-		color: color-mix(in srgb, var(--text-primary) 92%, transparent);
+		color: var(--text-primary);
 		font-size: 19px;
 		line-height: 1.62;
 		letter-spacing: -0.012em;
@@ -263,24 +261,30 @@
 
 	.post-page .blog-post :global(h2) {
 		margin: 2.2em 0 0.55em;
-		font-size: 34px;
-		font-weight: 700;
-		line-height: 1.08;
-		letter-spacing: -0.05em;
+		font-size: 30px;
+		font-weight: 500;
+		line-height: 1.15;
+		letter-spacing: -0.015em;
 		text-shadow: none;
 	}
 
 	.post-page .blog-post :global(h3) {
 		margin: 1.8em 0 0.5em;
-		font-size: 24px;
-		font-weight: 600;
-		line-height: 1.2;
-		letter-spacing: -0.035em;
+		font-size: 22px;
+		font-weight: 500;
+		line-height: 1.25;
+		letter-spacing: -0.01em;
 	}
 
 	.post-page .blog-post :global(a) {
-		color: var(--accent);
-		font-weight: 500;
+		color: var(--text-primary);
+		text-decoration: underline;
+		text-decoration-color: var(--text-secondary);
+		text-underline-offset: 3px;
+	}
+
+	.post-page .blog-post :global(a:hover) {
+		text-decoration-color: var(--text-primary);
 	}
 
 	.post-page .blog-post :global(img) {
@@ -309,8 +313,8 @@
 	.post-page .blog-post :global(blockquote) {
 		margin: 1.6em 0;
 		padding: 4px 0 4px 22px;
-		border-left: 3px solid var(--stat-affection);
-		color: color-mix(in srgb, var(--text-primary) 75%, transparent);
+		border-left: 3px solid var(--control-selected);
+		color: var(--text-secondary);
 	}
 
 	.post-page .blog-post :global(ul),
@@ -344,7 +348,7 @@
 	.toc-title {
 		margin: 0 0 10px;
 		padding-left: 12px;
-		color: color-mix(in srgb, var(--text-primary) 45%, transparent);
+		color: var(--text-secondary);
 		font-size: 14px;
 		font-weight: 500;
 	}
@@ -364,7 +368,7 @@
 		display: block;
 		padding: 7px 12px;
 		border-radius: 100px;
-		color: color-mix(in srgb, var(--text-primary) 55%, transparent);
+		color: var(--text-secondary);
 		font-size: 14px;
 		line-height: 1.3;
 		letter-spacing: -0.02em;
@@ -389,15 +393,15 @@
 	}
 
 	.more {
-		max-width: 1180px;
-		margin: 120px auto 0;
+		max-width: var(--site-max);
+		margin: var(--site-section) auto 0;
 	}
 
 	.more-title {
 		margin: 0 0 28px;
-		font-size: 40px;
-		font-weight: 700;
-		letter-spacing: -0.05em;
+		font-size: clamp(30px, 4vw, 40px);
+		font-weight: 500;
+		letter-spacing: -0.015em;
 		color: var(--text-primary);
 	}
 
@@ -422,11 +426,6 @@
 	@media (max-width: 640px) {
 		.post-head {
 			padding: 40px 0 32px;
-		}
-
-		.post-title {
-			font-size: 40px;
-			letter-spacing: -0.05em;
 		}
 
 		.post-lead {

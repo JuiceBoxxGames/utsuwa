@@ -26,7 +26,7 @@ export function getSortedPosts(): BlogPostMeta[] {
 			title: meta.title as string,
 			description: meta.description as string,
 			date: normalizeDate(meta.date),
-			image: (meta.image as string) || '/blog/blog-thumbnail.jpg',
+			image: (meta.image as string) || '/blog/placeholder-abstract.jpg',
 			slug: path.replace('/src/content/blog/', '').replace('.md', '')
 		}))
 		.filter((post) => post.date)

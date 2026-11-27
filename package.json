@@ -20,7 +20,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"postbuild": "pagefind --site .vercel/output/static || pagefind --site .svelte-kit/cloudflare || pagefind --site build || echo 'Pagefind indexing skipped (no static HTML found)'",
+		"postbuild": "pagefind --site .svelte-kit/cloudflare || pagefind --site build || echo 'Pagefind indexing skipped (no static HTML found)'",
 		"cf:deploy": "wrangler deploy cloudflare-worker.js",
 		"cf:preview": "wrangler versions upload cloudflare-worker.js",
 		"preview": "vite preview",

@@ -64,13 +64,14 @@ html.dark .shiki span {
 
 .docs-site .prose a:not(.btn) {
 	color: var(--accent-text);
-	text-decoration: none;
+	text-decoration: underline;
+	text-decoration-color: var(--text-secondary);
+	text-underline-offset: 3px;
 	border-radius: 2px;
 }
 
 .docs-site .prose a:not(.btn):hover {
-	text-decoration: underline;
-	text-underline-offset: 3px;
+	text-decoration-color: var(--text-primary);
 }
 
 .docs-site .prose strong {

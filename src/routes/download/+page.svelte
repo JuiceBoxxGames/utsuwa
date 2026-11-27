@@ -1,5 +1,5 @@
 <script lang="ts">
-	import '$lib/styles/site.css';
+	import '$lib/styles/marketing.css';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
@@ -10,9 +10,6 @@
 	import { marketingImage } from '$lib/utils/marketing-images';
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
-	import SkyZone from '$lib/components/marketing/SkyZone.svelte';
-	import PlatformLine from '$lib/components/marketing/PlatformLine.svelte';
-	import SiteLetter from '$lib/components/marketing/SiteLetter.svelte';
 	import OsIcon from '$lib/components/marketing/OsIcon.svelte';
 	import { SITE_URL, GITHUB_REPO, GITHUB_RELEASES } from '$lib/config/site';
 	import { sectionUrl } from '$lib/config/links';
@@ -36,17 +33,17 @@
 
 	const downloadFor = (key: string) => assets[key] || GITHUB_RELEASES;
 
-	const platforms: { name: Os; icon: 'macos' | 'windows' | 'linux'; note: string; tone: string }[] = [
-		{ name: 'macOS', icon: 'macos', note: 'Apple Silicon and Intel, universal .dmg', tone: '#1c2b33' },
-		{ name: 'Windows', icon: 'windows', note: 'Windows 10 and 11, x64 .exe installer', tone: 'color-mix(in oklab, var(--accent) 55%, #0b1620)' },
-		{ name: 'Linux', icon: 'linux', note: '.AppImage, .deb, and .rpm', tone: 'color-mix(in oklab, var(--tier-eternal-bond) 50%, #10141c)' }
+	const platforms: { name: Os; icon: 'macos' | 'windows' | 'linux'; note: string }[] = [
+		{ name: 'macOS', icon: 'macos', note: 'Apple Silicon and Intel, universal .dmg' },
+		{ name: 'Windows', icon: 'windows', note: 'Windows 10 and 11, x64 .exe installer' },
+		{ name: 'Linux', icon: 'linux', note: '.AppImage, .deb, and .rpm' }
 	];
 
 	const included = [
-		{ icon: GiftIcon, title: 'Free forever', body: 'No subscription and no paywalled features. The whole app is yours.', tint: 'var(--gradient-aurora)' },
-		{ icon: UserXIcon, title: 'No account', body: 'Nothing to sign up for. Open it and start.', tint: 'var(--gradient-aurora-cool)' },
-		{ icon: KeyRoundIcon, title: 'Your keys', body: 'Bring your own model keys, or run a local model with none at all.', tint: 'var(--gradient-aurora-mint)' },
-		{ icon: HardDriveIcon, title: 'Stays on device', body: 'Characters and conversations live in local storage, not our servers.', tint: 'var(--gradient-aurora-iris)' }
+		{ icon: GiftIcon, title: 'Free forever', body: 'No subscription and no paywalled features. The whole app is yours.' },
+		{ icon: UserXIcon, title: 'No account', body: 'Nothing to sign up for. Open it and start.' },
+		{ icon: KeyRoundIcon, title: 'Your keys', body: 'Bring your own model keys, or run a local model with none at all.' },
+		{ icon: HardDriveIcon, title: 'Stays on device', body: 'Characters and conversations live in local storage, not our servers.' }
 	];
 </script>
 
@@ -65,9 +62,9 @@
 	/>
 	<meta property="og:url" content={`${SITE_URL}/download`} />
 	<meta property="og:site_name" content="Utsuwa" />
-	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'SoftwareApplication',
@@ -80,100 +77,88 @@
 	})}<\/script>`}
 </svelte:head>
 
-<div class="page grain">
+<div class="docs-site site-shell">
+	<SiteNav />
+
 	<main>
-		<SkyZone fade>
-			<section class="dl-hero" aria-labelledby="dl-title">
-				<SiteNav variant="hero" />
+		<section class="dl-hero site-container" aria-labelledby="dl-title">
+			<p class="site-eyebrow">Download</p>
+			<h1 id="dl-title" class="site-h1">Utsuwa for your desktop</h1>
+			<p class="site-lede">
+				A transparent overlay you can pin over anything, and a global hotkey to summon your companion. Free and
+				open source on every platform.
+			</p>
+			<div class="site-actions">
+				<a href={downloadFor(os)} download class="btn btn-primary btn-pill">
+					<DownloadIcon size={16} strokeWidth={2.25} />
+					Download for {os}
+				</a>
+				<a href={sectionUrl('app')} class="btn btn-secondary btn-pill">
+					Try it in your browser <ArrowRightIcon size={15} strokeWidth={2.25} />
+				</a>
+			</div>
+			<div class="dl-figure site-panel">
+				<img
+					src="/landing-page/download-avatar-c.webp"
+					alt="A 3D VRM companion with dark hair and a high-collared jacket, arms crossed"
+					width="1200"
+					height="1500"
+					fetchpriority="high"
+				/>
+			</div>
+		</section>
 
-				<!-- Standing in the room behind the copy, cut off by the fold -->
-				<div class="dl-figure">
-					<img
-						src="/landing-page/download-avatar-c.webp"
-						alt="A 3D VRM companion with dark hair and a high-collared jacket, arms crossed"
-						width="1200"
-						height="1500"
-						fetchpriority="high"
-					/>
-				</div>
-
-				<div class="dl-wrap">
-					<div class="dl-copy">
-						<p class="dl-eyebrow">Download</p>
-						<h1 id="dl-title" class="dl-title">Utsuwa for your desktop</h1>
-						<p class="dl-lead">
-							A transparent overlay you can pin over anything, and a global hotkey to summon your companion. Free
-							and open source on every platform.
-						</p>
-						<a href={downloadFor(os)} download class="btn btn-hero">
-							<DownloadIcon size={18} strokeWidth={2.25} />
-							Download for {os}
-						</a>
-						<PlatformLine />
-						<a href={sectionUrl('app')} class="dl-web">
-							or try it in your browser <ArrowRightIcon size={14} strokeWidth={2.25} />
-						</a>
-					</div>
-				</div>
-			</section>
-		</SkyZone>
-
-		<!-- Platforms -->
-		<section class="platforms" aria-labelledby="platforms-title">
-			<h2 id="platforms-title" class="section-title">Pick your platform</h2>
+		<section class="dl-section site-container" aria-labelledby="platforms-title">
+			<h2 id="platforms-title" class="site-h2">Pick your platform</h2>
 			<div class="platform-grid">
 				{#each platforms as p (p.name)}
-					<article class="platform" style="--tone: {p.tone}">
+					<article class="platform">
 						<div class="platform-top">
-							<OsIcon os={p.icon} size={44} />
+							<OsIcon os={p.icon} size={36} />
 							{#if p.name === os}<span class="platform-tag">Your system</span>{/if}
 						</div>
-						<div class="platform-bottom">
-							<h3 class="platform-name">{p.name}</h3>
-							<p class="platform-note">{p.note}</p>
-							<a href={downloadFor(p.name)} download class="platform-link">
-								Download <ArrowDownIcon size={15} strokeWidth={2.25} />
-							</a>
-						</div>
+						<h3 class="platform-name">{p.name}</h3>
+						<p class="platform-note">{p.note}</p>
+						<a href={downloadFor(p.name)} download class="btn btn-secondary btn-pill platform-link">
+							Download <ArrowDownIcon size={15} strokeWidth={2.25} />
+						</a>
 					</article>
 				{/each}
 			</div>
 			<p class="platform-foot">
 				Builds are published on
-				<a href={GITHUB_RELEASES} target="_blank" rel="noopener noreferrer">GitHub Releases</a>. Older
-				versions and release notes live there too.
+				<a href={GITHUB_RELEASES} target="_blank" rel="noopener noreferrer">GitHub Releases</a>. Older versions and
+				release notes live there too.
 			</p>
 		</section>
 
-		<!-- Desktop overlay -->
-		<section class="overlay" aria-labelledby="overlay-title">
-			<p class="overlay-note">Desktop overlay</p>
-			<div class="overlay-head">
-				<h2 id="overlay-title" class="overlay-title">Pin them over anything</h2>
-				<p class="overlay-sub">
-					A transparent, always-on-top window you can drag anywhere. Hit the global hotkey and they are
-					there, over your browser, your code, or your game.
+		<section class="dl-section site-container" aria-labelledby="overlay-title">
+			<div class="section-head">
+				<p class="site-eyebrow">Desktop overlay</p>
+				<h2 id="overlay-title" class="site-h2">Pin them over anything</h2>
+				<p class="site-lede">
+					A transparent, always-on-top window you can drag anywhere. Hit the global hotkey and they are there, over
+					your browser, your code, or your game.
 				</p>
 			</div>
-			<div class="overlay-shot">
+			<div class="overlay-shot site-panel">
 				<img
-					{...marketingImage('/marketing/desktop-app.webp', '(max-width: 1180px) calc(100vw - 36px), 1110px')}
+					{...marketingImage('/marketing/desktop-app.webp', '(max-width: 1200px) calc(100vw - 48px), 1152px')}
 					alt="The Utsuwa desktop overlay: a VRM companion floating on a macOS desktop"
 					loading="lazy"
 				/>
 			</div>
 		</section>
 
-		<!-- What you get -->
-		<section class="included" aria-labelledby="included-title">
-			<p class="included-note">What you get</p>
-			<h2 id="included-title" class="included-title">No catch. Really.</h2>
+		<section class="dl-section site-container" aria-labelledby="included-title">
+			<div class="section-head">
+				<p class="site-eyebrow">What you get</p>
+				<h2 id="included-title" class="site-h2">No catch. Really.</h2>
+			</div>
 			<div class="included-grid">
 				{#each included as item (item.title)}
 					<div class="included-item">
-						<span class="included-face" style="background: {item.tint}"
-							><item.icon size={24} strokeWidth={1.75} /></span
-						>
+						<item.icon size={22} strokeWidth={1.75} />
 						<h3>{item.title}</h3>
 						<p>{item.body}</p>
 					</div>
@@ -181,219 +166,129 @@
 			</div>
 		</section>
 
-		<SiteLetter
-			lede="AGPL-3.0, built on SvelteKit, Three.js, and Tauri."
-			title="Rather build it yourself?"
-			body="Clone the repo, install dependencies, and run it locally, or fork it and make it your own."
-			href={GITHUB_REPO}
-			label="View the source"
-			external
-		/>
+		<section class="dl-section site-container" aria-labelledby="source-title">
+			<div class="source site-panel">
+				<p class="site-eyebrow">AGPL-3.0, built on SvelteKit, Three.js, and Tauri.</p>
+				<h2 id="source-title" class="site-h2">Rather build it yourself?</h2>
+				<p class="site-lede">Clone the repo, install dependencies, and run it locally, or fork it and make it your own.</p>
+				<a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-pill">
+					View the source <ArrowRightIcon size={15} strokeWidth={2.25} />
+				</a>
+			</div>
+		</section>
 	</main>
 
 	<SiteFooter />
 </div>
 
 <style>
-	.page {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		overflow-x: clip;
-		background: var(--bg-page);
-		color: var(--text-primary);
-	}
-
-	main {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		width: 100%;
-	}
-
-	/* Hero: same bones as the landing hero */
 	.dl-hero {
-		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 54px;
-		width: 100%;
-		min-height: 100vh;
-		min-height: 100dvh;
-		padding: 64px clamp(24px, 5.9vw, 85px) 150px;
+		gap: 20px;
+		padding-top: clamp(56px, 9vw, 120px);
+		text-align: center;
 	}
 
-	.dl-wrap {
-		position: relative;
-		z-index: 3;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: clamp(32px, 4vw, 56px);
-		width: 100%;
-		max-width: 1057px;
-		margin: auto 0;
-		color: #fff;
+	.dl-hero .site-h1 {
+		max-width: 14ch;
 	}
 
-	/* Sized by the hero's height so he stands the same way on any laptop. The
-	   frame is head to knees; the fade hides where it ends. */
+	.dl-hero .site-lede {
+		max-width: 50ch;
+	}
+
+	.dl-hero .site-actions {
+		justify-content: center;
+		margin-top: 8px;
+	}
+
 	.dl-figure {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		overflow: hidden;
-		pointer-events: none;
-		-webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 98%);
-		mask-image: linear-gradient(to bottom, #000 78%, transparent 98%);
+		display: flex;
+		justify-content: center;
+		width: 100%;
+		height: clamp(360px, 52vw, 620px);
+		margin-top: clamp(32px, 5vw, 56px);
 	}
 
 	.dl-figure img {
-		position: absolute;
-		top: 13%;
-		left: 72%;
+		height: 118%;
 		width: auto;
-		height: 100%;
-		translate: -50% 0;
+		object-fit: contain;
+		object-position: top;
 	}
 
-	.dl-copy {
+	.dl-section {
+		padding-top: var(--site-section);
+	}
+
+	.section-head {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
-		max-width: 560px;
+		gap: 14px;
+		max-width: 640px;
+		margin-bottom: 40px;
 	}
 
-	.dl-eyebrow {
-		margin: 0 0 16px;
-		color: rgba(255, 255, 255, 0.82);
-		font-size: 16px;
-		letter-spacing: -0.03em;
-	}
-
-	.dl-title {
-		margin: 0;
-		font-size: clamp(56px, 6.6vw, 96px);
-		font-weight: 700;
-		line-height: 0.9;
-		letter-spacing: -0.066em;
-		text-shadow: 0 2px 40px rgba(0, 48, 110, 0.12);
-	}
-
-	.dl-lead {
-		max-width: 440px;
-		margin: 26px 0 38px;
-		color: rgba(255, 255, 255, 0.9);
-		font-size: 18px;
-		font-weight: 500;
-		line-height: 24px;
-		letter-spacing: -0.03em;
-		text-shadow: 0 1px 20px rgba(0, 48, 110, 0.14);
-	}
-
-	.dl-web {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		margin-top: 6px;
-		padding-block: 12px;
-		color: #fff;
-		font-size: 15px;
-		font-weight: 500;
-		text-decoration: none;
-		opacity: 0.85;
-		transition: opacity 0.2s ease;
-	}
-
-	.dl-web:hover {
-		opacity: 1;
-	}
-
-	/* Platform cards: deep, tall, rounded, like the press "mentions" row */
-	.section-title {
-		margin: 0 0 28px;
-		font-size: 40px;
-		font-weight: 700;
-		letter-spacing: -0.05em;
-	}
-
-	.platforms {
-		width: 100%;
-		max-width: 1180px;
-		padding: 40px 35px 0;
+	.dl-section > .site-h2 {
+		margin-bottom: 32px;
 	}
 
 	.platform-grid {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 20px;
+		gap: 16px;
 	}
 
 	.platform {
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
-		min-height: 400px;
-		padding: 32px;
-		border-radius: 40px;
-		background: var(--tone);
-		color: #fff;
+		align-items: flex-start;
+		gap: 8px;
+		padding: 28px;
+		border-radius: 24px;
+		background: var(--bg-primary);
 	}
 
 	.platform-top {
 		display: flex;
-		align-items: flex-start;
 		justify-content: space-between;
+		align-items: center;
+		width: 100%;
+		margin-bottom: 20px;
+		color: var(--text-primary);
 	}
 
 	.platform-tag {
-		padding: 8px 14px;
-		border-radius: 100px;
-		background: rgba(255, 255, 255, 0.16);
-		font-size: 13px;
+		padding: 4px 10px;
+		border-radius: 999px;
+		background: var(--bg-page);
+		color: var(--text-secondary);
+		font-size: 12px;
 		font-weight: 500;
 	}
 
 	.platform-name {
 		margin: 0;
-		font-size: 34px;
-		font-weight: 700;
-		letter-spacing: -0.05em;
+		font-size: 22px;
+		font-weight: 500;
 	}
 
-	/* Two lines reserved so the names line up across cards */
 	.platform-note {
-		min-height: 2.7em;
-		margin: 6px 0 24px;
-		line-height: 1.35;
-		color: rgba(255, 255, 255, 0.7);
+		margin: 0 0 16px;
+		color: var(--text-secondary);
 		font-size: 15px;
-		letter-spacing: -0.02em;
 	}
 
 	.platform-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 16px 24px;
-		border-radius: 100px;
-		background: #fff;
-		color: #1c2b33;
-		font-size: 16px;
-		font-weight: 500;
-		text-decoration: none;
-		transition: transform 0.2s ease;
-	}
-
-	.platform-link:hover {
-		transform: translateY(-2px);
+		margin-top: auto;
 	}
 
 	.platform-foot {
-		margin: 22px 0 0;
-		color: color-mix(in srgb, var(--text-primary) 60%, transparent);
-		font-size: 15px;
+		margin: 24px 0 0;
+		color: var(--text-secondary);
+		font-size: 14px;
 	}
 
 	.platform-foot a {
@@ -401,255 +296,57 @@
 		text-underline-offset: 3px;
 	}
 
-	/* Desktop overlay: Replika's header row, one wide rounded shot */
-	.overlay {
-		width: 100%;
-		max-width: 1180px;
-		margin-top: 140px;
-		padding: 0 35px;
-	}
-
-	.overlay-note,
-	.included-note {
-		margin: 0 0 12px;
-		color: var(--accent);
-		font-size: 16px;
-		letter-spacing: -0.03em;
-	}
-
-	.overlay-head {
-		display: flex;
-		justify-content: space-between;
-		gap: 32px;
-		margin-bottom: 40px;
-	}
-
-	.overlay-title {
-		max-width: 475px;
-		margin: 0;
-		font-size: 48px;
-		font-weight: 600;
-		line-height: 50px;
-		letter-spacing: -0.065em;
-	}
-
-	.overlay-sub {
-		max-width: 370px;
-		margin: 0;
-		color: color-mix(in srgb, var(--text-primary) 80%, transparent);
-		font-size: 16px;
-		line-height: 1.2;
-		letter-spacing: -0.03em;
-	}
-
-	.overlay-shot {
-		overflow: hidden;
-		border-radius: 56px;
-		background: var(--bg-secondary);
-	}
-
 	.overlay-shot img {
 		display: block;
 		width: 100%;
 		height: auto;
-		aspect-ratio: 16 / 9;
-		object-fit: cover;
-		object-position: 40% 30%;
-	}
-
-	/* What you get */
-	.included {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		width: 100%;
-		max-width: 1180px;
-		margin-top: 140px;
-		padding: 0 35px;
-		text-align: center;
-	}
-
-	.included-title {
-		margin: 0 0 48px;
-		font-size: 48px;
-		font-weight: 600;
-		line-height: 50px;
-		letter-spacing: -0.045em;
 	}
 
 	.included-grid {
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: 20px;
-		width: 100%;
-		text-align: left;
-	}
-
-	.included-item {
-		padding: 28px 26px 30px;
-		border-radius: 40px;
-		background: var(--bg-secondary);
-	}
-
-	.included-face {
-		display: grid;
-		place-items: center;
-		width: 60px;
-		height: 60px;
-		margin-bottom: 22px;
-		border: 3px solid #fff;
-		border-radius: 20px;
-		color: #1c2b33;
-		box-shadow: 0 10px 24px rgba(34, 36, 48, 0.12);
+		gap: 32px;
 	}
 
 	.included-item h3 {
-		margin: 0 0 8px;
-		font-size: 22px;
-		font-weight: 600;
-		letter-spacing: -0.04em;
+		margin: 16px 0 6px;
+		font-size: 17px;
+		font-weight: 500;
 	}
 
 	.included-item p {
 		margin: 0;
-		color: color-mix(in srgb, var(--text-primary) 75%, transparent);
+		color: var(--text-secondary);
 		font-size: 15px;
-		line-height: 1.35;
+		line-height: 1.5;
 	}
 
-	/* Narrow laptops: step him right so the copy clears his arms */
-	@media (max-width: 1100px) {
-		.dl-figure img {
-			left: 77%;
-		}
+	.source {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 16px;
+		padding: clamp(40px, 7vw, 88px) 24px;
+		text-align: center;
 	}
 
-	/* Big monitors: scale the composition up instead of leaving a small island */
-	@media (min-width: 1800px) and (min-height: 1000px) {
-		.dl-wrap {
-			zoom: 1.15;
-		}
+	.source .site-lede {
+		max-width: 46ch;
 	}
 
-	@media (min-width: 2200px) and (min-height: 1250px) {
-		.dl-wrap {
-			zoom: 1.4;
-		}
-	}
-
-	@media (max-width: 956px) {
-		.dl-hero {
-			min-height: auto;
-			padding: 20px 18px 120px;
-		}
-
-		.dl-wrap {
-			flex-direction: column;
-		}
-
-		/* Stacked: he gets a band under the copy, full bleed */
-		.dl-figure {
-			position: relative;
-			inset: auto;
-			order: 2;
-			width: 100vw;
-			height: clamp(260px, 90vw, 600px);
-			margin-bottom: -60px;
-		}
-
-		/* Waist up, so he still reads at phone size */
-		.dl-figure img {
-			top: 3%;
-			left: 50%;
-			height: 165%;
-		}
-
-		.dl-copy {
-			align-items: center;
-			text-align: center;
-		}
-
-		.dl-title {
-			font-size: clamp(44px, 8vw, 64px);
-			line-height: 0.95;
-			letter-spacing: -0.05em;
-		}
-
+	@media (max-width: 900px) {
 		.platform-grid {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-			gap: 14px;
+			grid-template-columns: 1fr;
 		}
 
-		.platform {
-			min-height: 280px;
-			padding: 24px;
-		}
-
-		.platform-name {
-			font-size: 28px;
-		}
-
-		.overlay-head {
-			flex-direction: column;
-			gap: 16px;
-		}
-
-		.overlay-title,
-		.included-title {
-			font-size: 36px;
-			line-height: 38px;
-		}
-
-		.overlay-shot {
-			border-radius: 36px;
-		}
-	}
-
-	/* Landscape phones: small enough type that the download button fits */
-	@media (max-width: 956px) and (max-height: 520px) and (orientation: landscape) {
-		.dl-eyebrow {
-			margin-bottom: 8px;
-		}
-
-		.dl-title {
-			font-size: 40px;
-		}
-
-		.dl-lead {
-			margin: 14px 0 18px;
-			font-size: 15px;
-			line-height: 20px;
-		}
-	}
-
-	@media (max-width: 1100px) {
 		.included-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 
-	/* Phones: one card per row */
-	@media (max-width: 640px) {
-		.platform-grid,
+	@media (max-width: 560px) {
 		.included-grid {
 			grid-template-columns: 1fr;
-		}
-
-		.platform {
-			min-height: 240px;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.platforms,
-		.overlay,
-		.included {
-			padding: 0 18px;
-		}
-
-		.overlay,
-		.included {
-			margin-top: 96px;
 		}
 	}
 </style>

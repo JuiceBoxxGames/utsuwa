@@ -1,0 +1,173 @@
+/* Marketing pages on the shared app and docs system. The root also carries
+   .docs-site, which opts it into app-theme.css, app-controls.css, and the docs
+   prose. This file only adds the larger type scale, wider layout, and pills. */
+.site-shell {
+	--site-header-bg: var(--bg-page);
+	--site-max: 1200px;
+	--site-gutter: 24px;
+	--site-section: clamp(72px, 10vw, 152px);
+	--site-panel-radius: 28px;
+	min-height: 100vh;
+	background: var(--bg-page);
+	color: var(--text-primary);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 720px) {
+	.site-shell {
+		--site-gutter: 16px;
+	}
+}
+
+.site-shell .site-container {
+	max-width: var(--site-max);
+	margin: 0 auto;
+	padding: 0 var(--site-gutter);
+}
+
+.site-shell .site-eyebrow {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.site-shell .site-h1 {
+	margin: 0;
+	font-size: clamp(40px, 6vw, 76px);
+	font-weight: 500;
+	letter-spacing: -0.02em;
+	line-height: 1.05;
+	text-wrap: balance;
+}
+
+.site-shell .site-h2 {
+	margin: 0;
+	font-size: clamp(30px, 4vw, 48px);
+	font-weight: 500;
+	letter-spacing: -0.015em;
+	line-height: 1.1;
+	text-wrap: balance;
+}
+
+.site-shell .site-lede {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: 18px;
+	line-height: 1.55;
+	text-wrap: pretty;
+}
+
+.site-shell .site-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.site-shell .btn.btn-pill {
+	min-height: 44px;
+	padding: 0 20px;
+	border-radius: 999px;
+	font-size: 15px;
+	gap: 8px;
+}
+
+/* A small press for every button on the site */
+.site-shell .btn {
+	transition-property: background-color, color, box-shadow, scale;
+	transition-duration: 0.15s, 0.15s, 0.15s, 0.1s;
+}
+
+.site-shell .btn:active:not(:disabled) {
+	scale: 0.96;
+}
+
+.site-shell .site-panel {
+	position: relative;
+	border-radius: var(--site-panel-radius);
+	background: var(--bg-primary);
+	overflow: hidden;
+}
+
+/* A hairline over media so images keep a crisp edge on any background */
+.site-shell .site-panel::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 7%, transparent);
+	pointer-events: none;
+}
+
+/* Japanese has no spaces, so headings would break mid-word. Break at phrase
+   boundaries where supported, and never inside a word otherwise. */
+.site-shell :is(.site-h1, .site-h2):lang(ja) {
+	word-break: keep-all;
+	word-break: auto-phrase;
+	overflow-wrap: anywhere;
+	letter-spacing: 0;
+}
+
+/* Japanese text gets a Japanese face instead of a Latin fallback */
+.site-shell:lang(ja) {
+	font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', var(--font-sans);
+}
+
+/* Shared stage for the feature vignettes: a quiet canvas inside each card. */
+.site-shell .vg {
+	position: relative;
+	height: 100%;
+	overflow: hidden;
+	border-radius: 18px;
+	background: var(--bg-page);
+	font-size: 13px;
+	color: var(--text-primary);
+}
+
+.site-shell .vg .vg-bubble {
+	max-width: 78%;
+	padding: 8px 12px;
+	border-radius: 14px;
+	background: var(--bg-secondary);
+	line-height: 1.35;
+}
+
+.site-shell .vg .vg-bubble.user {
+	margin-left: auto;
+	background: var(--accent);
+	color: var(--accent-contrast);
+}
+
+.site-shell .vg .vg-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 10px;
+	border-radius: 999px;
+	background: var(--bg-secondary);
+	white-space: nowrap;
+}
+
+.site-shell .vg .vg-mono {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+/* Elements that appear on a step start hidden and rise in */
+.site-shell .vg .vg-in {
+	opacity: 0;
+	transform: translateY(6px);
+	transition:
+		opacity 0.35s var(--ease-brand),
+		transform 0.35s var(--ease-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.site-shell .vg *,
+	.site-shell .vg *::before,
+	.site-shell .vg *::after {
+		transition: none !important;
+		animation: none !important;
+	}
+}

@@ -11,10 +11,10 @@ import { env } from '$env/dynamic/private';
 import { isServerMcpEnabled } from '$lib/services/mcp/protocol';
 import { parseStdioAllowlist } from '$lib/services/mcp/stdio-policy';
 import { paraglideMiddleware } from '$lib/paraglide/server';
-import { isLightOnlyRoute } from '$lib/utils/light-only';
+import { isMarketingRoute } from '$lib/utils/marketing-routes';
 
 // No script CSP yet: the inline theme script and wasm would need nonces.
-// vercel.json repeats these for the prerendered pages, which skip this hook.
+// _headers repeats these for the prerendered pages, which skip this hook.
 // xr-spatial-tracking is for AR mode (WebXR immersive-ar), microphone for STT.
 const SECURITY_HEADERS = [
 	['Content-Security-Policy', "frame-ancestors 'none'"],
@@ -42,7 +42,7 @@ function withSecurityHeaders(response: Response): Response {
 // Marketing pages get the locale middleware and the right <html lang>. The
 // app, docs, and API never go through it.
 export const handle: Handle = async ({ event, resolve }) => {
-	if (!isLightOnlyRoute(event.url.hostname, event.url.pathname)) {
+	if (!isMarketingRoute(event.url.hostname, event.url.pathname)) {
 		return withSecurityHeaders(await resolve(event));
 	}
 	const response = await paraglideMiddleware(event.request, ({ request, locale }) => {
