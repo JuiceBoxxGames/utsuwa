@@ -73,7 +73,7 @@ Settings > Display controls appearance and how conversations show up.
 
 | Control | What it does | Default |
 |---|---|---|
-| Conversation layout | **Immersive** shows replies as a speech bubble beside her and a floating input bar. **Chat window** docks a panel with the conversation history. | Immersive |
+| Conversation layout | **Immersive** shows replies as a speech bubble beside her (just above the input bar on phones) and a floating input bar. **Chat window** docks a panel with the conversation history. | Immersive |
 | Dock side | Only in Chat window layout. **Left** or **Right**. The panel sits beside her on wide screens and below her on small screens. | Right |
 | Input bar alignment | Only in Immersive layout. Where the input bar sits along the bottom edge: **Left**, **Center**, or **Right**. | Center |
 | Text reveal | How fast replies appear word by word: **Off**, **Slow**, **Normal**, or **Fast**. Off shows the full reply at once. | Normal |
