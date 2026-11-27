@@ -133,3 +133,9 @@ test('pillar images never cover their copy on a phone', async ({ page }) => {
 	);
 	expect(overlaps).toBe(0);
 });
+
+test('Japanese headings break at phrases, not mid-word', async ({ page }) => {
+	await page.goto('/ja');
+	const wordBreak = await page.evaluate(() => getComputedStyle(document.querySelector('h1')!).wordBreak);
+	expect(['keep-all', 'auto-phrase']).toContain(wordBreak);
+});

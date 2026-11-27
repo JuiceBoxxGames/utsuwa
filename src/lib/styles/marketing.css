@@ -77,3 +77,11 @@
 	background: var(--bg-primary);
 	overflow: hidden;
 }
+
+/* Japanese has no spaces, so headings would break mid-word. Break at phrase
+   boundaries where supported, and never inside a word otherwise. */
+.site-shell :is(.site-h1, .site-h2):lang(ja) {
+	word-break: keep-all;
+	word-break: auto-phrase;
+	overflow-wrap: anywhere;
+}
