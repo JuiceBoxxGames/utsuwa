@@ -290,3 +290,37 @@ test('chat errors are dismissable alerts, return the message, and a stopped repl
 	await expect(page.locator('.message.user')).toHaveCount(1);
 	await expect(page.locator('.message.assistant')).toHaveCount(0);
 });
+
+test('on a phone the reply bubble docks above the chat bar', async ({ page }, testInfo) => {
+	test.skip(testInfo.project.name !== 'mobile', 'phone layout only');
+	await openApp(page, { chatDisplayMode: 'bubble' });
+	await page.route('**/api/chat', (route) =>
+		route.fulfill({
+			contentType: 'text/plain',
+			body: `0:${JSON.stringify('Text me when you are in.\n```json\n{"mood_change":{"emotion":"happy","intensity_delta":0}}\n```')}\n`
+		})
+	);
+	await page.evaluate(async () => {
+		const [modulesPath, settingsPath, eventsPath, dataPath] = [
+			'/src/lib/stores/modules.svelte.ts',
+			'/src/lib/stores/settings.svelte.ts',
+			'/src/lib/engine/events.ts',
+			'/src/lib/data/events/index.ts'
+		];
+		const { modulesStore } = await import(/* @vite-ignore */ modulesPath);
+		const { settingsStore } = await import(/* @vite-ignore */ settingsPath);
+		settingsStore.setProviderConfig('openai', { apiKey: 'browser-test-only' });
+		await modulesStore.setModuleSettings('consciousness', { activeProvider: 'openai', activeModel: 'gpt-4o-mini' });
+		await modulesStore.setModuleEnabled('consciousness', true);
+		const { eventsApi } = await import(/* @vite-ignore */ eventsPath);
+		const { allEvents } = await import(/* @vite-ignore */ dataPath);
+		await eventsApi.recordCompletedEvent(allEvents.find((e: { id: string }) => e.id === 'first_conversation'));
+	});
+	await page.getByRole('textbox', { name: 'Message', exact: true }).fill('walking home now');
+	await page.getByRole('button', { name: 'Send message', exact: true }).click();
+	const bubble = page.locator('.speech-bubble-container');
+	await expect(bubble).toContainText('Text me when you are in.');
+	await expect(bubble).toHaveClass(/docked/);
+	const [bubbleBox, barBox] = await Promise.all([bubble.boundingBox(), page.locator('.bottom-chat-bar').boundingBox()]);
+	expect(bubbleBox!.y + bubbleBox!.height).toBeLessThanOrEqual(barBox!.y);
+});

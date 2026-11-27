@@ -31,6 +31,7 @@
 		return null;
 	});
 	import SpeechBubble from '$lib/components/chat/SpeechBubble.svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import ChatWindow from '$lib/components/chat/ChatWindow.svelte';
 	import { type ThinkingPhase } from '$lib/services/chat/chat-phase';
 	import ThinkingImages from '$lib/components/chat/ThinkingImages.svelte';
@@ -76,6 +77,10 @@
 
 	// Speech bubble state
 	let latestResponse = $state('');
+	// On a phone the companion fills the screen, so a bubble chasing her head
+	// covers her face; it docks above the chat bar instead.
+	const phone = new MediaQuery('max-width: 640px');
+	let chatBarClearance = $state(0);
 	let isTyping = $state(false);
 	// What she's doing this turn, for the shimmer label
 	let thinkingPhase = $state<ThinkingPhase>('thinking');
@@ -148,6 +153,20 @@
 			// close setup only after that save has finished.
 			if (forced || (lastInteraction === null && totalInteractions === 0)) showOnboarding = true;
 		}
+	});
+
+	// The docked bubble clears the chat bar, whose height changes with its content
+	onMount(() => {
+		const bar = document.querySelector<HTMLElement>('.bottom-chat-bar');
+		if (!bar) return;
+		const measure = () => (chatBarClearance = Math.max(0, window.innerHeight - bar.getBoundingClientRect().top));
+		const observer = new ResizeObserver(measure);
+		observer.observe(bar);
+		window.addEventListener('resize', measure);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('resize', measure);
+		};
 	});
 
 	onMount(() => {
@@ -285,6 +304,8 @@
 				isTyping={isTyping && typingDotsVisible}
 				phase={thinkingPhase}
 				onHide={handleBubbleHide}
+				docked={phone.current}
+				dockOffset={chatBarClearance ? chatBarClearance + 12 : undefined}
 			/>
 		{/if}
 

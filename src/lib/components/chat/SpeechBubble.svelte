@@ -13,9 +13,11 @@
 		/** Docked dialog mode: the window moves around in overlay mode, so the
 		 *  bubble anchors above the bottom controls instead of chasing the head */
 		docked?: boolean;
+		/** Docked distance from the bottom edge in px; defaults to the overlay's controls */
+		dockOffset?: number;
 	}
 
-	let { message, isTyping = false, phase = 'thinking', onHide, docked = false }: Props = $props();
+	let { message, isTyping = false, phase = 'thinking', onHide, docked = false, dockOffset }: Props = $props();
 
 	const revealSpeedMs = $derived(REVEAL_SPEED_MS[displayStore.textRevealSpeed]);
 
@@ -25,7 +27,7 @@
 	// Calculate bubble position (offset to the right of head)
 	// Typing indicator appears closer to model, message bubble has more offset
 	const bubbleStyle = $derived(() => {
-		if (docked) return '';
+		if (docked) return dockOffset ? `bottom: ${dockOffset}px;` : '';
 		if (!screenPos) {
 			// Fallback to fixed position if no tracking available
 			return isTyping ? 'top: 25%; right: 25%;' : 'top: 22%; right: 15%;';
