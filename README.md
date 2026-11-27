@@ -54,7 +54,10 @@
 "Utsuwa" means "vessel" in Japanese. A container for AI to inhabit visually.
 
 <p align="center">
-  <img alt="The Utsuwa app: a 3D VRM companion with chat, mood, and voice" src="static/marketing/companion-light.webp" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="static/marketing/companion-dark.webp">
+    <img alt="The Utsuwa app: a 3D VRM companion with chat, mood, and voice" src="static/marketing/companion-light.webp" width="100%">
+  </picture>
 </p>
 
 ## Features

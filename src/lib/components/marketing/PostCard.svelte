@@ -34,7 +34,7 @@
 	.post-card-media {
 		aspect-ratio: 4 / 3;
 		overflow: hidden;
-		border-radius: 20px;
+		border-radius: 24px;
 		background: var(--bg-primary);
 	}
 

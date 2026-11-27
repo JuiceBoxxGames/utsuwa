@@ -6,6 +6,8 @@
 		title: string;
 		body: string;
 		image: string;
+		/** Optional twin for dark mode, for screenshots of the app itself */
+		imageDark?: string;
 		alt: string;
 		/** Cutouts sit on the panel fill; screenshots fill the frame. */
 		fit: 'cutout' | 'cover';
@@ -15,7 +17,12 @@
 <script lang="ts">
 	// Numbered tabs on the left, one large panel on the right. Arrow keys move
 	// between tabs (roving tabindex). Phones stack every pillar instead.
+	import { MediaQuery } from 'svelte/reactivity';
+
 	let { pillars, label }: { pillars: Pillar[]; label: string } = $props();
+
+	// Below this the tabs are hidden and the panels stack, so they drop the tab roles
+	const tabbed = new MediaQuery('min-width: 901px');
 
 	let active = $state(0);
 	const tabs = $state<HTMLButtonElement[]>([]);
@@ -64,9 +71,9 @@
 		<div
 			class="panel site-panel"
 			class:is-active={active === i}
-			role="tabpanel"
+			role={tabbed.current ? 'tabpanel' : undefined}
 			id="pillar-panel-{pillar.id}"
-			aria-labelledby="pillar-tab-{pillar.id}"
+			aria-labelledby={tabbed.current ? `pillar-tab-${pillar.id}` : undefined}
 		>
 			<div class="panel-copy">
 				<p class="site-eyebrow">{pillar.note}</p>
@@ -74,7 +81,10 @@
 				<p class="panel-body">{pillar.body}</p>
 			</div>
 			<div class="panel-media" class:cover={pillar.fit === 'cover'}>
-				<img src={pillar.image} alt={pillar.alt} loading="lazy" />
+				<img class:light-only={pillar.imageDark} src={pillar.image} alt={pillar.alt} loading="lazy" />
+				{#if pillar.imageDark}
+					<img class="dark-only" src={pillar.imageDark} alt={pillar.alt} loading="lazy" />
+				{/if}
 			</div>
 		</div>
 	{/each}
@@ -200,6 +210,15 @@
 
 	.panel-media.cover {
 		padding: 0;
+	}
+
+	.dark-only,
+	:global(html.dark) .light-only {
+		display: none;
+	}
+
+	:global(html.dark) .dark-only {
+		display: block;
 	}
 
 	.panel-media.cover img {

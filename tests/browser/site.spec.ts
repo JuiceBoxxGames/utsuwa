@@ -12,10 +12,12 @@ test('marketing pages follow the saved dark mode before hydration', async ({ pag
 test('the Japanese landing still renders in Japanese', async ({ page }) => {
 	await page.goto('/ja');
 	await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
-	// The shared header is translated too, not just the page body
-	const banner = page.getByRole('banner');
+	// The shared chrome is translated too, not just the page body. Phones keep
+	// these links in the footer only, so the header never wraps.
+	const phone = (page.viewportSize()?.width ?? 1280) <= 560;
+	const chrome = phone ? page.getByRole('contentinfo') : page.getByRole('banner');
 	for (const name of ['ドキュメント', 'ブログ']) {
-		await expect(banner.getByRole('link', { name, exact: true })).toBeVisible();
+		await expect(chrome.getByRole('link', { name, exact: true })).toBeVisible();
 	}
 });
 
@@ -36,7 +38,9 @@ test('marketing and docs share one header', async ({ page }) => {
 	for (const path of ['/', '/blog', '/docs']) {
 		await page.goto(path);
 		const banner = page.getByRole('banner');
-		for (const name of ['Docs', 'Blog', 'Try it live']) {
+		// Marketing phones drop the header nav to the footer; docs keep a menu instead
+		const phone = path !== '/docs' && (page.viewportSize()?.width ?? 1280) <= 560;
+		for (const name of phone ? ['Try it live'] : ['Docs', 'Blog', 'Try it live']) {
 			await expect(banner.getByRole('link', { name, exact: true }), `${path} ${name}`).toBeVisible();
 		}
 		await expect(banner.getByRole('link', { name: /Download/ }), `${path} Download`).toBeVisible();

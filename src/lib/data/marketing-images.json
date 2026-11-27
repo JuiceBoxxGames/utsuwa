@@ -93,11 +93,17 @@
     "width": 861,
     "height": 557
   },
+  "/marketing/companion-dark.webp": {
+    "src": "/marketing/companion-dark.webp",
+    "srcset": "/optimized/marketing/companion-dark-768.webp 768w, /optimized/marketing/companion-dark-1440.webp 1440w, /marketing/companion-dark.webp 1920w",
+    "width": 1920,
+    "height": 1200
+  },
   "/marketing/companion-light.webp": {
     "src": "/marketing/companion-light.webp",
-    "srcset": "/optimized/marketing/companion-light-768.webp 768w, /optimized/marketing/companion-light-1440.webp 1440w, /marketing/companion-light.webp 2880w",
-    "width": 2880,
-    "height": 1800
+    "srcset": "/optimized/marketing/companion-light-768.webp 768w, /optimized/marketing/companion-light-1440.webp 1440w, /marketing/companion-light.webp 1920w",
+    "width": 1920,
+    "height": 1200
   },
   "/marketing/desktop-app.webp": {
     "src": "/marketing/desktop-app.webp",

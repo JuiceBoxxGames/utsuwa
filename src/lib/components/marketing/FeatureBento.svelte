@@ -58,7 +58,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 18px;
-		padding: 16px 16px 24px;
+		padding: 12px 12px 24px;
 		border-radius: 24px;
 		grid-column: span 2;
 	}
@@ -73,8 +73,13 @@
 		align-items: center;
 	}
 
+	/* Card 24 = padding 12 + stage 12, so the corners stay concentric */
 	.stage {
 		height: 240px;
+	}
+
+	.stage :global(.vg) {
+		border-radius: 12px;
 	}
 
 	.card--overlay .stage {
@@ -83,7 +88,7 @@
 	}
 
 	.copy {
-		padding: 0 8px;
+		padding: 0 12px;
 	}
 
 	.card--overlay .copy {
@@ -140,7 +145,7 @@
 		}
 
 		.card--overlay .copy {
-			padding: 0 8px;
+			padding: 0 12px;
 		}
 	}
 </style>

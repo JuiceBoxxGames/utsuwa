@@ -62,6 +62,7 @@
 	"hero_eyebrow": "Open source · v{version}",
 	"hero_try_browser": "Try it in your browser",
 	"sc_own_sub": "Bring your own keys for any provider, or run the model, the voice, and the memory fully offline. Nothing is routed through us, and the code is open under AGPL-3.0.",
+	"sc_own_alt": "The Utsuwa app with Yuki on screen and the message box below her",
 	"stories_all": "All posts",
 	"hero_video_alt": "Utsuwa running on a laptop, a wall-mounted screen, and a phone",
 	"adv_eyebrow": "Under the hood",

@@ -62,6 +62,7 @@
 	"hero_eyebrow": "オープンソース · v{version}",
 	"hero_try_browser": "ブラウザで試す",
 	"sc_own_sub": "好きなプロバイダーのキーを使うことも、モデルも声も記憶も完全にオフラインで動かすこともできます。わたしたちを経由するものは何もなく、コードはAGPL-3.0で公開しています。",
+	"sc_own_alt": "Utsuwaのアプリ画面。Yukiとその下のメッセージ入力欄",
 	"stories_all": "すべての記事",
 	"hero_video_alt": "ノートパソコン、壁掛けディスプレイ、スマートフォンで動くUtsuwa",
 	"adv_eyebrow": "しくみ",

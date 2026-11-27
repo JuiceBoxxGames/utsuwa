@@ -17,6 +17,15 @@
 	let { onToggleSidebar, sidebarOpen = false }: Props = $props();
 
 	const currentPath = $derived(page.url.pathname);
+
+	// A hairline appears once the page scrolls under the header
+	let scrolled = $state(false);
+	$effect(() => {
+		const onScroll = () => (scrolled = window.scrollY > 4);
+		onScroll();
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	});
 	const inDocs = $derived(!!onToggleSidebar);
 	const href = $derived({
 		home: inDocs ? localPath('docs') : '/',
@@ -26,7 +35,8 @@
 	});
 </script>
 
-<header class="site-header">
+<header class="site-header" class:marketing={!inDocs} class:scrolled>
+	<div class="header-inner">
 	<div class="header-left">
 		{#if onToggleSidebar}
 			<button
@@ -56,6 +66,7 @@
 		</a>
 		<a href={sectionUrl('app')} class="btn btn-primary btn-sm">{m.nav_try()}</a>
 	</div>
+	</div>
 </header>
 
 <style>
@@ -69,6 +80,54 @@
 		height: 56px;
 		padding: 0 16px 0 20px;
 		background: var(--site-header-bg, var(--t3-sidebar));
+		transition: box-shadow 0.2s ease;
+	}
+
+	.header-inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		height: 100%;
+	}
+
+	/* Marketing: align with the page's content column, roomier controls */
+	.site-header.marketing {
+		height: 64px;
+		padding: 0;
+	}
+
+	.site-header.marketing.scrolled {
+		box-shadow: 0 1px 0 var(--bg-secondary);
+	}
+
+	.marketing .header-inner {
+		max-width: var(--site-max, 1200px);
+		margin: 0 auto;
+		padding: 0 var(--site-gutter, 24px);
+	}
+
+	/* The logo art is 24px tall; padding gives it a full-size target */
+	.marketing .logo {
+		padding: 8px 0;
+	}
+
+	.marketing .nav-link {
+		min-height: 36px;
+		padding: 0 14px;
+		border-radius: 999px;
+	}
+
+	.marketing .header-right :global(.btn) {
+		min-height: 36px;
+		padding: 0 14px;
+		border-radius: 999px;
+		font-size: 14px;
+	}
+
+	.nav-link,
+	.header-right :global(.btn) {
+		white-space: nowrap;
 	}
 
 	.header-left,
@@ -162,6 +221,26 @@
 	@media (max-width: 360px) {
 		.download-label {
 			display: none;
+		}
+	}
+
+	@media (max-width: 560px) {
+		.marketing .header-nav {
+			display: none;
+		}
+
+		.marketing .download-label {
+			display: none;
+		}
+
+		.marketing .header-right :global(.btn) {
+			min-height: 40px;
+		}
+
+		.marketing .header-right :global(.btn-secondary) {
+			width: 40px;
+			padding: 0;
+			justify-content: center;
 		}
 	}
 </style>

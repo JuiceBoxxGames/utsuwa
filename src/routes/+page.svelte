@@ -66,7 +66,8 @@
 			title: m.sc_own_title(),
 			body: m.sc_own_sub(),
 			image: '/marketing/companion-light.webp',
-			alt: '',
+			imageDark: '/marketing/companion-dark.webp',
+			alt: m.sc_own_alt(),
 			fit: 'cover'
 		}
 	];
@@ -165,6 +166,7 @@
 
 		<section id="features" class="section site-container" aria-labelledby="pillars-title">
 			<div class="section-head">
+				<p class="site-eyebrow">{m.sc_tabs_label()}</p>
 				<h2 id="pillars-title" class="site-h2">{m.sc_label()}</h2>
 			</div>
 			<LandingPillars {pillars} label={m.sc_tabs_label()} />
@@ -198,7 +200,10 @@
 		{#if data.posts.length}
 			<section class="section site-container" aria-labelledby="posts-title">
 				<div class="section-head section-head--row">
-					<h2 id="posts-title" class="site-h2">{m.stories_title()}</h2>
+					<div class="section-head">
+						<p class="site-eyebrow">{m.nav_blog()}</p>
+						<h2 id="posts-title" class="site-h2">{m.stories_title()}</h2>
+					</div>
 					<a href="/blog" class="btn btn-secondary btn-pill">{m.stories_all()}</a>
 				</div>
 				<div class="post-grid">
@@ -272,13 +277,14 @@
 		padding-top: clamp(48px, 7vw, 88px);
 	}
 
+	/* Ten marks as two even rows of five, never a lone orphan */
 	.models-list {
-		display: flex;
-		flex-wrap: wrap;
+		display: grid;
+		grid-template-columns: repeat(5, auto);
 		justify-content: center;
+		justify-items: center;
 		align-items: center;
-		gap: 20px 40px;
-		max-width: 960px;
+		gap: 28px 56px;
 		margin: 0;
 		padding: 0;
 		list-style: none;
@@ -292,6 +298,19 @@
 		font-size: 15px;
 		font-weight: 600;
 		opacity: 0.75;
+	}
+
+	@media (max-width: 900px) {
+		.models-list {
+			gap: 24px 28px;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.models-list {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 22px 24px;
+		}
 	}
 
 	.wordmark {
@@ -312,6 +331,10 @@
 		gap: 14px;
 		max-width: 720px;
 		margin-bottom: 40px;
+	}
+
+	.section-head .section-head {
+		margin-bottom: 0;
 	}
 
 	.section-head--row {
