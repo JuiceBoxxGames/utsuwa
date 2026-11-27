@@ -11,19 +11,19 @@
     "width": 1536,
     "height": 1024
   },
-  "/blog/dev-log-2026-7-9-backdrop.png": {
+  "/blog/dev-log-2026-7-9-backdrop.webp": {
     "src": "/optimized/blog/dev-log-2026-7-9-backdrop-1920.webp",
     "srcset": "/optimized/blog/dev-log-2026-7-9-backdrop-96.webp 96w, /optimized/blog/dev-log-2026-7-9-backdrop-479.webp 479w, /optimized/blog/dev-log-2026-7-9-backdrop-960.webp 960w, /optimized/blog/dev-log-2026-7-9-backdrop-1920.webp 1920w",
     "width": 2632,
     "height": 1472
   },
-  "/blog/dev-log-2026-7-9-reminders.png": {
+  "/blog/dev-log-2026-7-9-reminders.webp": {
     "src": "/optimized/blog/dev-log-2026-7-9-reminders-1920.webp",
     "srcset": "/optimized/blog/dev-log-2026-7-9-reminders-96.webp 96w, /optimized/blog/dev-log-2026-7-9-reminders-479.webp 479w, /optimized/blog/dev-log-2026-7-9-reminders-960.webp 960w, /optimized/blog/dev-log-2026-7-9-reminders-1920.webp 1920w",
     "width": 2632,
     "height": 1472
   },
-  "/blog/dev-log-2026-7-9-sidebar.png": {
+  "/blog/dev-log-2026-7-9-sidebar.webp": {
     "src": "/optimized/blog/dev-log-2026-7-9-sidebar-1920.webp",
     "srcset": "/optimized/blog/dev-log-2026-7-9-sidebar-96.webp 96w, /optimized/blog/dev-log-2026-7-9-sidebar-479.webp 479w, /optimized/blog/dev-log-2026-7-9-sidebar-960.webp 960w, /optimized/blog/dev-log-2026-7-9-sidebar-1920.webp 1920w",
     "width": 2632,
@@ -35,13 +35,13 @@
     "width": 2388,
     "height": 1506
   },
-  "/blog/dev-log-2026-9-26-animations.png": {
+  "/blog/dev-log-2026-9-26-animations.webp": {
     "src": "/optimized/blog/dev-log-2026-9-26-animations-1920.webp",
     "srcset": "/optimized/blog/dev-log-2026-9-26-animations-96.webp 96w, /optimized/blog/dev-log-2026-9-26-animations-479.webp 479w, /optimized/blog/dev-log-2026-9-26-animations-960.webp 960w, /optimized/blog/dev-log-2026-9-26-animations-1920.webp 1920w",
     "width": 2632,
     "height": 1472
   },
-  "/blog/dev-log-2026-9-26-home.png": {
+  "/blog/dev-log-2026-9-26-home.webp": {
     "src": "/optimized/blog/dev-log-2026-9-26-home-1920.webp",
     "srcset": "/optimized/blog/dev-log-2026-9-26-home-96.webp 96w, /optimized/blog/dev-log-2026-9-26-home-480.webp 480w, /optimized/blog/dev-log-2026-9-26-home-959.webp 959w, /optimized/blog/dev-log-2026-9-26-home-1920.webp 1920w",
     "width": 2388,
