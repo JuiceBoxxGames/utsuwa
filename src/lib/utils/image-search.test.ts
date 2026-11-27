@@ -527,6 +527,18 @@ test('explicit image requests stay narrower than the recovery heuristic', () => 
 	assert.equal(isExplicitImageRequest('show me cute cats'), false);
 });
 
+test('mentioning a photo is not asking for pictures', () => {
+	assert.equal(isExplicitImageRequest('I took a photo of my cat at the beach today'), false);
+	assert.equal(isExplicitImageRequest('What do you think of this photo?'), false);
+	assert.equal(isExplicitImageRequest("I'll send you a picture later"), false);
+	assert.equal(isExplicitImageRequest('Let me show you a photo'), false);
+	assert.equal(isExplicitImageRequest('Show me pictures of Kyoto'), true);
+	assert.equal(isExplicitImageRequest('can you find me some photos of red pandas?'), true);
+	assert.equal(isExplicitImageRequest('search for images of lighthouses'), true);
+	assert.equal(isExplicitImageRequest('Can I see a picture of a capybara?'), true);
+	assert.equal(isExplicitImageRequest('Such mir Fotos vom Schloss'), true);
+});
+
 test('only dedicated picture tools are hidden from the model', () => {
 	assert.equal(
 		isDedicatedPictureTool({ name: 'searxng_image_search', inputSchema: { properties: { query: {} } } }),
