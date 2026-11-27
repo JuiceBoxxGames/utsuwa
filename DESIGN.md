@@ -113,4 +113,4 @@ Honor reduced motion. Preserve status announcements, disabled states, touch targ
 
 Check both themes at desktop and mobile widths. Include focused fields, disabled controls, active switches, selected tabs, dropdown search, long messages, empty states, dialogs, and overlay controls. Inspect screenshots as well as interaction tests.
 
-Implementation notes and review coverage are in [docs/design/ui-review.md](docs/design/ui-review.md). Third-party license notices are maintained separately in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Third-party license notices are maintained separately in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
