@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-11-27
+
+A new look across the app, docs, and website, and your companion can now show you pictures.
+
+### Added
+- **Pictures:** ask your companion to show you something ("show me a red panda") and Utsuwa searches with the picture tool you pick under Settings > MCP (SearXNG, Brave image search and similar). Results open in a floating panel that leaves your companion visible, remembers where you put it, and becomes a bottom sheet on narrow screens. The desktop overlay shows the same panel. Settings > MCP shows which search tool is in use and whether thumbnails can load. Contributed by @dezihh ([#345](https://github.com/JuiceBoxxGames/utsuwa/pull/345)).
+- **Website:** a rebuilt utsuwa.ai with a film of Utsuwa on a laptop, a smart-home wall panel, and a phone, in day and night versions that follow your theme. A new "Under the hood" section shows MCP tools, memory, relationship stages, fully local setups, reminders, and the desktop overlay. A footer switch picks System, Light, or Dark ([#348](https://github.com/JuiceBoxxGames/utsuwa/pull/348)).
+
+### Changed
+- **Ink colors:** the blue accent is gone. Buttons, links, and highlights in the app, docs, and website are now ink: near-black in light mode, near-white in dark mode. Stats, the memory graph, and other data colors are unchanged ([#348](https://github.com/JuiceBoxxGames/utsuwa/pull/348)).
+- **App icon:** the desktop app has a new monochrome 器 icon. You'll see it after updating ([#348](https://github.com/JuiceBoxxGames/utsuwa/pull/348)).
+- **Phones:** replies now sit just above the chat bar instead of following your companion's face, so they no longer cover it or drift off screen ([#348](https://github.com/JuiceBoxxGames/utsuwa/pull/348)).
+- **Docs and blog** use the website's header and footer, and the Japanese landing page uses a Japanese typeface with reworked copy ([#348](https://github.com/JuiceBoxxGames/utsuwa/pull/348)).
+- New share images, README banners, and abstract blog thumbnails ([#348](https://github.com/JuiceBoxxGames/utsuwa/pull/348)).
+
+### Fixed
+- **Pictures:** mentioning a photo ("I took a photo of my cat today") no longer opens the picture panel or delays the reply. A search starts only when you ask to see something ([#347](https://github.com/JuiceBoxxGames/utsuwa/pull/347)).
+
 ## [0.21.4] - 2026-11-07
 
 Local and custom providers that refused the desktop app now connect.
