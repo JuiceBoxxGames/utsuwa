@@ -19,7 +19,7 @@
 
 	const locale = getLocale();
 	const canonical = locale === 'ja' ? `${SITE_URL}/ja` : SITE_URL;
-	const ogImage = `${SITE_URL}/brand-assets/${locale === 'ja' ? 'og-image-ja' : 'og-image'}.jpg`;
+	const ogImage = `${SITE_URL}/brand-assets/${locale === 'ja' ? 'og-ink-ja' : 'og-ink'}.jpg`;
 	const version = import.meta.env.VITE_APP_VERSION;
 
 	// Every provider we actually support today. Keep this honest. The wordmarks
@@ -86,7 +86,9 @@
 	<link rel="alternate" hreflang="en" href={SITE_URL} />
 	<link rel="alternate" hreflang="ja" href={`${SITE_URL}/ja`} />
 	<link rel="alternate" hreflang="x-default" href={SITE_URL} />
-	<link rel="preload" as="image" href="/landing-page/hero-devices-light.webp" type="image/webp" />
+	<!-- Fetch only the poster this visitor's system theme will show first -->
+	<link rel="preload" as="image" href="/landing-page/hero-devices-light.webp" type="image/webp" media="(prefers-color-scheme: light)" />
+	<link rel="preload" as="image" href="/landing-page/hero-devices-dark.webp" type="image/webp" media="(prefers-color-scheme: dark)" />
 
 	<!-- Open Graph -->
 	<meta property="og:type" content="website" />

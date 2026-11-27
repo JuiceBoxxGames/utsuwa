@@ -170,6 +170,20 @@ test('reduced motion keeps the hero on its still frame', async ({ page }) => {
 	expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
 });
 
+test('the hero loop can be paused and played again', async ({ page }) => {
+	await page.goto('/', { waitUntil: 'networkidle' });
+	const video = page.locator('video.hero-video--light');
+	await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused)).toBe(true);
+	await page.getByRole('button', { name: 'Pause video' }).click();
+	await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+	// Pausing sticks even when the theme flips
+	await page.evaluate(() => document.documentElement.classList.add('dark'));
+	await expect.poll(() => page.locator('video.hero-video--dark').evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+	await page.evaluate(() => document.documentElement.classList.remove('dark'));
+	await page.getByRole('button', { name: 'Play video' }).click();
+	await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused)).toBe(true);
+});
+
 test('the landing shows the advanced features with live vignettes', async ({ page }) => {
 	await page.goto('/', { waitUntil: 'networkidle' });
 	const section = page.getByRole('region', { name: 'Built deeper than it looks' });
@@ -215,4 +229,12 @@ test('posts that used the old window-light art show the abstract thumbnails', as
 		const src = await page.locator(`a[href="/blog/${slug}"] img`).first().getAttribute('src');
 		expect(src, slug).toContain(`${slug}-abstract`);
 	}
+});
+
+test('the footer theme toggle speaks Japanese on the Japanese landing', async ({ page }) => {
+	await page.goto('/ja', { waitUntil: 'networkidle' });
+	const toggle = page.getByRole('contentinfo').getByRole('button', { name: /^テーマ/ });
+	await expect(toggle).toHaveAccessibleName('テーマ：システム');
+	await toggle.click();
+	await expect(toggle).toHaveAccessibleName('テーマ：ライト');
 });
