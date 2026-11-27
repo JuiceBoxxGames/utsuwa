@@ -14,7 +14,7 @@ import { paraglideMiddleware } from '$lib/paraglide/server';
 import { isMarketingRoute } from '$lib/utils/marketing-routes';
 
 // No script CSP yet: the inline theme script and wasm would need nonces.
-// vercel.json repeats these for the prerendered pages, which skip this hook.
+// _headers repeats these for the prerendered pages, which skip this hook.
 // xr-spatial-tracking is for AR mode (WebXR immersive-ar), microphone for STT.
 const SECURITY_HEADERS = [
 	['Content-Security-Policy', "frame-ancestors 'none'"],
