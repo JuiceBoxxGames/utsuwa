@@ -2,7 +2,7 @@
 
 The app uses layered neutral fills, compact controls, and a single ink accent. Shape and hierarchy come from background color, spacing, and rounded corners. Resting controls and panels do not need visible strokes.
 
-These rules cover the main app, settings, desktop overlay, documentation, and their portaled menus and dialogs. The docs share the app tokens and components; the marketing site, blog, and legal pages keep their own stylesheet and layout.
+These rules cover every surface outside the 3D scene: the main app, settings, desktop overlay, documentation, the marketing site (landing, `/ja`, download), the blog, the legal pages, and their portaled menus and dialogs. They all share one set of tokens and components.
 
 ## Shared styles
 
@@ -10,9 +10,10 @@ These rules cover the main app, settings, desktop overlay, documentation, and th
 - `src/lib/styles/app-theme.css` owns the app palette, typography, radius scale, the `.btn` family, and focus defaults.
 - `src/lib/styles/app-controls.css` owns fields and their layout helpers, selects, dropdowns, sliders, native checkboxes and radios, badges, floating panels, and dialogs.
 - `src/routes/app/settings/settings-page.css` owns the settings column, page header, section panel, and the one `setting-row` family.
-- `src/lib/styles/site.css` owns the marketing site, blog, and legal pages: their palette, radius and shadow scale, pill and hero buttons, grain, Japanese typography, view transitions, and blog and legal prose. The landing, download, blog, and legal routes import it.
+- `src/lib/styles/marketing.css` adds what only the marketing pages need on top of the shared system: the `.site-shell` root, the larger type scale (`.site-h1`, `.site-h2`, `.site-lede`, `.site-eyebrow`), the 1200px container, section spacing, `.site-panel` media panels, and the `.btn-pill` modifier for the `.btn` family. The landing, download, blog, and legal routes import it.
 - `src/lib/styles/prose.css` owns the docs prose (`.docs-site .prose`) and the Shiki code colors.
-- The `html:has(.app, .overlay-app, .docs-site)` scope includes content portaled to the document body and stops applying outside the app and docs.
+- The `html:has(.app, .overlay-app, .docs-site)` scope includes content portaled to the document body. `.docs-site` is the theme root for both the docs and the marketing pages: marketing layouts render `<div class="docs-site site-shell">`, which also gives the blog and legal pages the docs prose.
+- One header (`SiteNav`) serves the marketing pages and the docs; one footer (`SiteFooter`) carries the light, dark, and system toggle (`ThemeToggle`, shared with the docs sidebar). Every page follows the saved color mode; each domain keeps its own choice.
 - Components consume tokens. Do not add per-component hex colors or duplicate shared control styling. Keep semantic status colors, graph categories, and authored media separate from interface colors.
 
 ## Palette

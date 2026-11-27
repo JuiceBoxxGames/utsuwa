@@ -102,6 +102,8 @@ test('the landing hero offers download and the browser app', async ({ page }) =>
 });
 
 test('the landing pillars switch with the keyboard', async ({ page }) => {
+	// Phones stack the pillars without tabs, so this runs at desktop width
+	await page.setViewportSize({ width: 1280, height: 800 });
 	await page.goto('/', { waitUntil: 'networkidle' });
 	const tabs = page.getByRole('tablist').getByRole('tab');
 	await expect(tabs).toHaveCount(3);
