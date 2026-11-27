@@ -144,3 +144,24 @@ test('Japanese headings break at phrases, not mid-word', async ({ page }) => {
 	const wordBreak = await page.evaluate(() => getComputedStyle(document.querySelector('h1')!).wordBreak);
 	expect(['keep-all', 'auto-phrase']).toContain(wordBreak);
 });
+
+for (const mode of ['light', 'dark'] as const) {
+	test(`the hero plays the ${mode} device loop`, async ({ page }) => {
+		await page.addInitScript((m) => localStorage.setItem('colorMode', m), mode);
+		await page.goto('/', { waitUntil: 'networkidle' });
+		const video = page.locator(`video.hero-video--${mode}`);
+		await expect(video).toBeVisible();
+		await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused)).toBe(true);
+		const other = page.locator(`video.hero-video--${mode === 'light' ? 'dark' : 'light'}`);
+		await expect(other).toBeHidden();
+	});
+}
+
+test('reduced motion keeps the hero on its still frame', async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.goto('/', { waitUntil: 'networkidle' });
+	const video = page.locator('video.hero-video--light');
+	await expect(video).toBeVisible();
+	await page.waitForTimeout(500);
+	expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+});

@@ -7,7 +7,7 @@
 	import ProviderIcons from '$lib/components/icons/ProviderIcons.svelte';
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
-	import HeroBust from '$lib/components/marketing/HeroBust.svelte';
+	import HeroVideo from '$lib/components/marketing/HeroVideo.svelte';
 	import LandingPillars, { type Pillar } from '$lib/components/marketing/LandingPillars.svelte';
 	import VesselLetter from '$lib/components/marketing/VesselLetter.svelte';
 	import PostCard from '$lib/components/marketing/PostCard.svelte';
@@ -36,12 +36,6 @@
 		{ name: 'ElevenLabs', glyph: 'elevenlabs' },
 		{ name: 'Fish Audio', glyph: 'fish-audio' }
 	];
-
-	// Tsuki's prerendered 5x3 head turns; she follows the cursor on desktop.
-	const tsuki = {
-		alt: m.hero_alt_tsuki(),
-		frames: Array.from({ length: 15 }, (_, i) => `/landing-page/bust/tsuki-${Math.floor(i / 5)}-${i % 5}.webp`)
-	};
 
 	const pillars: Pillar[] = [
 		{
@@ -90,7 +84,7 @@
 	<link rel="alternate" hreflang="en" href={SITE_URL} />
 	<link rel="alternate" hreflang="ja" href={`${SITE_URL}/ja`} />
 	<link rel="alternate" hreflang="x-default" href={SITE_URL} />
-	<link rel="preload" as="image" href="/landing-page/bust/tsuki-1-2.webp" type="image/webp" />
+	<link rel="preload" as="image" href="/landing-page/hero-devices-light.webp" type="image/webp" />
 
 	<!-- Open Graph -->
 	<meta property="og:type" content="website" />
@@ -148,9 +142,7 @@
 				</a>
 			</div>
 			<div class="hero-stage site-panel">
-				<div class="hero-bust">
-					<HeroBust characters={[tsuki]} />
-				</div>
+				<HeroVideo label={m.hero_video_alt()} />
 			</div>
 		</section>
 
@@ -256,24 +248,17 @@
 		margin-top: 8px;
 	}
 
-	/* Tsuki stands in the panel, cut off by its bottom edge */
 	.hero-stage {
-		position: relative;
 		width: 100%;
-		height: clamp(380px, 52vw, 640px);
+		aspect-ratio: 16 / 9;
 		margin-top: clamp(32px, 5vw, 56px);
 	}
 
-	.hero-bust {
-		position: absolute;
-		left: 50%;
-		bottom: -14%;
-		height: 112%;
-		transform: translateX(-50%);
-	}
-
-	.hero-bust :global(.shade) {
-		display: none;
+	/* Phones get a taller crop; every shot keeps its device centered */
+	@media (max-width: 720px) {
+		.hero-stage {
+			aspect-ratio: 4 / 3.4;
+		}
 	}
 
 	.models {
