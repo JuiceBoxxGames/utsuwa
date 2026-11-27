@@ -62,9 +62,9 @@
 	/>
 	<meta property="og:url" content={`${SITE_URL}/download`} />
 	<meta property="og:site_name" content="Utsuwa" />
-	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'SoftwareApplication',

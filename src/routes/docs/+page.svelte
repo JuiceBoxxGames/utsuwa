@@ -19,11 +19,11 @@
 	<meta property="og:title" content="Utsuwa Documentation" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content={DOCS_URL} />
-	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta property="og:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-image.jpg`} />
+	<meta name="twitter:image" content={`${SITE_URL}/brand-assets/og-ink.jpg`} />
 </svelte:head>
 
 <div class="docs-home" data-pagefind-ignore>

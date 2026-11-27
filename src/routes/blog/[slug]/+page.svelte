@@ -69,7 +69,7 @@
 	{#if data.metadata?.description}
 		<meta property="og:description" content={data.metadata.description} />
 	{/if}
-	<meta property="og:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`} />
+	<meta property="og:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail-ink.jpg`} />
 	<meta property="og:url" content={`${SITE_URL}/blog/${data.slug}`} />
 	<meta property="og:site_name" content="Utsuwa" />
 	<meta name="twitter:card" content="summary_large_image" />
@@ -77,14 +77,14 @@
 	{#if data.metadata?.description}
 		<meta name="twitter:description" content={data.metadata.description} />
 	{/if}
-	<meta name="twitter:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`} />
+	<meta name="twitter:image" content={data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail-ink.jpg`} />
 	<link rel="canonical" href={`${SITE_URL}/blog/${data.slug}`} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'BlogPosting',
 		headline: data.metadata?.title,
 		description: data.metadata?.description,
-		image: data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail.jpg`,
+		image: data.metadata?.image ? `${SITE_URL}${data.metadata.image}` : `${SITE_URL}/brand-assets/thumbnail-ink.jpg`,
 		datePublished: data.metadata?.date,
 		url: `${SITE_URL}/blog/${data.slug}`,
 		author: {

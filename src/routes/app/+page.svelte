@@ -155,8 +155,10 @@
 		}
 	});
 
-	// The docked bubble clears the chat bar, whose height changes with its content
-	onMount(() => {
+	// The docked bubble clears the chat bar, whose height changes with its content.
+	// Keyed on windowMode: the bar only exists outside the chat window layout.
+	$effect(() => {
+		if (windowMode) return;
 		const bar = document.querySelector<HTMLElement>('.bottom-chat-bar');
 		if (!bar) return;
 		const measure = () => (chatBarClearance = Math.max(0, window.innerHeight - bar.getBoundingClientRect().top));
