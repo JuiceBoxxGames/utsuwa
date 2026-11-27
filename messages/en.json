@@ -102,5 +102,9 @@
 	"footer_terms": "Terms of Use",
 	"footer_license": "AGPL-3.0 License",
 	"footer_copyright": "© 2026 Juice Boxx Games LLC. Open source under AGPL-3.0.",
-	"language": "Language"
+	"language": "Language",
+	"hero_eyebrow": "Open source · v{version}",
+	"hero_try_browser": "Try it in your browser",
+	"sc_own_sub": "Bring your own keys for any provider, or run the model, the voice, and the memory fully offline. Nothing is routed through us, and the code is open under AGPL-3.0.",
+	"stories_all": "All posts"
 }

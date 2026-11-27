@@ -1,16 +1,16 @@
 <script lang="ts">
-	import '$lib/styles/site.css';
+	import '$lib/styles/marketing.css';
 	import type { PageData } from './$types';
 	import { SITE_URL } from '$lib/config/site';
-	import DownloadIcon from '@lucide/svelte/icons/download';
+	import { sectionUrl } from '$lib/config/links';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ProviderIcons from '$lib/components/icons/ProviderIcons.svelte';
-	import HomeHero from '$lib/components/marketing/HomeHero.svelte';
-	import HomeScroller from '$lib/components/marketing/HomeScroller.svelte';
-	import HomeStories from '$lib/components/marketing/HomeStories.svelte';
+	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
-	import PlatformLine from '$lib/components/marketing/PlatformLine.svelte';
-	import SiteLetter from '$lib/components/marketing/SiteLetter.svelte';
-	import SkyZone from '$lib/components/marketing/SkyZone.svelte';
+	import HeroBust from '$lib/components/marketing/HeroBust.svelte';
+	import LandingPillars, { type Pillar } from '$lib/components/marketing/LandingPillars.svelte';
+	import VesselLetter from '$lib/components/marketing/VesselLetter.svelte';
+	import PostCard from '$lib/components/marketing/PostCard.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 
@@ -19,22 +19,67 @@
 	const locale = getLocale();
 	const canonical = locale === 'ja' ? `${SITE_URL}/ja` : SITE_URL;
 	const ogImage = `${SITE_URL}/brand-assets/${locale === 'ja' ? 'og-image-ja' : 'og-image'}.jpg`;
+	const version = import.meta.env.VITE_APP_VERSION;
 
-	// Every provider we actually support today. Keep this honest. Wordmarks are
-	// the white (dark-theme) variants since they always sit on the sky.
+	// Every provider we actually support today. Keep this honest. The wordmarks
+	// are white art, darkened in light mode.
 	const WM = '/brand-assets/providers';
-	// `h` evens out the optical size of marks that ship with different padding.
 	const providers: { name: string; wordmark?: string; glyph?: string; h?: number }[] = [
-		{ name: 'OpenAI', wordmark: `${WM}/openai-wordmark-dark.svg`, h: 24 },
-		{ name: 'Anthropic', wordmark: `${WM}/anthropic-wordmark-dark.svg`, h: 15 },
-		{ name: 'Google Gemini', wordmark: `${WM}/gemini-wordmark-dark.svg`, h: 26 },
-		{ name: 'DeepSeek', wordmark: `${WM}/deepseek-wordmark-dark.svg`, h: 24 },
-		{ name: 'xAI Grok', wordmark: `${WM}/grok-wordmark-dark.svg`, h: 22 },
+		{ name: 'OpenAI', wordmark: `${WM}/openai-wordmark-dark.svg`, h: 22 },
+		{ name: 'Anthropic', wordmark: `${WM}/anthropic-wordmark-dark.svg`, h: 14 },
+		{ name: 'Google Gemini', wordmark: `${WM}/gemini-wordmark-dark.svg`, h: 24 },
+		{ name: 'DeepSeek', wordmark: `${WM}/deepseek-wordmark-dark.svg`, h: 22 },
+		{ name: 'xAI Grok', wordmark: `${WM}/grok-wordmark-dark.svg`, h: 20 },
 		{ name: 'Ollama', glyph: 'ollama' },
 		{ name: 'LM Studio', glyph: 'lmstudio' },
-		{ name: 'Groq', wordmark: `${WM}/groq-wordmark-dark.svg`, h: 22 },
+		{ name: 'Groq', wordmark: `${WM}/groq-wordmark-dark.svg`, h: 20 },
 		{ name: 'ElevenLabs', glyph: 'elevenlabs' },
 		{ name: 'Fish Audio', glyph: 'fish-audio' }
+	];
+
+	// Tsuki's prerendered 5x3 head turns; she follows the cursor on desktop.
+	const tsuki = {
+		alt: m.hero_alt_tsuki(),
+		frames: Array.from({ length: 15 }, (_, i) => `/landing-page/bust/tsuki-${Math.floor(i / 5)}-${i % 5}.webp`)
+	};
+
+	const pillars: Pillar[] = [
+		{
+			id: 'presence',
+			label: m.sc_tab_presence(),
+			note: m.sc_presence_note(),
+			title: m.sc_presence_title(),
+			body: m.sc_presence_sub(),
+			image: '/landing-page/presence-stool.webp',
+			alt: m.sc_presence_alt(),
+			fit: 'cutout'
+		},
+		{
+			id: 'memory',
+			label: m.sc_tab_memory(),
+			note: m.sc_memory_note(),
+			title: m.sc_memory_title(),
+			body: m.sc_memory_sub(),
+			image: '/landing-page/hero-memory.webp',
+			alt: '',
+			fit: 'cutout'
+		},
+		{
+			id: 'ownership',
+			label: m.sc_tab_ownership(),
+			note: [m.sc_own_model(), m.sc_own_voice(), m.sc_own_avatar()].join(' · '),
+			title: m.sc_own_title(),
+			body: m.sc_own_sub(),
+			image: '/marketing/companion-light.webp',
+			alt: '',
+			fit: 'cover'
+		}
+	];
+
+	const features = [
+		{ note: m.feature_custom_note(), title: m.feature_custom_title(), body: m.feature_custom_body(), image: '/landing-page/feature-group.webp', alt: m.feature_custom_alt() },
+		{ note: m.feature_ar_note(), title: m.feature_ar_title(), body: m.feature_ar_body(), image: '/landing-page/ar-phone.webp', alt: m.feature_ar_alt() },
+		{ note: m.feature_photo_note(), title: m.feature_photo_title(), body: m.feature_photo_body(), image: '/landing-page/photo-yuki.webp', alt: '' }
 	];
 </script>
 
@@ -88,147 +133,99 @@
 	})}</script>`}
 </svelte:head>
 
-<div class="page grain">
+<div class="docs-site site-shell">
+	<SiteNav />
+
 	<main>
-		<!-- Sky: bleeds behind the hero, the model strip, and the letter -->
-		<SkyZone>
-
-			<HomeHero />
-
-			<div class="models">
-				<p class="models-label">{m.models_label()}</p>
-				<!-- Two identical groups loop seamlessly; the copy is hidden from AT -->
-				<div class="models-marquee">
-					<div class="models-track">
-						{#each [0, 1] as copy}
-							<ul class="models-list" aria-hidden={copy === 1}>
-								{#each providers as provider}
-									<li title={provider.name}>
-										{#if provider.wordmark}
-											<img
-												src={provider.wordmark}
-												alt={copy === 0 ? provider.name : ''}
-												style="height: {provider.h}px"
-											/>
-										{:else if provider.glyph}
-											<ProviderIcons provider={provider.glyph} size={22} themed />
-											<span>{provider.name}</span>
-										{/if}
-									</li>
-								{/each}
-							</ul>
-						{/each}
-					</div>
-				</div>
+		<section class="hero site-container" aria-labelledby="hero-title">
+			<p class="site-eyebrow">{m.hero_eyebrow({ version })}</p>
+			<h1 id="hero-title" class="site-h1">{m.hero_title_full()}</h1>
+			<p class="site-lede">{m.hero_lede()}</p>
+			<div class="site-actions">
+				<a href="/download" class="btn btn-primary btn-pill">{m.nav_download()}</a>
+				<a href={sectionUrl('app')} class="btn btn-secondary btn-pill">
+					{m.hero_try_browser()} <ArrowRightIcon size={15} strokeWidth={2.25} />
+				</a>
 			</div>
-
-			<SiteLetter tone="sky" />
-		</SkyZone>
-
-		<HomeScroller />
-
-		<!-- Everything else -->
-		<section id="features" class="features" aria-labelledby="features-title">
-			<p class="features-note">{m.features_note()}</p>
-			<h2 id="features-title" class="features-title">{m.features_title()}</h2>
-
-			<div class="features-grid">
-				<article class="feature">
-					<div class="feature-asset feature-asset--group">
-						<img
-							src="/landing-page/feature-group.webp"
-							alt={m.feature_custom_alt()}
-							width="1080"
-							height="960"
-							loading="lazy"
-						/>
-					</div>
-					<div class="feature-copy">
-						<p class="feature-note">{m.feature_custom_note()}</p>
-						<h3 class="feature-title">{m.feature_custom_title()}</h3>
-						<p class="feature-note">{m.feature_custom_body()}</p>
-					</div>
-				</article>
-
-				<article class="feature">
-					<div class="feature-asset feature-asset--ar">
-						<img
-							src="/landing-page/ar-phone.webp"
-							alt={m.feature_ar_alt()}
-							width="530"
-							height="816"
-							loading="lazy"
-						/>
-					</div>
-					<div class="feature-copy">
-						<p class="feature-note">{m.feature_ar_note()}</p>
-						<h3 class="feature-title">{m.feature_ar_title()}</h3>
-						<p class="feature-note">{m.feature_ar_body()}</p>
-					</div>
-				</article>
-
-				<article class="feature">
-					<div class="feature-asset feature-asset--photos" aria-hidden="true">
-						<figure class="polaroid polaroid-back">
-							<img src="/landing-page/photo-yuki.webp" alt="" loading="lazy" />
-							<figcaption>{m.feature_photo_caption_1()}</figcaption>
-						</figure>
-						<figure class="polaroid polaroid-front">
-							<img src="/landing-page/photo-momo.webp" alt="" loading="lazy" />
-							<figcaption>{m.feature_photo_caption_2()}</figcaption>
-						</figure>
-						<svg class="doodle doodle-star" viewBox="0 0 40 40">
-							<path
-								d="M20 4l4.2 10.4L35 15.6l-8.3 7.1 2.7 10.9L20 27.7l-9.4 5.9 2.7-10.9L5 15.6l10.8-1.2Z"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2.4"
-								stroke-linejoin="round"
-							/>
-						</svg>
-						<svg class="doodle doodle-heart" viewBox="0 0 40 36">
-							<path
-								d="M20 33S4 23.5 4 12.6C4 7.6 7.8 4 12.3 4c3.3 0 5.9 2 7.7 4.8C21.8 6 24.4 4 27.7 4 32.2 4 36 7.6 36 12.6 36 23.5 20 33 20 33Z"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2.4"
-								stroke-linejoin="round"
-							/>
-						</svg>
-					</div>
-					<div class="feature-copy">
-						<p class="feature-note">{m.feature_photo_note()}</p>
-						<h3 class="feature-title">{m.feature_photo_title()}</h3>
-						<p class="feature-note">{m.feature_photo_body()}</p>
-					</div>
-				</article>
+			<div class="hero-stage site-panel">
+				<div class="hero-bust">
+					<HeroBust characters={[tsuki]} />
+				</div>
 			</div>
 		</section>
 
-		{#if data.posts.length > 0}
-			<HomeStories posts={data.posts} />
+		<section class="models site-container" aria-label={m.models_label()}>
+			<p class="site-eyebrow">{m.models_label()}</p>
+			<ul class="models-list">
+				{#each providers as provider (provider.name)}
+					<li>
+						{#if provider.wordmark}
+							<img class="wordmark" src={provider.wordmark} alt={provider.name} style="height: {provider.h}px" />
+						{:else if provider.glyph}
+							<ProviderIcons provider={provider.glyph} size={20} themed />
+							<span>{provider.name}</span>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</section>
+
+		<section id="features" class="section site-container" aria-labelledby="pillars-title">
+			<div class="section-head">
+				<h2 id="pillars-title" class="site-h2">{m.sc_label()}</h2>
+			</div>
+			<LandingPillars {pillars} label={m.sc_tabs_label()} />
+		</section>
+
+		<section class="section site-container" aria-labelledby="features-title">
+			<div class="section-head">
+				<p class="site-eyebrow">{m.features_note()}</p>
+				<h2 id="features-title" class="site-h2">{m.features_title()}</h2>
+			</div>
+			<div class="feature-grid">
+				{#each features as feature (feature.title)}
+					<article class="feature">
+						<div class="feature-media site-panel">
+							<img src={feature.image} alt={feature.alt} loading="lazy" />
+						</div>
+						<p class="site-eyebrow">{feature.note}</p>
+						<h3 class="feature-title">{feature.title}</h3>
+						<p class="feature-body">{feature.body}</p>
+					</article>
+				{/each}
+			</div>
+		</section>
+
+		<div class="section">
+			<VesselLetter />
+		</div>
+
+		{#if data.posts.length}
+			<section class="section site-container" aria-labelledby="posts-title">
+				<div class="section-head section-head--row">
+					<h2 id="posts-title" class="site-h2">{m.stories_title()}</h2>
+					<a href="/blog" class="btn btn-secondary btn-pill">{m.stories_all()}</a>
+				</div>
+				<div class="post-grid">
+					{#each data.posts.slice(0, 3) as post (post.slug)}
+						<PostCard {post} />
+					{/each}
+				</div>
+			</section>
 		{/if}
 
-		<!-- Closing CTA -->
-		<section class="cta" aria-labelledby="cta-title">
-			<div class="cta-wrap">
-				<div class="cta-content">
-					<h2 id="cta-title" class="cta-title">{m.cta_title()}</h2>
-					<a href="/download" class="btn btn-hero">
-						<DownloadIcon size={18} strokeWidth={2.25} />
-						{m.hero_download()}
-					</a>
-					<PlatformLine tone="ink" />
+		<section class="section site-container" aria-labelledby="cta-title">
+			<div class="cta site-panel">
+				<div class="cta-copy">
+					<h2 id="cta-title" class="site-h1">{m.cta_title()}</h2>
+					<div class="site-actions">
+						<a href="/download" class="btn btn-primary btn-pill">{m.nav_download()}</a>
+						<a href={sectionUrl('app')} class="btn btn-secondary btn-pill">
+							{m.hero_try_browser()} <ArrowRightIcon size={15} strokeWidth={2.25} />
+						</a>
+					</div>
 				</div>
-				<div class="cta-image">
-					<img
-						src="/landing-page/cta-pair.webp"
-						alt={m.cta_alt()}
-						width="843"
-						height="962"
-						loading="lazy"
-					/>
-				</div>
+				<img class="cta-img" src="/landing-page/cta-pair.webp" alt={m.cta_alt()} loading="lazy" />
 			</div>
 		</section>
 	</main>
@@ -237,372 +234,192 @@
 </div>
 
 <style>
-	.page {
-		--ink: var(--text-primary);
-		--ink-80: color-mix(in srgb, var(--text-primary) 80%, transparent);
+	.hero {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		overflow-x: clip;
-		background: var(--bg-page);
-		color: var(--ink);
+		gap: 20px;
+		padding-top: clamp(56px, 9vw, 120px);
+		text-align: center;
 	}
 
-	main {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		width: 100%;
+	.hero .site-h1 {
+		max-width: 17ch;
 	}
 
-	/* Model strip */
-	.models {
+	.hero .site-lede {
+		max-width: 54ch;
+	}
+
+	.hero .site-actions {
+		justify-content: center;
+		margin-top: 8px;
+	}
+
+	/* Tsuki stands in the panel, cut off by its bottom edge */
+	.hero-stage {
 		position: relative;
-		z-index: 2;
+		width: 100%;
+		height: clamp(380px, 52vw, 640px);
+		margin-top: clamp(32px, 5vw, 56px);
+	}
+
+	.hero-bust {
+		position: absolute;
+		left: 50%;
+		bottom: -14%;
+		height: 112%;
+		transform: translateX(-50%);
+	}
+
+	.hero-bust :global(.shade) {
+		display: none;
+	}
+
+	.models {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 22px;
-		margin: 40px 36px 114px;
-	}
-
-	.models-label {
-		margin: 0;
-		color: rgba(255, 255, 255, 0.78);
-		font-size: 14px;
-		letter-spacing: -0.02em;
-	}
-
-	.models-marquee {
-		width: min(1240px, 100%);
-		overflow: hidden;
-		-webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
-		mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
-	}
-
-	.models-track {
-		display: flex;
-		width: max-content;
-		animation: marquee 42s linear infinite;
-	}
-
-	.models-marquee:hover .models-track {
-		animation-play-state: paused;
-	}
-
-	@keyframes marquee {
-		to {
-			transform: translateX(-50%);
-		}
+		gap: 24px;
+		padding-top: clamp(48px, 7vw, 88px);
 	}
 
 	.models-list {
 		display: flex;
-		flex-shrink: 0;
+		flex-wrap: wrap;
+		justify-content: center;
 		align-items: center;
-		gap: 44px;
+		gap: 20px 40px;
+		max-width: 960px;
 		margin: 0;
-		padding: 0 44px 0 0;
+		padding: 0;
 		list-style: none;
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.models-track {
-			animation: none;
-		}
-	}
-
 	.models-list li {
-		display: inline-flex;
+		display: flex;
 		align-items: center;
 		gap: 8px;
-		color: #fff;
-		font-size: 18px;
+		color: var(--text-primary);
+		font-size: 15px;
 		font-weight: 600;
-		letter-spacing: -0.03em;
-		filter: drop-shadow(0 1px 10px rgba(0, 40, 100, 0.18));
+		opacity: 0.75;
 	}
 
-	.models-list img {
-		display: block;
+	.wordmark {
 		width: auto;
 	}
 
-	/* Features */
-	.features {
+	:global(html:not(.dark)) .wordmark {
+		filter: brightness(0);
+	}
+
+	.section {
+		padding-top: var(--site-section);
+	}
+
+	.section-head {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		width: 100%;
-		max-width: 1180px;
-		margin: 40px 0 0;
-		padding: 0 35px;
-		scroll-margin-top: 40px;
+		gap: 14px;
+		max-width: 720px;
+		margin-bottom: 40px;
 	}
 
-	.features-note,
-	.feature-note {
-		margin: 0;
-		color: var(--ink-80);
-		font-size: 16px;
-		line-height: 18px;
-		letter-spacing: -0.03em;
+	.section-head--row {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: flex-end;
+		max-width: none;
 	}
 
-	.features-title {
-		margin: 12px 0 0;
-		color: var(--ink);
-		font-size: 48px;
-		font-weight: 600;
-		line-height: 50px;
-		letter-spacing: -0.045em;
-		text-align: center;
-	}
-
-	.features-grid {
+	.feature-grid {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		justify-items: center;
-		gap: 48px;
-		width: 100%;
-		max-width: 1110px;
-		margin: 48px 0 0;
+		gap: 24px;
 	}
 
 	.feature {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		gap: 16px;
-		width: 100%;
-		max-width: 362px;
+		gap: 8px;
 	}
 
-	.feature-asset {
-		position: relative;
+	.feature-media {
 		display: flex;
 		align-items: flex-end;
 		justify-content: center;
-		width: 100%;
-		aspect-ratio: 338 / 362;
-		overflow: hidden;
-		border-radius: 56px;
-		background: var(--bg-secondary);
+		aspect-ratio: 4 / 3.6;
+		margin-bottom: 12px;
+		border-radius: 24px;
 	}
 
-	.feature-asset--group img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: center 30%;
-	}
-
-	.feature-asset--ar img {
-		width: 78%;
-		height: auto;
-		margin-bottom: -18%;
-	}
-
-	.feature-asset--photos {
-		align-items: center;
-		color: var(--stat-affection);
-	}
-
-	.polaroid {
-		position: absolute;
-		width: 56%;
-		margin: 0;
-		padding: 8px 8px 30px;
-		border-radius: 8px;
-		background: #fff;
-		box-shadow: 0 16px 40px rgba(28, 43, 51, 0.18);
-	}
-
-	.polaroid img {
-		display: block;
-		width: 100%;
-		aspect-ratio: 1;
-		object-fit: cover;
-		border-radius: 3px;
-		background: var(--gradient-aurora-cool);
-	}
-
-	.polaroid-back img {
-		background: var(--gradient-aurora-mint);
-	}
-
-	.polaroid figcaption {
-		position: absolute;
-		left: 12px;
-		bottom: 6px;
-		color: #3a3a47;
-		font-family: 'Bradley Hand', 'Segoe Print', 'Chalkboard SE', cursive;
-		font-size: 14px;
-	}
-
-	.polaroid-back {
-		top: 11%;
-		left: 8%;
-		transform: rotate(-9deg);
-	}
-
-	.polaroid-front {
-		right: 7%;
-		bottom: 9%;
-		transform: rotate(6deg);
-	}
-
-	.doodle {
-		position: absolute;
-		width: 34px;
-		height: 34px;
-	}
-
-	.doodle-star {
-		top: 10%;
-		right: 12%;
-		transform: rotate(14deg);
-	}
-
-	.doodle-heart {
-		bottom: 12%;
-		left: 12%;
-		transform: rotate(-12deg);
-	}
-
-	.feature-copy {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 12px;
-		width: 100%;
-		padding: 0 24px;
+	.feature-media img {
+		max-width: 90%;
+		max-height: 92%;
+		object-fit: contain;
 	}
 
 	.feature-title {
 		margin: 0;
-		color: var(--ink);
-		font-size: 24px;
-		font-weight: 600;
-		line-height: 28px;
-		letter-spacing: -0.035em;
+		font-size: 22px;
+		font-weight: 500;
+		letter-spacing: -0.01em;
 	}
 
-	/* Closing CTA */
+	.feature-body {
+		margin: 0;
+		color: var(--text-secondary);
+		font-size: 15px;
+		line-height: 1.55;
+	}
+
+	.post-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 24px;
+	}
+
 	.cta {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		align-items: end;
+		min-height: 460px;
+		margin-bottom: var(--site-section);
+	}
+
+	.cta-copy {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		width: 100%;
-		max-width: 1276px;
-		padding: 0 36px;
+		gap: 28px;
+		align-self: center;
+		padding: clamp(32px, 6vw, 72px);
 	}
 
-	.cta-wrap {
-		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 16px;
-		width: 100%;
-	}
-
-	.cta-image {
-		display: flex;
-		justify-content: center;
-		flex: 1 1 50%;
-		min-width: 0;
-	}
-
-	/* The pair is portrait, so cap it by height */
-	.cta-image img {
-		display: block;
-		width: auto;
-		max-width: 100%;
+	.cta-img {
+		justify-self: center;
+		width: min(100%, 440px);
 		height: auto;
-		max-height: min(600px, 72vh);
+		margin-top: 56px;
 	}
 
-	.cta-content {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		justify-content: center;
-		flex: 1 1 50%;
-		min-width: 0;
-	}
-
-	.cta-title {
-		max-width: 620px;
-		margin: 0 0 50px;
-		color: var(--ink);
-		font-size: 120px;
-		font-weight: 700;
-		line-height: 110px;
-		letter-spacing: -0.08em;
-	}
-
-	@media (max-width: 1040px) {
-		.cta-title {
-			font-size: 90px;
-			line-height: 88px;
-			letter-spacing: -0.06em;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.models {
-			margin: 0 18px 64px;
+	@media (max-width: 900px) {
+		.feature-grid,
+		.post-grid {
+			grid-template-columns: 1fr;
 		}
 
-		.models-list {
-			gap: 28px;
-			padding-right: 28px;
-		}
-
-		.models-list img {
-			scale: 0.8;
-		}
-
-		.models-list li {
-			font-size: 16px;
-		}
-
-
-		.features {
-			margin-top: 64px;
-		}
-
-		.features-title {
-			font-size: 36px;
-			line-height: 38px;
-		}
-
-		.features-grid {
-			grid-template-columns: minmax(0, 1fr);
-			gap: 36px;
-			margin-top: 36px;
-		}
-
-		.feature-copy {
-			gap: 8px;
-			padding: 0 10px;
-		}
-
-		.feature-title {
-			font-size: 20px;
-			line-height: 22px;
-		}
-
-		.cta-wrap {
+		.section-head--row {
 			flex-direction: column;
 			align-items: flex-start;
 		}
 
-		.cta-title {
-			max-width: 300px;
-			font-size: 60px;
-			line-height: 58px;
+		.cta {
+			grid-template-columns: 1fr;
+		}
+
+		.cta-img {
+			width: min(80%, 360px);
 		}
 	}
 </style>

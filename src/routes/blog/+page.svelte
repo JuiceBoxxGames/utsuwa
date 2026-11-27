@@ -3,6 +3,7 @@
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import { SITE_URL, GITHUB_REPO, GITHUB_RELEASES } from '$lib/config/site';
 	import PostCard from '$lib/components/marketing/PostCard.svelte';
+	import VesselLetter from '$lib/components/marketing/VesselLetter.svelte';
 
 	let { data }: { data: PageData } = $props();
 </script>
@@ -52,6 +53,10 @@
 			{/each}
 		</div>
 	</section>
+
+	<div class="blog-letter">
+		<VesselLetter />
+	</div>
 </div>
 
 <style>
@@ -85,6 +90,10 @@
 
 	.blog-posts .site-h2 {
 		margin-bottom: 32px;
+	}
+
+	.blog-letter {
+		padding-top: var(--site-section);
 	}
 
 	.post-grid {

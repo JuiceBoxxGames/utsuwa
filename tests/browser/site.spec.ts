@@ -28,7 +28,7 @@ test('the footer theme toggle switches the blog to dark', async ({ page }) => {
 });
 
 test('marketing and docs share one header', async ({ page }) => {
-	for (const path of ['/blog', '/docs']) {
+	for (const path of ['/', '/blog', '/docs']) {
 		await page.goto(path);
 		const banner = page.getByRole('banner');
 		for (const name of ['Docs', 'Blog', 'Try it live']) {
@@ -40,8 +40,10 @@ test('marketing and docs share one header', async ({ page }) => {
 
 test('the logo shows on a phone-width marketing page', async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
-	await page.goto('/blog');
-	await expect(page.getByRole('banner').getByRole('img', { name: 'Utsuwa' })).toBeVisible();
+	for (const path of ['/', '/blog']) {
+		await page.goto(path);
+		await expect(page.getByRole('banner').getByRole('img', { name: 'Utsuwa' }), path).toBeVisible();
+	}
 });
 
 test('the docs header keeps its menu button on a phone', async ({ page }) => {
@@ -88,4 +90,44 @@ test('download page offers each platform on the shared tokens', async ({ page })
 	expect(await gradientsInMain(page)).toEqual([]);
 	const weight = await page.evaluate(() => getComputedStyle(document.querySelector('h1')!).fontWeight);
 	expect(weight).toBe('500');
+});
+
+test('the landing hero offers download and the browser app', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Give your AI a body, a voice, a memory, and a home.');
+	const main = page.getByRole('main');
+	await expect(main.getByRole('link', { name: 'Download', exact: true }).first()).toHaveAttribute('href', '/download');
+	await expect(main.getByRole('link', { name: 'Try it in your browser' }).first()).toHaveAttribute('href', '/app');
+	expect(await gradientsInMain(page)).toEqual([]);
+});
+
+test('the landing pillars switch with the keyboard', async ({ page }) => {
+	await page.goto('/', { waitUntil: 'networkidle' });
+	const tabs = page.getByRole('tablist').getByRole('tab');
+	await expect(tabs).toHaveCount(3);
+	await tabs.first().focus();
+	await page.keyboard.press('ArrowRight');
+	await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+	await expect(tabs.nth(1)).toBeFocused();
+	const panelId = await tabs.nth(1).getAttribute('aria-controls');
+	await expect(page.locator(`#${panelId}`)).toBeVisible();
+});
+
+test('the landing fits a phone without sideways scroll', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/', { waitUntil: 'networkidle' });
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('pillar images never cover their copy on a phone', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/', { waitUntil: 'networkidle' });
+	const overlaps = await page.evaluate(() =>
+		[...document.querySelectorAll('[role="tabpanel"]')].filter((panel) => {
+			const copy = panel.querySelector('.panel-copy')!.getBoundingClientRect();
+			const img = panel.querySelector('img')!.getBoundingClientRect();
+			return img.top < copy.bottom - 1;
+		}).length
+	);
+	expect(overlaps).toBe(0);
 });
