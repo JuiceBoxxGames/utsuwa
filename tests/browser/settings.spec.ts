@@ -326,19 +326,28 @@ test('appearance persists and app tokens follow the selected theme', async ({ pa
 	await page.goto('/app/settings/display');
 	await waitForHydration(page);
 	const themes = page.getByRole('group', { name: 'Color theme' });
-	for (const [label, canvas, accent] of [
-		['Light', '#fcfcfc', '#04b2fd'],
-		['Dark', '#0a0a0a', '#04b2fd']
-	]) {
+	// Ink flips with the theme; data colors keep their own cyan and never alias the accent
+	for (const [label, expected] of [
+		['Light', { bg: '#fcfcfc', accent: '#18181b', contrast: '#ffffff', energy: '#00b2ff', acquaintance: '#00b2ff', affectionate: '#00b2ff' }],
+		['Dark', { bg: '#0a0a0a', accent: '#f4f4f5', contrast: '#0a0a0a', energy: '#33c1ff', acquaintance: '#33c1ff', affectionate: '#33c1ff' }]
+	] as const) {
 		await themes.getByRole('button', { name: label, exact: true }).click();
 		await page.reload();
 		await waitForHydration(page);
 		await expect(themes.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
 		const colors = await page.evaluate(() => {
 			const style = getComputedStyle(document.documentElement);
-			return ['--bg-page', '--accent'].map(name => style.getPropertyValue(name).trim());
+			const read = (name: string) => style.getPropertyValue(name).trim();
+			return {
+				bg: read('--bg-page'),
+				accent: read('--accent'),
+				contrast: read('--accent-contrast'),
+				energy: read('--stat-energy'),
+				acquaintance: read('--tier-acquaintance'),
+				affectionate: read('--mood-affectionate')
+			};
 		});
-		expect(colors).toEqual([canvas, accent]);
+		expect(colors).toEqual(expected);
 	}
 	await page.emulateMedia({ colorScheme: 'light' });
 	await themes.getByRole('button', { name: 'System', exact: true }).click();

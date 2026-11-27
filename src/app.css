@@ -35,7 +35,7 @@
 	--mood-content: var(--color-success);
 	--mood-frustrated: var(--color-error);
 	--mood-curious: #06b6d4;
-	--mood-affectionate: var(--accent);
+	--mood-affectionate: var(--color-info);
 	--mood-playful: #14b8a6;
 	--mood-melancholy: var(--text-tertiary);
 	--mood-neutral: var(--text-secondary);
