@@ -11,6 +11,7 @@
 	import LandingPillars, { type Pillar } from '$lib/components/marketing/LandingPillars.svelte';
 	import VesselLetter from '$lib/components/marketing/VesselLetter.svelte';
 	import PostCard from '$lib/components/marketing/PostCard.svelte';
+	import FeatureBento from '$lib/components/marketing/FeatureBento.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 
@@ -168,6 +169,8 @@
 			</div>
 			<LandingPillars {pillars} label={m.sc_tabs_label()} />
 		</section>
+
+		<FeatureBento />
 
 		<section class="section site-container" aria-labelledby="features-title">
 			<div class="section-head">

@@ -165,3 +165,29 @@ test('reduced motion keeps the hero on its still frame', async ({ page }) => {
 	await page.waitForTimeout(500);
 	expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
 });
+
+test('the landing shows the advanced features with live vignettes', async ({ page }) => {
+	await page.goto('/', { waitUntil: 'networkidle' });
+	const section = page.getByRole('region', { name: 'Built deeper than it looks' });
+	await section.scrollIntoViewIfNeeded();
+	for (const name of ['Tools through MCP', 'Memory that recalls by meaning', 'A bond that grows', 'Fully local if you want', 'Reminders that come back', 'Desktop overlay']) {
+		await expect(section.getByRole('heading', { name, exact: true })).toBeVisible();
+	}
+	const tool = section.locator('[data-vignette="tools"]');
+	const first = await tool.getAttribute('data-step');
+	await expect.poll(() => tool.getAttribute('data-step'), { timeout: 6000 }).not.toBe(first);
+});
+
+test('reduced motion shows each vignette finished and still', async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.goto('/', { waitUntil: 'networkidle' });
+	const steps = await page.locator('[data-vignette]').evaluateAll((els) =>
+		els.map((el) => ({ step: el.getAttribute('data-step'), last: el.getAttribute('data-last') }))
+	);
+	expect(steps.length).toBe(6);
+	for (const s of steps) expect(s.step).toBe(s.last);
+	// The finished state is actually drawn, not just flagged (Svelte prunes step rules it cannot see)
+	const reply = page.locator('[data-vignette="tools"] .reply');
+	await reply.scrollIntoViewIfNeeded();
+	await expect.poll(() => reply.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+});

@@ -85,3 +85,61 @@
 	word-break: auto-phrase;
 	overflow-wrap: anywhere;
 }
+
+/* Shared stage for the feature vignettes: a quiet canvas inside each card. */
+.site-shell .vg {
+	position: relative;
+	height: 100%;
+	overflow: hidden;
+	border-radius: 18px;
+	background: var(--bg-page);
+	font-size: 13px;
+	color: var(--text-primary);
+}
+
+.site-shell .vg .vg-bubble {
+	max-width: 78%;
+	padding: 8px 12px;
+	border-radius: 14px;
+	background: var(--bg-secondary);
+	line-height: 1.35;
+}
+
+.site-shell .vg .vg-bubble.user {
+	margin-left: auto;
+	background: var(--accent);
+	color: var(--accent-contrast);
+}
+
+.site-shell .vg .vg-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 10px;
+	border-radius: 999px;
+	background: var(--bg-secondary);
+	white-space: nowrap;
+}
+
+.site-shell .vg .vg-mono {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+/* Elements that appear on a step start hidden and rise in */
+.site-shell .vg .vg-in {
+	opacity: 0;
+	transform: translateY(6px);
+	transition:
+		opacity 0.35s var(--ease-brand),
+		transform 0.35s var(--ease-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.site-shell .vg *,
+	.site-shell .vg *::before,
+	.site-shell .vg *::after {
+		transition: none !important;
+		animation: none !important;
+	}
+}
