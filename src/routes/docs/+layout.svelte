@@ -74,8 +74,8 @@
 	});
 </script>
 
-<!-- .docs-site opts these pages into the app theme (app-theme.css). Blog and
-     legal pages use a plain .docs wrapper and keep the site styles. -->
+<!-- .docs-site opts these pages into the app theme (app-theme.css). The
+     marketing, blog, and legal pages render the same root. -->
 <div class="docs-site">
 	<SiteNav onToggleSidebar={() => (sidebarOpen = !sidebarOpen)} {sidebarOpen} />
 	<div class="docs-body">

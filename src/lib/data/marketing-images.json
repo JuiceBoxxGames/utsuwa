@@ -53,12 +53,6 @@
     "width": 2400,
     "height": 1500
   },
-  "/blog/gaming-gpu.jpg": {
-    "src": "/optimized/blog/gaming-gpu-1200.webp",
-    "srcset": "/optimized/blog/gaming-gpu-96.webp 96w, /optimized/blog/gaming-gpu-480.webp 480w, /optimized/blog/gaming-gpu-960.webp 960w, /optimized/blog/gaming-gpu-1200.webp 1200w",
-    "width": 1200,
-    "height": 800
-  },
   "/blog/grok-ani.jpg": {
     "src": "/optimized/blog/grok-ani-1280.webp",
     "srcset": "/optimized/blog/grok-ani-96.webp 96w, /optimized/blog/grok-ani-480.webp 480w, /optimized/blog/grok-ani-960.webp 960w, /optimized/blog/grok-ani-1280.webp 1280w",
