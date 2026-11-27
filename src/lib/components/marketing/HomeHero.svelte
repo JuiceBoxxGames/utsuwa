@@ -42,7 +42,7 @@
 </script>
 
 <section class="hero" aria-labelledby="hero-title">
-	<SiteNav variant="hero" />
+	<SiteNav />
 
 	<div class="hero-content">
 		<div class="hero-wrap">

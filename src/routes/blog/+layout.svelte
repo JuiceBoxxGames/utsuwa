@@ -1,5 +1,5 @@
 <script lang="ts">
-	import '$lib/styles/site.css';
+	import '$lib/styles/marketing.css';
 	import SiteNav from '$lib/components/marketing/SiteNav.svelte';
 	import SiteFooter from '$lib/components/marketing/SiteFooter.svelte';
 	import type { Snippet } from 'svelte';
@@ -7,7 +7,7 @@
 	let { children }: { children: Snippet } = $props();
 </script>
 
-<div class="docs blog-site grain">
+<div class="docs-site site-shell blog-site">
 	<SiteNav />
 
 	<main class="blog-main" data-pagefind-body>
@@ -18,13 +18,6 @@
 </div>
 
 <style>
-	.blog-site {
-		min-height: 100vh;
-		background: var(--bg-page);
-		color: var(--text-primary);
-		font-family: var(--font-sans);
-	}
-
 	/* Pages own their vertical rhythm; the shell only sets the side gutters. */
 	.blog-main {
 		max-width: 80rem;

@@ -1,305 +1,157 @@
 <script lang="ts">
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import { page } from '$app/state';
-	import { sectionUrl } from '$lib/config/links';
-	import { m } from '$lib/paraglide/messages';
-	import { getLocale } from '$lib/paraglide/runtime';
+	import { localPath, sectionUrl, mainUrl, isSection } from '$lib/config/links';
 
-	// One header everywhere: logo, the capsule of section links, and Try it
-	// live. "hero" sits over a sky hero in white; "page" is the sticky header
-	// with a soft fade, in ink, for the white pages.
-	let { variant = 'page' }: { variant?: 'hero' | 'page' } = $props();
+	// One header for the marketing site and the docs. The docs pass a sidebar
+	// toggle; on phones their logo moves into the drawer, so it hides here.
 
-	// Only the landing page is translated, so the switch only shows there
-	const translated = $derived(['/', '/ja'].includes(page.url.pathname));
-	const locale = getLocale();
+	interface Props {
+		onToggleSidebar?: () => void;
+		sidebarOpen?: boolean;
+	}
+
+	let { onToggleSidebar, sidebarOpen = false }: Props = $props();
+
+	const currentPath = $derived(page.url.pathname);
 </script>
 
-<header class="site-header" class:on-page={variant === 'page'}>
-	<div class="site-header-inner">
-		<a href="/" class="brand" aria-label={m.nav_home()}>
-			<img src="/brand-assets/logo.svg" alt="Utsuwa" class="brand-logo" />
+<header class="site-header">
+	<div class="header-left">
+		{#if onToggleSidebar}
+			<button
+				type="button"
+				id="docs-menu-toggle"
+				class="btn btn-ghost btn-icon hamburger"
+				onclick={onToggleSidebar}
+				aria-controls="docs-sidebar"
+				aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+				aria-expanded={sidebarOpen}
+			>
+				<Icon name={sidebarOpen ? 'xmark' : 'bars'} size={18} />
+			</button>
+		{/if}
+		<a href={onToggleSidebar ? localPath('docs') : mainUrl('/')} class="logo" class:desktop-logo={!!onToggleSidebar} aria-label="Utsuwa home">
+			<img src="/brand-assets/logo.svg" alt="Utsuwa" class="logo-img" />
 		</a>
-
-		<nav class="hero-links" aria-label={m.nav_main()}>
-			<a href="/#features">{m.nav_features()}</a>
-			<a href={sectionUrl('docs')}>{m.nav_docs()}</a>
-			<a href="/blog">{m.nav_blog()}</a>
-			<a href="/download">{m.nav_download()}</a>
+	</div>
+	<div class="header-right">
+		<nav class="header-nav" aria-label="Site">
+			<a href={localPath('docs')} class="nav-link" class:active={isSection('docs')} aria-current={isSection('docs') ? 'page' : undefined}>Docs</a>
+			<a href={mainUrl('/blog')} class="nav-link" class:active={currentPath.startsWith('/blog')}>Blog</a>
 		</nav>
-
-		<div class="hero-actions">
-			{#if translated}
-				<nav class="lang-switch" aria-label={m.language()}>
-					<a href="/" hreflang="en" lang="en" aria-current={locale === 'en' ? 'true' : undefined} data-sveltekit-reload
-						>EN</a
-					>
-					<a href="/ja" hreflang="ja" lang="ja" aria-current={locale === 'ja' ? 'true' : undefined} data-sveltekit-reload
-						>日本語</a
-					>
-				</nav>
-			{/if}
-			<a href={sectionUrl('app')} class="glass-pill">{m.nav_try()}</a>
-		</div>
+		<a href={mainUrl('/download')} aria-label="Download Utsuwa" class="btn btn-secondary btn-sm">
+			<Icon name="download" size={14} />
+			<span class="download-label">Download</span>
+		</a>
+		<a href={sectionUrl('app')} class="btn btn-primary btn-sm">Try it live</a>
 	</div>
 </header>
 
 <style>
-	/* Three columns keep the link capsule centered however wide the right
-	   side gets. Over a hero it sits in the hero's flow. */
 	.site-header {
-		position: relative;
-		z-index: 2;
-		display: flex;
-		justify-content: center;
-		width: 100%;
-	}
-
-	.site-header-inner {
-		display: grid;
-		grid-template-columns: 1fr auto 1fr;
-		align-items: start;
-		width: 100%;
-		max-width: 1270px;
-	}
-
-	.hero-actions {
-		display: flex;
-		grid-column: 3;
-		align-items: center;
-		justify-self: end;
-		gap: 10px;
-	}
-
-	/* Language switch: the same glass as the link capsule, current one lit */
-	.lang-switch {
-		display: flex;
-		gap: 2px;
-		padding: 5px;
-		border: 1px solid rgba(255, 255, 255, 0.22);
-		border-radius: 100px;
-		background: rgba(255, 255, 255, 0.12);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
-	}
-
-	.lang-switch a {
-		padding: 11px 14px;
-		border-radius: 100px;
-		white-space: nowrap;
-		color: rgba(255, 255, 255, 0.72);
-		font-size: 15px;
-		line-height: 20px;
-		letter-spacing: -0.02em;
-		text-decoration: none;
-		text-shadow: 0 1px 8px rgba(0, 40, 100, 0.2);
-		transition:
-			background 0.25s ease,
-			color 0.25s ease;
-	}
-
-	.lang-switch a:hover {
-		background: rgba(255, 255, 255, 0.14);
-		color: #fff;
-	}
-
-	.lang-switch a[aria-current] {
-		background: rgba(255, 255, 255, 0.24);
-		color: #fff;
-	}
-
-	.brand {
-		display: flex;
-		align-items: center;
-		justify-self: start;
-		min-width: 118px;
-		height: 3.375rem;
-		text-decoration: none;
-	}
-
-	.brand-logo {
-		height: 1.375rem;
-		width: auto;
-		filter: brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0, 40, 100, 0.2));
-	}
-
-
-	/* Glass capsule of section links, centered between logo and CTA */
-	.hero-links {
-		display: flex;
-		grid-column: 2;
-		align-items: center;
-		gap: 2px;
-		margin-top: 4px;
-		padding: 5px;
-		border: 1px solid rgba(255, 255, 255, 0.22);
-		border-radius: 100px;
-		background: rgba(255, 255, 255, 0.12);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
-	}
-
-	.hero-links a {
-		padding: 10px 14px;
-		white-space: nowrap;
-		border-radius: 100px;
-		color: #fff;
-		font-size: 15px;
-		letter-spacing: -0.02em;
-		text-decoration: none;
-		text-shadow: 0 1px 8px rgba(0, 40, 100, 0.2);
-		transition: background 0.25s ease;
-	}
-
-	.hero-links a:hover {
-		background: rgba(255, 255, 255, 0.18);
-	}
-
-	.glass-pill {
-		display: inline-block;
-		padding: 1rem;
-		border: 1px solid rgba(255, 255, 255, 0.05);
-		border-radius: 100px;
-		background: rgba(255, 255, 255, 0.16);
-		box-shadow: inset 0 -4px 24px 0 var(--glass-glow, rgba(222, 249, 255, 0.7));
-		color: #fff;
-		text-shadow: 0 1px 8px rgba(0, 40, 100, 0.25);
-		font-size: 1rem;
-		line-height: 1.25rem;
-		letter-spacing: -0.02em;
-		text-decoration: none;
-		white-space: nowrap;
-		-webkit-backdrop-filter: blur(6px);
-		backdrop-filter: blur(6px);
-		transition: background 0.5s ease;
-	}
-
-	.glass-pill:hover {
-		background: rgba(255, 255, 255, 0.32);
-	}
-
-	/* Big monitors: scale the composition up instead of leaving a small island */
-	@media (min-width: 1800px) and (min-height: 1000px) {
-		.site-header-inner {
-			zoom: 1.15;
-		}
-	}
-
-	@media (min-width: 2200px) and (min-height: 1250px) {
-		.site-header-inner {
-			zoom: 1.4;
-		}
-	}
-
-	/* Tablets and small laptops: the section links live in the footer */
-	@media (max-width: 1099px) {
-		.hero-links {
-			display: none;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.site-header-inner {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-
-		/* With the switch showing, logo left and switch right */
-		.site-header-inner:has(.lang-switch) {
-			justify-content: space-between;
-		}
-
-		.brand {
-			min-width: 0;
-		}
-
-		.hero-links,
-		.glass-pill {
-			display: none;
-		}
-
-		/* Phones keep just the logo and a compact switch */
-		.lang-switch {
-			padding: 3px;
-		}
-
-		.lang-switch a {
-			padding: 6px 10px;
-			font-size: 13px;
-			line-height: 18px;
-		}
-	}
-
-	/* White pages: sticky, with the page color fading in behind it, and the
-	   same header in ink instead of white */
-	/* Starts at the same height as the hero pages' header, so it doesn't jump
-	   between pages, then slides up to 10px from the top once stuck */
-	.site-header.on-page {
-		--stuck-offset: 54px;
 		position: sticky;
-		top: calc(var(--stuck-offset) * -1);
+		top: 0;
 		z-index: 50;
-		padding: 64px clamp(24px, 5.9vw, 85px) 10px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		height: 56px;
+		padding: 0 16px 0 20px;
+		background: var(--site-header-bg, var(--t3-sidebar));
 	}
 
-	/* The fade starts where the header sits once stuck */
-	.site-header.on-page::after {
-		content: '';
-		position: absolute;
-		top: calc(var(--stuck-offset) - 24px);
-		left: 0;
-		z-index: -1;
-		width: 100%;
-		height: 200px;
-		pointer-events: none;
-		opacity: 1;
-		background: linear-gradient(
-			180deg,
-			var(--bg-page) 0,
-			color-mix(in srgb, var(--bg-page) 96%, transparent) 12%,
-			color-mix(in srgb, var(--bg-page) 82%, transparent) 28%,
-			color-mix(in srgb, var(--bg-page) 55%, transparent) 45%,
-			color-mix(in srgb, var(--bg-page) 28%, transparent) 63%,
-			color-mix(in srgb, var(--bg-page) 10%, transparent) 82%,
-			transparent
-		);
+	.header-left,
+	.header-right,
+	.header-nav {
+		display: flex;
+		align-items: center;
 	}
 
-	.on-page .brand-logo {
+	.header-right {
+		gap: 8px;
+	}
+
+	.header-nav {
+		gap: 2px;
+		margin-right: 4px;
+	}
+
+	.logo {
+		display: flex;
+		align-items: center;
+		border-radius: var(--control-radius);
+	}
+
+	.logo-img {
+		height: 24px;
+		width: auto;
+	}
+
+	/* The logo art is white; darken it on light backgrounds. */
+	:global(html:not(.dark)) .logo-img {
 		filter: brightness(0);
-		opacity: 0.9;
 	}
 
-	.on-page .hero-links {
-		border-color: color-mix(in srgb, var(--text-primary) 8%, transparent);
-		background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+	.nav-link {
+		display: inline-flex;
+		align-items: center;
+		min-height: 32px;
+		padding: 6px 10px;
+		border-radius: var(--control-radius);
+		color: var(--text-secondary);
+		font-size: 14px;
+		font-weight: 500;
+		line-height: 20px;
+		text-decoration: none;
+		transition: color 150ms, background 150ms;
 	}
 
-	.on-page .hero-links a {
+	.nav-link:hover {
 		color: var(--text-primary);
-		text-shadow: none;
+		background: var(--t3-sidebar-row-hover);
 	}
 
-	.on-page .hero-links a:hover {
-		background: var(--bg-tertiary);
-	}
-
-	.on-page .glass-pill {
-		border-color: color-mix(in srgb, var(--text-primary) 6%, transparent);
-		background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
-		box-shadow: none;
+	.nav-link.active {
 		color: var(--text-primary);
-		text-shadow: none;
 	}
 
-	.on-page .glass-pill:hover {
-		background: var(--bg-tertiary);
+	.hamburger {
+		display: none;
 	}
 
 	@media (max-width: 768px) {
-		.site-header.on-page {
-			--stuck-offset: 10px;
-			padding: 20px 1.125rem 10px;
+		.site-header {
+			padding: 0 12px 0 8px;
+		}
+
+		.site-header .hamburger {
+			display: inline-flex;
+			width: 44px;
+			height: 44px;
+		}
+
+		.desktop-logo {
+			display: none;
+		}
+
+		.header-right {
+			gap: 4px;
+		}
+
+		.header-nav {
+			margin-right: 0;
+		}
+
+		.nav-link,
+		.header-right :global(.btn) {
+			min-height: 44px;
+		}
+	}
+
+	@media (max-width: 360px) {
+		.download-label {
+			display: none;
 		}
 	}
 </style>

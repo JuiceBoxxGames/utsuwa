@@ -84,7 +84,7 @@
 	<main>
 		<SkyZone fade>
 			<section class="dl-hero" aria-labelledby="dl-title">
-				<SiteNav variant="hero" />
+				<SiteNav />
 
 				<!-- Standing in the room behind the copy, cut off by the fold -->
 				<div class="dl-figure">

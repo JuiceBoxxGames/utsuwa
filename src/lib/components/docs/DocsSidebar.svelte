@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import DocsSidebarSection from './DocsSidebarSection.svelte';
 	import DocsSearch from './DocsSearch.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { docsNav } from '$lib/config/docs-nav';
-	import { cycleColorMode, getColorMode, type ColorMode } from '$lib/utils/color-mode';
+	import ThemeToggle from '$lib/components/ui/ThemeToggle.svelte';
 	import { GITHUB_REPO } from '$lib/config/site';
 
 	interface Props {
@@ -14,12 +13,6 @@
 	let { mobileOpen = false }: Props = $props();
 
 	let searchComponent = $state<DocsSearch | null>(null);
-	let colorMode = $state<ColorMode>('system');
-
-	onMount(() => {
-		colorMode = getColorMode();
-	});
-
 	let asideEl = $state<HTMLElement | null>(null);
 
 	export function focusDrawer() {
@@ -29,9 +22,6 @@
 	export function focusSearch() {
 		searchComponent?.focus();
 	}
-
-	const iconName = $derived(colorMode === 'light' ? 'sun' : colorMode === 'dark' ? 'moon' : 'monitor');
-	const label = $derived(colorMode === 'light' ? 'Light' : colorMode === 'dark' ? 'Dark' : 'System');
 </script>
 
 <aside id="docs-sidebar" class="sidebar" class:mobile-open={mobileOpen} aria-label="Documentation menu" tabindex="-1" bind:this={asideEl}>
@@ -46,16 +36,7 @@
 		</nav>
 	</div>
 	<div class="sidebar-footer">
-		<button
-			type="button"
-			class="btn btn-ghost btn-sm"
-			onclick={() => (colorMode = cycleColorMode())}
-			aria-label={`Theme: ${label}`}
-			title={`Theme: ${label}`}
-		>
-			<Icon name={iconName} size={14} />
-			<span>{label}</span>
-		</button>
+		<ThemeToggle />
 		<a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" aria-label="GitHub" title="GitHub">
 			<Icon name="github" size={14} />
 		</a>
