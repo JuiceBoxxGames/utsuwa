@@ -174,6 +174,8 @@ test('the landing shows the advanced features with live vignettes', async ({ pag
 		await expect(section.getByRole('heading', { name, exact: true })).toBeVisible();
 	}
 	const tool = section.locator('[data-vignette="tools"]');
+	// Vignettes pause offscreen; the section is taller than a phone screen
+	await tool.scrollIntoViewIfNeeded();
 	const first = await tool.getAttribute('data-step');
 	await expect.poll(() => tool.getAttribute('data-step'), { timeout: 6000 }).not.toBe(first);
 });

@@ -18,7 +18,7 @@
 	let { pillars, label }: { pillars: Pillar[]; label: string } = $props();
 
 	let active = $state(0);
-	const tabs: HTMLButtonElement[] = [];
+	const tabs = $state<HTMLButtonElement[]>([]);
 
 	function onKey(event: KeyboardEvent, index: number) {
 		const last = pillars.length - 1;
