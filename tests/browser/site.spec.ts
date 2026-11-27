@@ -78,3 +78,14 @@ test('blog cards and headings follow the restrained scale', async ({ page }) => 
 	expect(styles.media).not.toBe('rgba(0, 0, 0, 0)');
 	expect(styles.titleWeight).toBe('500');
 });
+
+test('download page offers each platform on the shared tokens', async ({ page }) => {
+	await page.goto('/download');
+	await expect(page.getByRole('link', { name: /^Download for (macOS|Windows|Linux)$/ })).toBeVisible();
+	for (const name of ['macOS', 'Windows', 'Linux']) {
+		await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+	}
+	expect(await gradientsInMain(page)).toEqual([]);
+	const weight = await page.evaluate(() => getComputedStyle(document.querySelector('h1')!).fontWeight);
+	expect(weight).toBe('500');
+});
