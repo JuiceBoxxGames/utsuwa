@@ -192,4 +192,15 @@ test('reduced motion shows each vignette finished and still', async ({ page }) =
 	const reply = page.locator('[data-vignette="tools"] .reply');
 	await reply.scrollIntoViewIfNeeded();
 	await expect.poll(() => reply.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+	// Each vignette lands on the moment that names its feature
+	const shown = async (selector: string) => {
+		const el = page.locator(selector).first();
+		await el.scrollIntoViewIfNeeded();
+		await expect.poll(() => el.evaluate((n) => getComputedStyle(n).opacity), { message: selector }).toBe('1');
+	};
+	await shown('[data-vignette="tools"] .server');
+	await shown('[data-vignette="tools"] .packet.back');
+	await shown('[data-vignette="memory"] .query');
+	await shown('[data-vignette="memory"] .label.hot');
+	await shown('[data-vignette="overlay"] .bubble');
 });

@@ -113,9 +113,7 @@
 	"adv_tools_title": "MCPでツールを使う",
 	"adv_tools_body": "MCPサーバーをつなげば、会話の途中でコンパニオンがツールを使います。Home Assistantのセンサー確認、ウェブ検索、リポジトリの調査まで。実行前の確認は最初からオンです。",
 	"adv_tools_user": "リビング、寒くないかな？",
-	"adv_tools_confirm": "このツールを許可しますか？",
-	"adv_tools_allow": "許可",
-	"adv_tools_reply": "いまは21.5度。お茶にちょうどいい暖かさだよ。",
+	"adv_tools_reply": "いまは21.5度。ちょうどいいね。",
 	"adv_memory_title": "意味で思い出す記憶",
 	"adv_memory_body": "覚えたことは、大切な人や予定、好きなもののグラフになります。デバイス上の埋め込みが意味で探すので、検索のために外へ送られることはありません。",
 	"adv_memory_query": "うちの猫の名前、なんだっけ？",
@@ -145,5 +143,12 @@
 	"adv_remind_task": "ストレッチ",
 	"adv_remind_due": "ストレッチの時間だよ！",
 	"adv_overlay_title": "デスクトップオーバーレイ",
-	"adv_overlay_body": "どのアプリの上にも浮かぶ、透明なコンパニオン。Ctrl+Shift+Uで表示と非表示、Ctrl+Shift+Spaceでどこからでも話しかけられます。"
+	"adv_overlay_body": "どのアプリの上にも浮かぶ、透明なコンパニオン。Ctrl+Shift+Uで表示と非表示、Ctrl+Shift+Spaceでどこからでも話しかけられます。",
+	"adv_tools_using": "ツールを使用中",
+	"adv_tools_via": "Home Assistant 経由",
+	"adv_memory_mom": "お母さん",
+	"adv_memory_japanese": "日本語の勉強",
+	"adv_overlay_bubble": "ずっとここにいるよ。",
+	"adv_overlay_toggle": "表示と非表示",
+	"adv_overlay_talk": "押して話す"
 }

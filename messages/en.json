@@ -113,9 +113,7 @@
 	"adv_tools_title": "Tools through MCP",
 	"adv_tools_body": "Connect MCP servers and your companion calls them mid-conversation: check a Home Assistant sensor, search the web, look up a repo. Ask before running is on by default.",
 	"adv_tools_user": "Is the living room warm enough?",
-	"adv_tools_confirm": "Allow this tool?",
-	"adv_tools_allow": "Allow",
-	"adv_tools_reply": "21.5 degrees in there. Cozy enough for tea.",
+	"adv_tools_reply": "21.5 degrees in there. Cozy.",
 	"adv_memory_title": "Memory that recalls by meaning",
 	"adv_memory_body": "Facts become a graph of your people, plans, and interests. On-device embeddings find them by meaning, so nothing leaves your machine to be searched.",
 	"adv_memory_query": "what's my cat called again?",
@@ -145,5 +143,12 @@
 	"adv_remind_task": "Stretch",
 	"adv_remind_due": "Time to stretch!",
 	"adv_overlay_title": "Desktop overlay",
-	"adv_overlay_body": "A transparent companion that floats over any app. Ctrl+Shift+U shows or hides them, and Ctrl+Shift+Space is push-to-talk from anywhere."
+	"adv_overlay_body": "A transparent companion that floats over any app. Ctrl+Shift+U shows or hides them, and Ctrl+Shift+Space is push-to-talk from anywhere.",
+	"adv_tools_using": "Using a tool",
+	"adv_tools_via": "via Home Assistant",
+	"adv_memory_mom": "Mom",
+	"adv_memory_japanese": "learning Japanese",
+	"adv_overlay_bubble": "Still right here.",
+	"adv_overlay_toggle": "Show or hide",
+	"adv_overlay_talk": "Push to talk"
 }
