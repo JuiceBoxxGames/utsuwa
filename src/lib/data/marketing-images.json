@@ -1,19 +1,13 @@
 {
-  "/blog/blog-thumbnail.jpg": {
-    "src": "/optimized/blog/blog-thumbnail-1536.webp",
-    "srcset": "/optimized/blog/blog-thumbnail-96.webp 96w, /optimized/blog/blog-thumbnail-480.webp 480w, /optimized/blog/blog-thumbnail-960.webp 960w, /optimized/blog/blog-thumbnail-1536.webp 1536w",
+  "/blog/dev-log-2026-5-29-abstract.jpg": {
+    "src": "/optimized/blog/dev-log-2026-5-29-abstract-1536.webp",
+    "srcset": "/optimized/blog/dev-log-2026-5-29-abstract-96.webp 96w, /optimized/blog/dev-log-2026-5-29-abstract-480.webp 480w, /optimized/blog/dev-log-2026-5-29-abstract-960.webp 960w, /optimized/blog/dev-log-2026-5-29-abstract-1536.webp 1536w",
     "width": 1536,
     "height": 1024
   },
-  "/blog/dev-log-2026-5-29.jpg": {
-    "src": "/optimized/blog/dev-log-2026-5-29-1536.webp",
-    "srcset": "/optimized/blog/dev-log-2026-5-29-96.webp 96w, /optimized/blog/dev-log-2026-5-29-480.webp 480w, /optimized/blog/dev-log-2026-5-29-960.webp 960w, /optimized/blog/dev-log-2026-5-29-1536.webp 1536w",
-    "width": 1536,
-    "height": 1024
-  },
-  "/blog/dev-log-2026-7-3.jpg": {
-    "src": "/optimized/blog/dev-log-2026-7-3-1536.webp",
-    "srcset": "/optimized/blog/dev-log-2026-7-3-96.webp 96w, /optimized/blog/dev-log-2026-7-3-480.webp 480w, /optimized/blog/dev-log-2026-7-3-960.webp 960w, /optimized/blog/dev-log-2026-7-3-1536.webp 1536w",
+  "/blog/dev-log-2026-7-3-abstract.jpg": {
+    "src": "/optimized/blog/dev-log-2026-7-3-abstract-1536.webp",
+    "srcset": "/optimized/blog/dev-log-2026-7-3-abstract-96.webp 96w, /optimized/blog/dev-log-2026-7-3-abstract-480.webp 480w, /optimized/blog/dev-log-2026-7-3-abstract-960.webp 960w, /optimized/blog/dev-log-2026-7-3-abstract-1536.webp 1536w",
     "width": 1536,
     "height": 1024
   },
@@ -71,9 +65,15 @@
     "width": 1280,
     "height": 720
   },
-  "/blog/moving-to-agpl.jpg": {
-    "src": "/optimized/blog/moving-to-agpl-1536.webp",
-    "srcset": "/optimized/blog/moving-to-agpl-96.webp 96w, /optimized/blog/moving-to-agpl-480.webp 480w, /optimized/blog/moving-to-agpl-960.webp 960w, /optimized/blog/moving-to-agpl-1536.webp 1536w",
+  "/blog/moving-to-agpl-abstract.jpg": {
+    "src": "/optimized/blog/moving-to-agpl-abstract-1536.webp",
+    "srcset": "/optimized/blog/moving-to-agpl-abstract-96.webp 96w, /optimized/blog/moving-to-agpl-abstract-480.webp 480w, /optimized/blog/moving-to-agpl-abstract-960.webp 960w, /optimized/blog/moving-to-agpl-abstract-1536.webp 1536w",
+    "width": 1536,
+    "height": 1024
+  },
+  "/blog/placeholder-abstract.jpg": {
+    "src": "/optimized/blog/placeholder-abstract-1536.webp",
+    "srcset": "/optimized/blog/placeholder-abstract-96.webp 96w, /optimized/blog/placeholder-abstract-480.webp 480w, /optimized/blog/placeholder-abstract-960.webp 960w, /optimized/blog/placeholder-abstract-1536.webp 1536w",
     "width": 1536,
     "height": 1024
   },

@@ -204,3 +204,11 @@ test('reduced motion shows each vignette finished and still', async ({ page }) =
 	await shown('[data-vignette="memory"] .label.hot');
 	await shown('[data-vignette="overlay"] .bubble');
 });
+
+test('posts that used the old window-light art show the abstract thumbnails', async ({ page }) => {
+	await page.goto('/blog');
+	for (const slug of ['dev-log-2026-5-29', 'dev-log-2026-7-3', 'moving-to-agpl']) {
+		const src = await page.locator(`a[href="/blog/${slug}"] img`).first().getAttribute('src');
+		expect(src, slug).toContain(`${slug}-abstract`);
+	}
+});

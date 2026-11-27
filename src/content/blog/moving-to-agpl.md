@@ -2,7 +2,7 @@
 title: Utsuwa is Moving to the AGPL
 description: Starting with 0.12.1, Utsuwa is licensed AGPL-3.0-or-later instead of MIT. What changed, what did not, and why.
 date: '2026-07-19'
-image: /blog/moving-to-agpl.jpg
+image: /blog/moving-to-agpl-abstract.jpg
 tag: DevLog
 ---
 
