@@ -12,6 +12,11 @@ test('marketing pages follow the saved dark mode before hydration', async ({ pag
 test('the Japanese landing still renders in Japanese', async ({ page }) => {
 	await page.goto('/ja');
 	await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+	// The shared header is translated too, not just the page body
+	const banner = page.getByRole('banner');
+	for (const name of ['ドキュメント', 'ブログ']) {
+		await expect(banner.getByRole('link', { name, exact: true })).toBeVisible();
+	}
 });
 
 test('the footer theme toggle switches the blog to dark', async ({ page }) => {

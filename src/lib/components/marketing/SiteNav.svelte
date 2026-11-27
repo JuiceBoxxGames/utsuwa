@@ -2,9 +2,12 @@
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { page } from '$app/state';
 	import { localPath, sectionUrl, mainUrl, isSection } from '$lib/config/links';
+	import { m } from '$lib/paraglide/messages';
 
 	// One header for the marketing site and the docs. The docs pass a sidebar
 	// toggle; on phones their logo moves into the drawer, so it hides here.
+	// Marketing pages link to themselves with relative paths (absolute apex URLs
+	// would bounce through the apex-to-www redirect) and to the docs subdomain.
 
 	interface Props {
 		onToggleSidebar?: () => void;
@@ -14,6 +17,13 @@
 	let { onToggleSidebar, sidebarOpen = false }: Props = $props();
 
 	const currentPath = $derived(page.url.pathname);
+	const inDocs = $derived(!!onToggleSidebar);
+	const href = $derived({
+		home: inDocs ? localPath('docs') : '/',
+		docs: inDocs ? localPath('docs') : sectionUrl('docs'),
+		blog: inDocs ? mainUrl('/blog') : '/blog',
+		download: inDocs ? mainUrl('/download') : '/download'
+	});
 </script>
 
 <header class="site-header">
@@ -31,20 +41,20 @@
 				<Icon name={sidebarOpen ? 'xmark' : 'bars'} size={18} />
 			</button>
 		{/if}
-		<a href={onToggleSidebar ? localPath('docs') : mainUrl('/')} class="logo" class:desktop-logo={!!onToggleSidebar} aria-label="Utsuwa home">
+		<a href={href.home} class="logo" class:desktop-logo={inDocs} aria-label={m.nav_home()}>
 			<img src="/brand-assets/logo.svg" alt="Utsuwa" class="logo-img" />
 		</a>
 	</div>
 	<div class="header-right">
 		<nav class="header-nav" aria-label="Site">
-			<a href={localPath('docs')} class="nav-link" class:active={isSection('docs')} aria-current={isSection('docs') ? 'page' : undefined}>Docs</a>
-			<a href={mainUrl('/blog')} class="nav-link" class:active={currentPath.startsWith('/blog')}>Blog</a>
+			<a href={href.docs} class="nav-link" class:active={isSection('docs')} aria-current={isSection('docs') ? 'page' : undefined}>{m.nav_docs()}</a>
+			<a href={href.blog} class="nav-link" class:active={currentPath.startsWith('/blog')}>{m.nav_blog()}</a>
 		</nav>
-		<a href={mainUrl('/download')} aria-label="Download Utsuwa" class="btn btn-secondary btn-sm">
+		<a href={href.download} aria-label={m.nav_download()} class="btn btn-secondary btn-sm">
 			<Icon name="download" size={14} />
-			<span class="download-label">Download</span>
+			<span class="download-label">{m.nav_download()}</span>
 		</a>
-		<a href={sectionUrl('app')} class="btn btn-primary btn-sm">Try it live</a>
+		<a href={sectionUrl('app')} class="btn btn-primary btn-sm">{m.nav_try()}</a>
 	</div>
 </header>
 

@@ -2,11 +2,13 @@
 	import { page } from '$app/state';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ThemeToggle from '$lib/components/ui/ThemeToggle.svelte';
-	import { mainUrl, sectionUrl } from '$lib/config/links';
+	import { sectionUrl } from '$lib/config/links';
 	import { GITHUB_REPO, GITHUB_RELEASES } from '$lib/config/site';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 
+	// The footer only renders on main-site pages, so its links stay relative
+	// (absolute apex URLs would bounce through the apex-to-www redirect).
 	// Only the landing page is translated, so the language switch only shows there
 	const translated = $derived(['/', '/ja'].includes(page.url.pathname));
 	const locale = getLocale();
@@ -14,26 +16,26 @@
 
 <footer class="site-footer">
 	<div class="footer-top">
-		<a href={mainUrl('/')} class="footer-logo" aria-label={m.nav_home()}>
+		<a href="/" class="footer-logo" aria-label={m.nav_home()}>
 			<img src="/brand-assets/logo.svg" alt="" />
 		</a>
 		<div class="footer-cols">
 			<div class="footer-col">
 				<p>{m.footer_product()}</p>
 				<a href={sectionUrl('app')}>{m.nav_try()}</a>
-				<a href={mainUrl('/download')}>{m.nav_download()}</a>
-				<a href={mainUrl('/#features')}>{m.nav_features()}</a>
+				<a href="/download">{m.nav_download()}</a>
+				<a href="/#features">{m.nav_features()}</a>
 			</div>
 			<div class="footer-col">
 				<p>{m.footer_resources()}</p>
 				<a href={sectionUrl('docs')}>{m.nav_docs()}</a>
-				<a href={mainUrl('/blog')}>{m.nav_blog()}</a>
+				<a href="/blog">{m.nav_blog()}</a>
 				<a href={GITHUB_RELEASES} target="_blank" rel="noopener noreferrer">{m.footer_releases()}</a>
 			</div>
 			<div class="footer-col">
 				<p>{m.footer_legal()}</p>
-				<a href={mainUrl('/privacy')}>{m.footer_privacy()}</a>
-				<a href={mainUrl('/terms')}>{m.footer_terms()}</a>
+				<a href="/privacy">{m.footer_privacy()}</a>
+				<a href="/terms">{m.footer_terms()}</a>
 				<a href={`${GITHUB_REPO}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">{m.footer_license()}</a>
 			</div>
 		</div>
